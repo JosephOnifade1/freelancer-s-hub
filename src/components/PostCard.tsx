@@ -1,4 +1,5 @@
 import { MessageSquare, Share2, Bookmark } from "lucide-react";
+import { Link } from "react-router-dom";
 import { VoteControls } from "@/components/VoteControls";
 import { PostTypeBadge } from "@/components/PostTypeBadge";
 import { motion } from "framer-motion";
@@ -42,13 +43,15 @@ export function PostCard({ post, index }: PostCardProps) {
           </span>
         </div>
 
-        <h3 className="font-heading text-base font-semibold text-foreground leading-snug mb-1 group-hover:text-primary transition-colors cursor-pointer">
-          {post.title}
-        </h3>
+        <Link to={`/post/${post.id}`} className="block">
+          <h3 className="font-heading text-base font-semibold text-foreground leading-snug mb-1 group-hover:text-primary transition-colors cursor-pointer">
+            {post.title}
+          </h3>
 
-        <p className="font-body text-sm text-muted-foreground line-clamp-2 mb-3">
-          {post.body}
-        </p>
+          <p className="font-body text-sm text-muted-foreground line-clamp-2 mb-3">
+            {post.body}
+          </p>
+        </Link>
 
         <div className="flex items-center gap-3 flex-wrap">
           {post.tags.map((tag) => (
