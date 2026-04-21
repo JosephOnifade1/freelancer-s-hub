@@ -1,41 +1,56 @@
 
 
-## Fix all 404 routes in Soloboard
+## Populate Profile page with real data + functional tabs
 
-Currently only `/` works. Every sidebar link (`/new`, `/following`, `/communities`, `/bookmarks`, `/achievements`, `/profile`, `/settings`) hits the 404 page, and the "New Post" button has no destination. I'll add real pages for each route, all wrapped in the existing `AppLayout` so the sidebar/header stay consistent.
+The Profile page already has a header with mock identity (marcelo_dev), reputation, follower count, and skills. The tabs render but Comments and Achievements show placeholder text. I'll keep the existing header (it already fits the spec) and focus on making the data centralized and the three tabs fully populated.
 
-### Pages to create
+### 1. Create `src/data/mockProfile.ts`
 
-| Route | Page | Content |
-|---|---|---|
-| `/new` | `NewFeed.tsx` | Same feed as Index, sorted by `timeAgo` (newest first), tab pre-selected to "New" |
-| `/following` | `Following.tsx` | Feed filtered to a mock "following" subset, with empty-state CTA if the user follows no one |
-| `/communities` | `Communities.tsx` | Grid of community cards (Design, Dev, Writing, Marketing, Video, Consulting) with member counts and "Join" buttons |
-| `/bookmarks` | `Bookmarks.tsx` | List of saved posts (reuses `PostCard`) with empty state |
-| `/achievements` | `Achievements.tsx` | Grid of badge cards (First Post, 100 Reputation, Helper, Veteran, etc.) — locked vs unlocked styling |
-| `/profile` | `Profile.tsx` | Header with avatar, username, bio, skills, reputation, follower count; tabs for Posts / Comments / Achievements |
-| `/settings` | `Settings.tsx` | Sectioned form: Account, Profile, Notifications, Availability status toggle |
-| `/submit` | `CreatePost.tsx` | Title input, body textarea, post type selector (discussion/question/resource), tag picker (max 3) |
-| `/post/:id` | `PostDetail.tsx` | Full post + threaded comments (mock, 3 levels deep) with vote controls |
+A single source of truth for the current user so the same data can be reused on Profile, comments, and future pages.
 
-All pages use mock data only — no backend wiring yet.
+```ts
+mockProfile = {
+  username: "marcelo_dev",
+  initial: "M",
+  bio: "Fintech dashboards & React specialist...",
+  location: "Lisbon, Portugal",
+  website: "marcelo.dev",
+  joined: "2024",
+  status: "Open to work",
+  skills: ["React", "TypeScript", "UI Design", "Figma", "Copywriting"],
+  reputation: 2340,
+  followers: 847,
+  following: 124,
+  postsCount: 3,
+  commentsCount: 18,
+}
+```
 
-### Routing & navigation updates
+Plus a `mockUserComments` array (6–8 entries) with: id, postTitle, postId, body, score, timeAgo.
 
-- **`src/App.tsx`** — register all 9 new routes above the catch-all.
-- **`src/components/AppSidebar.tsx`** — wrap the "New Post" button in a `NavLink to="/submit"` so it navigates.
-- **`src/pages/Index.tsx`** — make `PostCard` titles link to `/post/:id` (small change in `PostCard.tsx`).
+### 2. Move achievements list into shared data
 
-### Shared building blocks
+Extract the `achievements` array from `Achievements.tsx` into `src/data/mockAchievements.ts` so both pages render the same badges. `Achievements.tsx` imports from there (no UI change).
 
-- A small `PageHeader` component (title + optional subtitle) reused by Communities, Bookmarks, Achievements, Profile, Settings, CreatePost so every page has a consistent heading.
-- An `EmptyState` component (icon + message + optional CTA) for Following and Bookmarks.
+### 3. Update `src/pages/Profile.tsx`
 
-### Out of scope (future work)
+- Replace hardcoded values with imports from `mockProfile`.
+- Add a `postsCount` / `commentsCount` count next to each tab label, e.g. `Posts (3)`, `Comments (18)`, `Achievements (3/8)`.
+- **Posts tab**: filter `mockPosts` by `author.name === mockProfile.username` instead of `slice(0, 3)`.
+- **Comments tab**: render a list of comment cards. Each card shows the parent post title (linked to `/post/:id`), the comment body, score with an upvote icon, and timeAgo. Empty state if list is empty.
+- **Achievements tab**: render a compact 2/3-column grid using the shared achievements data and the same locked/unlocked styling as the Achievements page (smaller card, no animation delay). Footer link to `/achievements` for the full page.
 
-- Real auth, database, and Supabase wiring (Foundation phase).
-- Functional post submission, real voting persistence, real comments.
-- Per-community sub-feeds and moderator tools.
+### 4. Visual consistency
 
-After implementation every sidebar link, the New Post button, and clicking a post will land on a real page instead of the 404 screen.
+- Reuse existing tokens (`badge-resource` for status, `glow-primary` on avatar, `bg-card` borders).
+- Comment cards use the same `rounded-xl border border-border bg-card` pattern as PostCard.
+- Achievement grid in the tab: `grid-cols-2 sm:grid-cols-3` with `h-10 w-10` icon circles (smaller than the dedicated page).
+
+### Out of scope
+
+- Real auth / fetching the logged-in user from Supabase (Foundation phase).
+- Editing profile inline (Settings page already covers this).
+- Pagination on posts/comments lists.
+
+After this, every Profile tab shows real, linked content sourced from one mock data file that can later be swapped for a Supabase query.
 
