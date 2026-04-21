@@ -1,16 +1,25 @@
 import { useState } from "react";
-import { Link as LinkIcon, MapPin, Calendar, Zap } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Link as LinkIcon, MapPin, Calendar, Zap, ArrowUp } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { PostCard } from "@/components/PostCard";
 import { mockPosts } from "@/data/mockPosts";
+import { mockProfile, mockUserComments } from "@/data/mockProfile";
+import { achievements } from "@/data/mockAchievements";
 
-const skills = ["React", "TypeScript", "UI Design", "Figma", "Copywriting"];
 const tabs = ["Posts", "Comments", "Achievements"] as const;
 type Tab = (typeof tabs)[number];
 
 const Profile = () => {
   const [active, setActive] = useState<Tab>("Posts");
-  const userPosts = mockPosts.slice(0, 3);
+  const userPosts = mockPosts.filter((p) => p.author.name === mockProfile.username);
+  const unlockedCount = achievements.filter((a) => a.unlocked).length;
+
+  const tabCounts: Record<Tab, string> = {
+    Posts: String(userPosts.length),
+    Comments: String(mockUserComments.length),
+    Achievements: `${unlockedCount}/${achievements.length}`,
+  };
 
   return (
     <AppLayout>
@@ -19,33 +28,33 @@ const Profile = () => {
         <div className="rounded-xl border border-border bg-card p-6 mb-6">
           <div className="flex flex-col sm:flex-row gap-5 items-start">
             <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-primary/20 font-heading text-2xl font-bold text-primary glow-primary">
-              M
+              {mockProfile.initial}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1">
                 <h1 className="font-heading text-2xl font-bold text-foreground">
-                  marcelo_dev
+                  {mockProfile.username}
                 </h1>
                 <span className="rounded-full bg-badge-resource/15 px-2 py-0.5 font-body text-[10px] font-semibold text-badge-resource">
-                  Open to work
+                  {mockProfile.status}
                 </span>
               </div>
               <p className="font-body text-sm text-muted-foreground mb-3">
-                Fintech dashboards & React specialist. Helping solo devs raise their rates.
+                {mockProfile.bio}
               </p>
               <div className="flex flex-wrap gap-3 font-body text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  <MapPin className="h-3.5 w-3.5" /> Lisbon, Portugal
+                  <MapPin className="h-3.5 w-3.5" /> {mockProfile.location}
                 </span>
                 <a href="#" className="flex items-center gap-1 hover:text-primary">
-                  <LinkIcon className="h-3.5 w-3.5" /> marcelo.dev
+                  <LinkIcon className="h-3.5 w-3.5" /> {mockProfile.website}
                 </a>
                 <span className="flex items-center gap-1">
-                  <Calendar className="h-3.5 w-3.5" /> Joined 2024
+                  <Calendar className="h-3.5 w-3.5" /> Joined {mockProfile.joined}
                 </span>
               </div>
               <div className="mt-3 flex flex-wrap gap-1.5">
-                {skills.map((s) => (
+                {mockProfile.skills.map((s) => (
                   <span
                     key={s}
                     className="rounded-md bg-secondary px-2 py-0.5 font-body text-[11px] font-medium text-secondary-foreground"
@@ -63,16 +72,16 @@ const Profile = () => {
           <div className="mt-5 grid grid-cols-3 gap-3 pt-5 border-t border-border">
             <div>
               <p className="font-heading text-xl font-bold text-foreground flex items-center gap-1">
-                <Zap className="h-4 w-4 text-primary" /> 2,340
+                <Zap className="h-4 w-4 text-primary" /> {mockProfile.reputation.toLocaleString()}
               </p>
               <p className="font-body text-[11px] text-muted-foreground">Reputation</p>
             </div>
             <div>
-              <p className="font-heading text-xl font-bold text-foreground">847</p>
+              <p className="font-heading text-xl font-bold text-foreground">{mockProfile.followers}</p>
               <p className="font-body text-[11px] text-muted-foreground">Followers</p>
             </div>
             <div>
-              <p className="font-heading text-xl font-bold text-foreground">124</p>
+              <p className="font-heading text-xl font-bold text-foreground">{mockProfile.following}</p>
               <p className="font-body text-[11px] text-muted-foreground">Following</p>
             </div>
           </div>
@@ -90,7 +99,7 @@ const Profile = () => {
                   : "text-muted-foreground hover:text-foreground hover:bg-secondary"
               }`}
             >
-              {t}
+              {t} <span className="opacity-70">({tabCounts[t]})</span>
             </button>
           ))}
         </div>
@@ -98,19 +107,82 @@ const Profile = () => {
         {/* Content */}
         {active === "Posts" && (
           <div className="space-y-3">
-            {userPosts.map((post, i) => (
-              <PostCard key={post.id} post={post} index={i} />
-            ))}
+            {userPosts.length === 0 ? (
+              <div className="rounded-xl border border-border bg-card p-6 text-center font-body text-sm text-muted-foreground">
+                No posts yet.
+              </div>
+            ) : (
+              userPosts.map((post, i) => <PostCard key={post.id} post={post} index={i} />)
+            )}
           </div>
         )}
+
         {active === "Comments" && (
-          <div className="rounded-xl border border-border bg-card p-6 text-center font-body text-sm text-muted-foreground">
-            Comment history will appear here.
+          <div className="space-y-3">
+            {mockUserComments.length === 0 ? (
+              <div className="rounded-xl border border-border bg-card p-6 text-center font-body text-sm text-muted-foreground">
+                No comments yet.
+              </div>
+            ) : (
+              mockUserComments.map((c) => (
+                <div
+                  key={c.id}
+                  className="rounded-xl border border-border bg-card p-4 hover:border-primary/40 transition-colors"
+                >
+                  <Link
+                    to={`/post/${c.postId}`}
+                    className="font-heading text-sm font-semibold text-foreground hover:text-primary line-clamp-1"
+                  >
+                    {c.postTitle}
+                  </Link>
+                  <p className="mt-2 font-body text-sm text-muted-foreground leading-relaxed">
+                    {c.body}
+                  </p>
+                  <div className="mt-3 flex items-center gap-4 font-body text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1 text-primary">
+                      <ArrowUp className="h-3.5 w-3.5" /> {c.score}
+                    </span>
+                    <span>{c.timeAgo}</span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
+
         {active === "Achievements" && (
-          <div className="rounded-xl border border-border bg-card p-6 text-center font-body text-sm text-muted-foreground">
-            Visit the <a href="/achievements" className="text-primary hover:underline">Achievements page</a> to see all badges.
+          <div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {achievements.map((a) => (
+                <div
+                  key={a.id}
+                  className={`rounded-xl border p-3 text-center transition-all ${
+                    a.unlocked
+                      ? "border-primary/30 bg-card"
+                      : "border-border bg-card/30 opacity-60"
+                  }`}
+                >
+                  <div
+                    className={`mx-auto flex h-10 w-10 items-center justify-center rounded-full mb-2 ${
+                      a.unlocked ? "bg-primary/15 text-primary glow-primary" : "bg-secondary text-muted-foreground"
+                    }`}
+                  >
+                    <a.icon className="h-5 w-5" />
+                  </div>
+                  <h3 className="font-heading text-xs font-semibold text-foreground mb-0.5">
+                    {a.name}
+                  </h3>
+                  <p className="font-body text-[10px] text-muted-foreground leading-snug line-clamp-2">
+                    {a.description}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 text-center">
+              <Link to="/achievements" className="font-body text-sm text-primary hover:underline">
+                View all achievements →
+              </Link>
+            </div>
           </div>
         )}
       </div>
