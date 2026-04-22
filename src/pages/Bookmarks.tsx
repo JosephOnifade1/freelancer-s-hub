@@ -3,11 +3,17 @@ import { AppLayout } from "@/components/AppLayout";
 import { PostCard } from "@/components/PostCard";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
-import { mockPosts } from "@/data/mockPosts";
+import { useQuery } from "@tanstack/react-query";
+import { fetchPosts } from "@/lib/posts";
 
 const Bookmarks = () => {
-  // Mock: pretend the user bookmarked these
-  const bookmarked = mockPosts.filter((p) => ["3", "5"].includes(p.id));
+  const { data: posts = [], isLoading } = useQuery({
+    queryKey: ['posts'],
+    queryFn: fetchPosts
+  });
+
+  // TODO: Fetch user's actual bookmarks from database
+  const bookmarked = posts.filter((p) => [].includes(p.id as never));
 
   return (
     <AppLayout>

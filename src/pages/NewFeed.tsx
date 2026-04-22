@@ -2,18 +2,17 @@ import { AppLayout } from "@/components/AppLayout";
 import { PostCard } from "@/components/PostCard";
 import { FeedSidebar } from "@/components/FeedSidebar";
 import { PageHeader } from "@/components/PageHeader";
-import { mockPosts } from "@/data/mockPosts";
-
-const parseHours = (t: string) => {
-  const num = parseInt(t);
-  if (t.includes("d")) return num * 24;
-  return num;
-};
+import { useQuery } from "@tanstack/react-query";
+import { fetchPosts } from "@/lib/posts";
+import { Loader2 } from "lucide-react";
 
 const NewFeed = () => {
-  const sorted = [...mockPosts].sort(
-    (a, b) => parseHours(a.timeAgo) - parseHours(b.timeAgo)
-  );
+  const { data: posts = [], isLoading } = useQuery({
+    queryKey: ['posts'],
+    queryFn: fetchPosts
+  });
+
+  const sorted = [...posts].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
   return (
     <AppLayout>
@@ -25,14 +24,24 @@ const NewFeed = () => {
               subtitle="The freshest posts from freelancers, sorted by time."
             />
             <div className="space-y-3">
-              {sorted.map((post, i) => (
-                <PostCard key={post.id} post={post} index={i} />
-              ))}
+              {isLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : sorted.length === 0 ? (
+                <div className="rounded-xl border border-border bg-card p-6 text-center font-body text-sm text-muted-foreground">
+                  No posts yet. Be the first to share!
+                </div>
+              ) : (
+                sorted.map((post, i) => (
+                  <PostCard key={post.id} post={post} index={i} />
+                ))
+              )}
             </div>
           </div>
           <div className="hidden lg:block w-72 shrink-0">
             <div className="sticky top-20">
-              <FeedSidebar />
+              <FeedSidebar posts={posts} />
             </div>
           </div>
         </div>

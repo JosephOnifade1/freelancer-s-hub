@@ -7,6 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getUserProfile } from "@/lib/users";
+import { createPost } from "@/lib/posts";
 
 type PostType = "discussion" | "question" | "resource";
 
@@ -23,6 +27,15 @@ const CreatePost = () => {
   const [body, setBody] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.uid],
+    queryFn: () => user ? getUserProfile(user.uid) : null,
+    enabled: !!user,
+  });
 
   const addTag = () => {
     const t = tagInput.trim().toLowerCase().replace(/^#/, "");
@@ -33,13 +46,36 @@ const CreatePost = () => {
 
   const removeTag = (t: string) => setTags(tags.filter((x) => x !== t));
 
-  const submit = () => {
-    if (!title.trim()) {
-      toast({ title: "Title required", description: "Give your post a clear title.", variant: "destructive" });
+  const submit = async () => {
+    if (!title.trim() || !body.trim()) {
+      toast({ title: "Missing fields", description: "Title and body are required.", variant: "destructive" });
       return;
     }
-    toast({ title: "Post created", description: "Your post has been published (mock)." });
-    navigate("/");
+    
+    setIsSubmitting(true);
+    try {
+      await createPost({
+        title,
+        body,
+        type,
+        tags,
+        author: { 
+          uid: user?.uid,
+          name: profile?.username || "Unknown", 
+          reputation: profile?.reputation || 0 
+        },
+        score: 0,
+        commentCount: 0,
+        timeAgo: "just now"
+      });
+      toast({ title: "Post created", description: "Your post has been published." });
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      navigate("/");
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to create post.", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -145,9 +181,10 @@ const CreatePost = () => {
             </button>
             <button
               onClick={submit}
-              className="rounded-lg bg-primary px-5 py-2.5 font-body text-sm font-semibold text-primary-foreground hover:opacity-90 glow-primary"
+              disabled={isSubmitting}
+              className="rounded-lg bg-primary px-5 py-2.5 font-body text-sm font-semibold text-primary-foreground hover:opacity-90 glow-primary disabled:opacity-50"
             >
-              Publish
+              {isSubmitting ? "Publishing..." : "Publish"}
             </button>
           </div>
         </div>

@@ -14,7 +14,7 @@ interface PostTypeBadgeProps {
 }
 
 export function PostTypeBadge({ type }: PostTypeBadgeProps) {
-  const config = typeConfig[type];
+  const config = typeConfig[type] || { label: "Post", className: "bg-secondary text-secondary-foreground border-border" };
   return (
     <Badge variant="outline" className={`font-body text-[10px] font-semibold uppercase tracking-wider ${config.className}`}>
       {config.label}

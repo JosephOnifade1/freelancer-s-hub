@@ -1,4 +1,4 @@
-import { Users, Loader2 } from "lucide-react";
+import { useParams } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { PostCard } from "@/components/PostCard";
 import { FeedSidebar } from "@/components/FeedSidebar";
@@ -6,26 +6,26 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { useQuery } from "@tanstack/react-query";
 import { fetchPosts } from "@/lib/posts";
-import { getUserProfile } from "@/lib/users";
-import { useAuth } from "@/hooks/useAuth";
+import { Loader2, Hash } from "lucide-react";
 
-const Following = () => {
-  const { user } = useAuth();
+const TagFeed = () => {
+  const { tagName } = useParams();
   
-  const { data: profile } = useQuery({
-    queryKey: ['profile', user?.uid],
-    queryFn: () => user ? getUserProfile(user.uid) : null,
-    enabled: !!user,
-  });
-
   const { data: posts = [], isLoading } = useQuery({
     queryKey: ['posts'],
     queryFn: fetchPosts
   });
 
-  const followingList = profile?.followingList || {};
-  const followingPosts = posts.filter(post => post.author?.uid && followingList[post.author.uid]);
-  const sorted = [...followingPosts].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  const filteredPosts = posts.filter(post => 
+    post.tags && post.tags.includes(tagName || "")
+  );
+  
+  const sorted = [...filteredPosts].sort((a, b) => {
+    // Sort by hotness
+    const scoreA = (a.score || 0) * 2 + (a.commentCount || 0);
+    const scoreB = (b.score || 0) * 2 + (b.commentCount || 0);
+    return scoreB - scoreA;
+  });
 
   return (
     <AppLayout>
@@ -33,8 +33,8 @@ const Following = () => {
         <div className="flex gap-6">
           <div className="flex-1 min-w-0">
             <PageHeader
-              title="Following"
-              subtitle="Posts from freelancers you follow."
+              title={`#${tagName}`}
+              subtitle={`All discussions, questions, and resources tagged with ${tagName}.`}
             />
             {isLoading ? (
               <div className="flex justify-center py-8">
@@ -42,9 +42,9 @@ const Following = () => {
               </div>
             ) : sorted.length === 0 ? (
               <EmptyState
-                icon={Users}
-                title="You're not following anyone yet"
-                description="Follow other freelancers to see their posts here. Start by exploring the Hot feed."
+                icon={Hash}
+                title={`No posts found for #${tagName}`}
+                description="Be the first to start a conversation about this topic!"
               />
             ) : (
               <div className="space-y-3">
@@ -65,4 +65,4 @@ const Following = () => {
   );
 };
 
-export default Following;
+export default TagFeed;

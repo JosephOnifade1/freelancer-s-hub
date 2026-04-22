@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Flame, Clock, Users } from "lucide-react";
 import { PostCard } from "@/components/PostCard";
 import { FeedSidebar } from "@/components/FeedSidebar";
 import { AppLayout } from "@/components/AppLayout";
-import { mockPosts } from "@/data/mockPosts";
+import { useQuery } from "@tanstack/react-query";
+import { fetchPosts } from "@/lib/posts";
+import { getUserProfile } from "@/lib/users";
+import { useAuth } from "@/hooks/useAuth";
 
 type SortTab = "hot" | "new" | "following";
 
@@ -14,7 +17,40 @@ const tabs: { id: SortTab; label: string; icon: React.ElementType }[] = [
 ];
 
 const Index = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<SortTab>("hot");
+  
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.uid],
+    queryFn: () => user ? getUserProfile(user.uid) : null,
+    enabled: !!user,
+  });
+
+  const { data: posts = [], isLoading } = useQuery({
+    queryKey: ['posts'],
+    queryFn: fetchPosts
+  });
+
+  const displayedPosts = useMemo(() => {
+    let filtered = [...posts];
+
+    if (activeTab === "following") {
+      const followingList = profile?.followingList || {};
+      filtered = filtered.filter((post) => post.author.uid && followingList[post.author.uid]);
+    }
+
+    if (activeTab === "hot") {
+      filtered.sort((a, b) => {
+        const scoreA = (a.score || 0) * 2 + (a.commentCount || 0);
+        const scoreB = (b.score || 0) * 2 + (b.commentCount || 0);
+        return scoreB - scoreA;
+      });
+    } else {
+      filtered.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    }
+
+    return filtered;
+  }, [posts, activeTab, profile]);
 
   return (
     <AppLayout>
@@ -42,16 +78,28 @@ const Index = () => {
 
             {/* Posts */}
             <div className="space-y-3">
-              {mockPosts.map((post, i) => (
-                <PostCard key={post.id} post={post} index={i} />
-              ))}
+              {isLoading ? (
+                <div className="rounded-xl border border-border bg-card p-6 text-center font-body text-sm text-muted-foreground">
+                  Loading posts...
+                </div>
+              ) : displayedPosts.length === 0 ? (
+                <div className="rounded-xl border border-border bg-card p-6 text-center font-body text-sm text-muted-foreground">
+                  {activeTab === "following" 
+                    ? "You aren't following anyone with posts yet." 
+                    : "No posts yet. Be the first to share!"}
+                </div>
+              ) : (
+                displayedPosts.map((post, i) => (
+                  <PostCard key={post.id} post={post} index={i} />
+                ))
+              )}
             </div>
           </div>
 
           {/* Right Sidebar */}
           <div className="hidden lg:block w-72 shrink-0">
             <div className="sticky top-20">
-              <FeedSidebar />
+              <FeedSidebar posts={posts} />
             </div>
           </div>
         </div>

@@ -1,35 +1,71 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowBigUp, ArrowBigDown } from "lucide-react";
 import { motion } from "framer-motion";
+import { useAuth } from "@/hooks/useAuth";
+import { fetchUserVote, handleVote as rtdbHandleVote } from "@/lib/votes";
+import { toast } from "sonner";
 
 interface VoteControlsProps {
+  entityId?: string;
+  authorUid?: string;
   score: number;
-  userVote?: "up" | "down" | null;
-  onVote?: (direction: "up" | "down" | null) => void;
+  type?: "post" | "comment";
+  postIdForComment?: string;
 }
 
-export function VoteControls({ score, userVote = null, onVote }: VoteControlsProps) {
-  const [vote, setVote] = useState(userVote);
+export function VoteControls({ entityId, authorUid, score, type = "post", postIdForComment }: VoteControlsProps) {
+  const { user } = useAuth();
+  const [vote, setVote] = useState<"up" | "down" | null>(null);
   const [displayScore, setDisplayScore] = useState(score);
 
-  const handleVote = (direction: "up" | "down") => {
+  useEffect(() => {
+    setDisplayScore(score);
+    if (user && entityId) {
+      fetchUserVote(entityId, user.uid, type).then((val) => {
+        if (val === 1) setVote("up");
+        else if (val === -1) setVote("down");
+        else setVote(null);
+      }).catch(console.error);
+    }
+  }, [entityId, user, score, type]);
+
+  const handleVote = async (direction: "up" | "down") => {
+    if (!user) {
+      toast.error("You must be logged in to vote");
+      return;
+    }
+    if (!entityId) return;
+
     let newVote: "up" | "down" | null;
     let delta = 0;
+    let numericVote: 1 | -1 | 0 = 0;
 
     if (vote === direction) {
       newVote = null;
       delta = direction === "up" ? -1 : 1;
+      numericVote = 0;
     } else if (vote === null) {
       newVote = direction;
       delta = direction === "up" ? 1 : -1;
+      numericVote = direction === "up" ? 1 : -1;
     } else {
       newVote = direction;
       delta = direction === "up" ? 2 : -2;
+      numericVote = direction === "up" ? 1 : -1;
     }
 
+    // Optimistic UI update
     setVote(newVote);
     setDisplayScore((prev) => prev + delta);
-    onVote?.(newVote);
+    
+    // Fire mutation in background
+    try {
+      await rtdbHandleVote(entityId, authorUid, user.uid, numericVote, type, postIdForComment);
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message || "Failed to vote");
+      // Could revert state here
+    }
   };
 
   return (
