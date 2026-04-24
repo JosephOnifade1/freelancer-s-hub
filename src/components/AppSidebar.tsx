@@ -42,7 +42,6 @@ const discover = [
 ];
 
 const personal = [
-  { title: "Profile", url: "/profile", icon: User },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 
