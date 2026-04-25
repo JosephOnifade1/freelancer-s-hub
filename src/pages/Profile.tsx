@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Link as LinkIcon, MapPin, Calendar, Zap, ArrowUp, UserPlus, MessageSquare, Edit2, Check, X, Camera, BadgeCheck, CheckCircle2, Loader2, MoreHorizontal, Trash2 } from "lucide-react";
+import { Link as LinkIcon, MapPin, Calendar, Zap, ArrowUp, UserPlus, MessageSquare, Edit2, Check, X, Camera, BadgeCheck, CheckCircle2, Loader2, MoreHorizontal, Trash2, Trophy, Flame, Star, BookOpen, Heart, type LucideIcon } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { PostCard } from "@/components/PostCard";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
-import { getUserProfile, toggleFollow, getUidByUsername, updateUserAvatar } from "@/lib/users";
+import { getUserProfile, toggleFollow, getUidByUsername, updateUserAvatar, isVeteran } from "@/lib/users";
 import { fetchPosts } from "@/lib/posts";
 import { fetchCommentsByAuthor, updateComment, softDeleteComment } from "@/lib/comments";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -17,7 +17,6 @@ import { Switch } from "@/components/ui/switch";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { UserBadges } from "@/components/UserBadges";
-import { achievements } from "@/data/mockAchievements";
 import {
   Tooltip,
   TooltipContent,
@@ -150,14 +149,14 @@ const Profile = () => {
         setResolvedUid(id);
         setResolving(false);
       });
-    } else if (handle && handle.startsWith("@")) {
+    } else if (handle) {
+      // Handle comes from /@:handle route — React Router strips the literal '@'
       setResolving(true);
-      const actualUsername = handle.substring(1);
-      getUidByUsername(actualUsername).then(id => {
+      getUidByUsername(handle).then(id => {
         setResolvedUid(id);
         setResolving(false);
       });
-    } else if (currentUser?.uid && !handle) {
+    } else if (currentUser?.uid) {
       setResolvedUid(currentUser.uid);
       setResolving(false);
     } else {
@@ -192,8 +191,14 @@ const Profile = () => {
   const [bioInput, setBioInput] = useState("");
   const [isSavingBio, setIsSavingBio] = useState(false);
 
-  // Availability Toggle State
+  // Availability Toggle State — initialized from profile, persisted on change
   const [isOpenToGigs, setIsOpenToGigs] = useState(true);
+
+  useEffect(() => {
+    if (profile?.status !== undefined) {
+      setIsOpenToGigs(profile.status === "Available");
+    }
+  }, [profile?.status]);
 
   useEffect(() => {
     if (profile?.bio) {
@@ -248,7 +253,7 @@ const Profile = () => {
     )
   ) : [];
   
-  const resourcePosts = userPosts.filter(p => p.category === "Resources" || p.tags?.includes("resource"));
+  const resourcePosts = userPosts.filter(p => p.type === 'resource');
   const savedPostsList = profile ? allPosts.filter(p => profile.savedPosts?.[p.id]) : [];
   
   // Mixed Feed for Overview: Top 3 Posts + Top 3 Comments
@@ -267,6 +272,21 @@ const Profile = () => {
   };
   
   const isFollowing = currentUser && profile?.followersList?.[currentUser.uid] === true;
+
+  // Dynamic achievements (mirrors Achievements.tsx computation)
+  type AchievementDef = { id: string; name: string; description: string; icon: LucideIcon; unlocked: boolean };
+  const commentUpvotes = userComments.reduce((sum, c) => sum + Math.max(0, c.score || 0), 0);
+  const achievements: AchievementDef[] = [
+    { id: "first-post", name: "First Post", description: "Publish your first post.", icon: Flame, unlocked: userPosts.length >= 1 },
+    { id: "rep-100", name: "Rising Voice", description: "Reach 100 reputation.", icon: Zap, unlocked: (profile?.reputation || 0) >= 100 },
+    { id: "helper", name: "Helper", description: "Get 10 upvotes on comments.", icon: Heart, unlocked: commentUpvotes >= 10 },
+    { id: "rep-1000", name: "Trusted Voice", description: "Reach 1,000 reputation.", icon: Star, unlocked: (profile?.reputation || 0) >= 1000 },
+    { id: "streak-30", name: "Consistent", description: "Post 30 days in a row.", icon: Calendar, unlocked: false },
+    { id: "resources-5", name: "Generous", description: "Share 5 resource posts.", icon: BookOpen, unlocked: userPosts.filter(p => p.type === 'resource').length >= 5 },
+    { id: "veteran", name: "Veteran Freelancer", description: "Reach 5,000 reputation.", icon: Trophy, unlocked: (profile?.reputation || 0) >= 5000 },
+    { id: "convo-starter", name: "Conversation Starter", description: "Get 50 comments on a post.", icon: MessageSquare, unlocked: userPosts.some(p => (p.commentCount || 0) >= 50) },
+  ];
+  const unlockedAchievements = achievements.filter(a => a.unlocked);
 
   const followMutation = useMutation({
     mutationFn: async () => {
@@ -318,7 +338,9 @@ const Profile = () => {
                   
                   {/* Avatar Wrapper */}
                   <div className="relative group">
-                    <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-primary/10 font-heading text-3xl font-bold text-primary overflow-hidden border-2 border-border relative">
+                    <div className={`flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-primary/10 font-heading text-3xl font-bold text-primary overflow-hidden border-2 relative transition-all ${
+                      isVeteran(profile.reputation || 0) ? 'veteran-aura scale-105 border-[#6366F1]' : 'border-border'
+                    }`}>
                       {profile.avatarUrl ? (
                         <img src={profile.avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
                       ) : (
@@ -346,10 +368,15 @@ const Profile = () => {
                   {/* Profile Info */}
                   <div className="flex-1 min-w-0 pt-1">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <h1 className="font-heading text-2xl font-bold text-foreground">
+                      <h1 className={`font-heading text-2xl font-bold ${isVeteran(profile.reputation || 0) ? 'veteran-text-gradient' : 'text-foreground'}`}>
                         {profile.displayName || profile.username}
                       </h1>
                       <VerifiedBadge isVerified={profile.isVerifiedPro} size={18} />
+                      {isVeteran(profile.reputation || 0) && (
+                        <div className="bg-[#6366F1]/20 text-[#6366F1] px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase font-heading border border-[#6366F1]/30">
+                          Veteran
+                        </div>
+                      )}
                     </div>
                     
                     <div className="flex flex-col mb-3">
@@ -396,7 +423,7 @@ const Profile = () => {
                 </div>
 
                 {/* CTAs */}
-                <div className="shrink-0 flex items-center gap-2">
+                <div className="shrink-0 flex items-center gap-[24px]">
                   {isOwnProfile ? (
                     <Link to="/settings" className="rounded-full border border-[#6366F1]/40 bg-transparent px-4 py-2 font-body text-sm font-semibold text-[#6366F1] hover:bg-[#6366F1]/5 transition-all shadow-sm">
                       Edit Profile
@@ -438,10 +465,10 @@ const Profile = () => {
                 <button
                   key={t}
                   onClick={() => setActive(t)}
-                  className={`pb-3 font-semibold transition-colors border-b-2 whitespace-nowrap ${
+                  className={`pb-3 font-semibold transition-colors border-b-2 whitespace-nowrap inline-block ${
                     active === t
                       ? "border-primary text-foreground"
-                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   {t} <span className="ml-1 opacity-50 font-normal">({tabCounts[t]})</span>
@@ -550,7 +577,13 @@ const Profile = () => {
                   </span>
                   <Switch 
                     checked={isOpenToGigs}
-                    onCheckedChange={setIsOpenToGigs}
+                    onCheckedChange={async (checked) => {
+                      setIsOpenToGigs(checked);
+                      if (profileUid) {
+                        await set(ref(database, `users/${profileUid}/status`), checked ? "Available" : "Busy");
+                        queryClient.invalidateQueries({ queryKey: ['profile', profileUid] });
+                      }
+                    }}
                     className={isOpenToGigs ? "data-[state=checked]:bg-lime-500" : ""}
                   />
                 </div>
@@ -588,6 +621,22 @@ const Profile = () => {
                   <span className="font-body text-sm text-muted-foreground">Joined</span>
                   <span className="font-heading text-sm font-bold text-foreground">{profile.joined || "Recently"}</span>
                 </div>
+                
+                {/* Progress to Veteran */}
+                {!isVeteran(profile.reputation || 0) && (
+                  <div className="pt-2 space-y-2 border-t border-border/30 mt-2">
+                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider">
+                      <span className="text-muted-foreground">Progress to Veteran</span>
+                      <span className="text-primary">{Math.round(((profile.reputation || 0) / 5000) * 100)}%</span>
+                    </div>
+                    <div className="h-1 w-full bg-secondary rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-[#D1FF4A] transition-all duration-1000 ease-out" 
+                        style={{ width: `${Math.min(100, ((profile.reputation || 0) / 5000) * 100)}%` }} 
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -623,12 +672,12 @@ const Profile = () => {
                 </Link>
               </div>
               <div className="flex items-center gap-3">
-                {achievements.filter(a => a.unlocked).slice(-3).map((achievement) => (
+                {unlockedAchievements.slice(-3).map((achievement) => (
                   <TooltipProvider key={achievement.id}>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <div className="h-10 w-10 rounded-lg bg-primary/5 border border-primary/10 flex items-center justify-center transition-all hover:scale-110 hover:bg-primary/10 cursor-help">
-                          <achievement.icon size={20} className="text-primary" />
+                        <div className="h-10 w-10 rounded-lg bg-primary/5 border border-primary/10 flex items-center justify-center transition-all hover:scale-110 hover:bg-primary/10 cursor-help overflow-hidden">
+                          <achievement.icon size={20} className="text-primary flex-shrink-0" />
                         </div>
                       </TooltipTrigger>
                       <TooltipContent className="font-body text-[11px] bg-card border-border text-foreground p-2">
@@ -638,8 +687,8 @@ const Profile = () => {
                     </Tooltip>
                   </TooltipProvider>
                 ))}
-                {achievements.filter(a => a.unlocked).length === 0 && (
-                  <p className="text-xs text-muted-foreground italic">No achievements yet.</p>
+                {unlockedAchievements.length === 0 && (
+                  <p className="text-xs text-muted-foreground italic">No achievements yet. Keep contributing!</p>
                 )}
               </div>
             </div>

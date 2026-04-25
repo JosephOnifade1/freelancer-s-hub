@@ -5,6 +5,7 @@ import { PostTypeBadge } from "@/components/PostTypeBadge";
 import { LiveReputation } from "@/components/LiveReputation";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { formatTimeAgo } from "@/lib/utils";
+import { isVeteran } from "@/lib/users";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -29,6 +30,7 @@ export interface PostData {
     name: string;
     avatar?: string;
     reputation: number;
+    isVerifiedPro?: boolean;
   };
   score: number;
   commentCount: number;
@@ -166,7 +168,7 @@ export function PostCard({ post, index }: PostCardProps) {
         post.type === 'discussion' 
           ? 'border-[#6366F1]/30 shadow-[0_4px_15px_rgba(99,102,241,0.05)] hover:border-[#6366F1]/50' 
           : 'border-border hover:border-primary/20'
-      }`}
+      } ${isVeteran(post.author?.reputation || 0) ? 'veteran-aura' : ''}`}
     >
       <VoteControls score={post.score || 0} entityId={post.id} authorUid={post.author?.uid} type="post" />
 
@@ -176,6 +178,12 @@ export function PostCard({ post, index }: PostCardProps) {
             <PostTypeBadge type={post.type} />
             <span className="font-body text-xs text-muted-foreground flex items-center gap-1">
               {formatTimeAgo(post.createdAt)}
+              {isVeteran(post.author?.reputation || 0) && (
+                <span className="text-[#6366F1] font-bold ml-1 flex items-center gap-0.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#6366F1] animate-pulse" />
+                  V
+                </span>
+              )}
               {post.isEdited && <span className="italic text-[10px]">(edited)</span>}
             </span>
           </div>
@@ -247,12 +255,7 @@ export function PostCard({ post, index }: PostCardProps) {
 
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/50">
           <Link to={post.author?.uid ? `/profile/${post.author.uid}` : "#"} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <div className={`flex h-6 w-6 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden ${
-              post.author?.name === 'marcelo_dev' ? 'bg-[#4C1D95] text-white' :
-              post.author?.name === 'designkara' ? 'bg-[#84CC16] text-black' :
-              post.author?.name === 'freelance_mike' ? 'bg-[#475569] text-white' :
-              'bg-primary/20 text-primary'
-            }`}>
+            <div className="flex h-6 w-6 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-primary/20 text-primary">
               {post.author?.avatar ? (
                 <img src={post.author.avatar} alt={post.author.name} className="h-full w-full object-cover" />
               ) : (
@@ -261,7 +264,7 @@ export function PostCard({ post, index }: PostCardProps) {
             </div>
             <span className="font-body text-xs font-medium text-foreground flex items-center gap-1">
               {post.author?.name || 'Unknown'}
-              <VerifiedBadge isVerified={post.author?.uid === 'marcelo_dev' || post.author?.uid === 'designkara' || post.author?.uid === 'freelance_mike' || !!(post.author as any).isVerifiedPro} size={12} showTooltip={false} />
+              <VerifiedBadge isVerified={!!post.author?.isVerifiedPro} size={12} showTooltip={false} />
             </span>
             <span className="font-body text-[10px] text-muted-foreground">
               <LiveReputation uid={post.author?.uid} fallback={post.author?.reputation || 0} />

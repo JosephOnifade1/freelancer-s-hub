@@ -127,17 +127,12 @@ const CommentThread = ({ comment, postId, depth = 0 }: { comment: CommentData; p
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
               <Link to={comment.authorUid ? `/profile/${comment.authorUid}` : "#"} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                <div className={`flex h-5 w-5 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden ${
-                  comment.authorUid === 'marcelo_dev' ? 'bg-[#4C1D95] text-white' :
-                  comment.authorUid === 'designkara' ? 'bg-[#84CC16] text-black' :
-                  comment.authorUid === 'freelance_mike' ? 'bg-[#475569] text-white' :
-                  'bg-primary/20 text-primary'
-                }`}>
+                <div className="flex h-5 w-5 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-primary/20 text-primary">
                   {comment.author ? comment.author.charAt(0).toUpperCase() : '?'}
                 </div>
                 <span className="font-body text-xs font-semibold text-foreground flex items-center gap-1">
                   {comment.author || 'Anonymous'}
-                  <VerifiedBadge isVerified={comment.authorUid === 'marcelo_dev' || comment.authorUid === 'designkara' || comment.authorUid === 'freelance_mike'} size={12} showTooltip={false} />
+                  <VerifiedBadge isVerified={!!(comment as any).isVerifiedPro} size={12} showTooltip={false} />
                 </span>
                 <span className="font-body text-[10px] text-muted-foreground">
                   <LiveReputation uid={comment.authorUid} fallback={comment.reputation || 0} />
@@ -458,12 +453,16 @@ const PostDetail = () => {
                 
                 <div className="flex items-center justify-between pt-3 border-t border-border/50">
                   <Link to={post.author?.uid ? `/profile/${post.author.uid}` : "#"} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 font-heading text-xs font-bold text-primary">
-                      {post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'}
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full font-heading text-xs font-bold overflow-hidden bg-primary/20 text-primary">
+                      {post.author?.avatar ? (
+                        <img src={post.author.avatar} alt={post.author.name} className="h-full w-full object-cover" />
+                      ) : (
+                        post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'
+                      )}
                     </div>
                     <span className="font-body text-sm font-medium text-foreground flex items-center gap-1">
                       {post.author?.name || 'Anonymous'}
-                      <VerifiedBadge isVerified={post.author?.uid === 'marcelo_dev' || post.author?.uid === 'designkara' || post.author?.uid === 'freelance_mike'} size={14} showTooltip={false} />
+                      <VerifiedBadge isVerified={!!(post.author as any).isVerifiedPro} size={14} showTooltip={false} />
                     </span>
                     <span className="font-body text-[11px] text-muted-foreground">
                       <LiveReputation uid={post.author?.uid} fallback={post.author?.reputation || 0} />

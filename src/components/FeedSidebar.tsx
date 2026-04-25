@@ -86,24 +86,23 @@ export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
           <div className="space-y-2.5">
             {topContributors.map((user, i) => (
               <Link 
-                key={user.name} 
+                key={user.uid || user.username} 
                 to={user.uid ? `/profile/${user.uid}` : "#"} 
                 className="flex items-center gap-2 group hover:opacity-80 transition-opacity"
               >
                 <span className="font-heading text-xs font-bold text-muted-foreground w-4">
                   {i + 1}
                 </span>
-                <div className={`flex h-6 w-6 items-center justify-center rounded-full font-heading text-[10px] font-bold ${
-                  user.uid === 'marcelo_dev' ? 'bg-[#4C1D95] text-white' :
-                  user.uid === 'designkara' ? 'bg-[#84CC16] text-black' :
-                  user.uid === 'freelance_mike' ? 'bg-[#475569] text-white' :
-                  'bg-primary/20 text-primary'
-                } group-hover:opacity-90`}>
-                  {user.displayName?.charAt(0).toUpperCase() || user.username?.charAt(0).toUpperCase()}
+                <div className="flex h-6 w-6 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-primary/20 text-primary group-hover:opacity-90">
+                  {user.avatarUrl ? (
+                    <img src={user.avatarUrl} alt={user.displayName} className="h-full w-full object-cover" />
+                  ) : (
+                    user.displayName?.charAt(0).toUpperCase() || user.username?.charAt(0).toUpperCase()
+                  )}
                 </div>
                 <span className="flex-1 font-body text-xs font-medium text-foreground group-hover:text-primary transition-colors flex items-center gap-1">
                   {user.displayName || user.username}
-                  <VerifiedBadge isVerified={user.uid === 'marcelo_dev' || user.uid === 'designkara' || user.uid === 'freelance_mike' || user.isVerifiedPro} size={10} showTooltip={false} />
+                  <VerifiedBadge isVerified={user.isVerifiedPro} size={10} showTooltip={false} />
                 </span>
                 <span className="font-body text-[10px] text-muted-foreground">
                   <LiveReputation uid={user.uid} fallback={user.reputation} />

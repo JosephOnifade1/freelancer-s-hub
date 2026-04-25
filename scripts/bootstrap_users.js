@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getDatabase, ref, get, update, set } from "firebase/database";
+import { getDatabase, ref, get, update, set, remove } from "firebase/database";
 import dotenv from "dotenv";
 
 dotenv.config({ path: ".env.local" });
@@ -18,11 +18,16 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
 async function bootstrap() {
-  console.log("Bootstrapping users...");
+  console.log("Cleaning up old seed nodes...");
+  await remove(ref(db, 'users/marcelo_dev'));
+  await remove(ref(db, 'users/designkara'));
+  await remove(ref(db, 'users/freelance_mike'));
+
+  console.log("Bootstrapping users with real Auth UIDs...");
 
   const users = {
-    "marcelo_dev": {
-      uid: "marcelo_dev",
+    "2GsYwXpvjhcSQ0Womc7gwdeNDKT2": {
+      uid: "2GsYwXpvjhcSQ0Womc7gwdeNDKT2",
       username: "marcelo_dev",
       displayName: "Marcelo",
       initial: "M",
@@ -30,10 +35,11 @@ async function bootstrap() {
       reputation: 2500,
       joined: "2024",
       status: "Available",
+      isVerifiedPro: true,
       createdAt: Date.now()
     },
-    "designkara": {
-      uid: "designkara",
+    "MsmSFDzJZVUKItoUJ8yk3d9MLC13": {
+      uid: "MsmSFDzJZVUKItoUJ8yk3d9MLC13",
       username: "designkara",
       displayName: "Kara",
       initial: "K",
@@ -41,10 +47,11 @@ async function bootstrap() {
       reputation: 1800,
       joined: "2024",
       status: "Available",
+      isVerifiedPro: true,
       createdAt: Date.now()
     },
-    "freelance_mike": {
-      uid: "freelance_mike",
+    "tzYIrJFbd5NH6Mmd66A829b7akW2": {
+      uid: "tzYIrJFbd5NH6Mmd66A829b7akW2",
       username: "freelance_mike",
       displayName: "Mike",
       initial: "M",
@@ -52,6 +59,7 @@ async function bootstrap() {
       reputation: 1200,
       joined: "2024",
       status: "Available",
+      isVerifiedPro: true,
       createdAt: Date.now()
     }
   };
@@ -59,10 +67,10 @@ async function bootstrap() {
   for (const [uid, profile] of Object.entries(users)) {
     await set(ref(db, `users/${uid}`), profile);
     await set(ref(db, `usernames/${profile.username}`), uid);
-    console.log(`Updated user: ${profile.username}`);
+    console.log(`Updated user: ${profile.username} (${uid})`);
   }
 
-  console.log("Mapping posts to users...");
+  console.log("Mapping posts to new real UIDs...");
   const postsRef = ref(db, 'posts');
   const snapshot = await get(postsRef);
   
@@ -71,12 +79,13 @@ async function bootstrap() {
     for (const [id, post] of Object.entries(posts)) {
       let newAuthor = { ...post.author };
       
-      if (post.author.name === "Marcelo") {
-        newAuthor = { uid: "marcelo_dev", name: "marcelo_dev", reputation: 2500 };
-      } else if (post.author.name === "Kara") {
-        newAuthor = { uid: "designkara", name: "designkara", reputation: 1800 };
-      } else if (post.author.name === "Mike") {
-        newAuthor = { uid: "freelance_mike", name: "freelance_mike", reputation: 1200 };
+      // Match by original spoofed name or old spoofed UID
+      if (post.author.name === "Marcelo" || post.author.name === "marcelo_dev" || post.author.uid === "marcelo_dev") {
+        newAuthor = { uid: "2GsYwXpvjhcSQ0Womc7gwdeNDKT2", name: "marcelo_dev", reputation: 2500 };
+      } else if (post.author.name === "Kara" || post.author.name === "designkara" || post.author.uid === "designkara") {
+        newAuthor = { uid: "MsmSFDzJZVUKItoUJ8yk3d9MLC13", name: "designkara", reputation: 1800 };
+      } else if (post.author.name === "Mike" || post.author.name === "freelance_mike" || post.author.uid === "freelance_mike") {
+        newAuthor = { uid: "tzYIrJFbd5NH6Mmd66A829b7akW2", name: "freelance_mike", reputation: 1200 };
       }
       
       await update(ref(db, `posts/${id}/author`), newAuthor);

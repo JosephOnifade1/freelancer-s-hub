@@ -163,4 +163,26 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
+
+  @keyframes veteran-heartbeat {
+    0% { box-shadow: 0 0 10px rgba(99, 102, 241, 0.2); }
+    50% { box-shadow: 0 0 25px rgba(99, 102, 241, 0.5); }
+    100% { box-shadow: 0 0 10px rgba(99, 102, 241, 0.2); }
+  }
+
+  .veteran-aura {
+    animation: veteran-heartbeat 4s ease-in-out infinite;
+    border-color: rgba(99, 102, 241, 0.6) !important;
+  }
+
+  .veteran-text-gradient {
+    background: linear-gradient(135deg, #6366F1 0%, #A855F7 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .veteran-gradient-bg {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%);
+  }
 }

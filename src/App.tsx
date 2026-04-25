@@ -48,7 +48,7 @@ const App = () => (
             <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><ErrorBoundary><Profile /></ErrorBoundary></ProtectedRoute>} />
             <Route path="/profile/:uid" element={<ProtectedRoute><ErrorBoundary><Profile /></ErrorBoundary></ProtectedRoute>} />
-            <Route path="/:handle" element={<ProtectedRoute><ErrorBoundary><Profile /></ErrorBoundary></ProtectedRoute>} />
+            <Route path="/@:handle" element={<ProtectedRoute><ErrorBoundary><Profile /></ErrorBoundary></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/submit" element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
             <Route path="/post/:id" element={<ProtectedRoute><PostDetail /></ProtectedRoute>} />

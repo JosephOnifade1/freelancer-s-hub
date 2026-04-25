@@ -1,5 +1,6 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { VeteranCelebration } from "./VeteranCelebration";
 import { MessageSquare, Plus, Bell, User, LogOut, Settings } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -138,6 +139,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           </main>
         </div>
       </div>
+      <VeteranCelebration />
     </SidebarProvider>
   );
 }

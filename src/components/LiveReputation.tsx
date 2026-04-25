@@ -22,7 +22,7 @@ export function LiveReputation({ uid, fallback }: LiveReputationProps) {
       <span className={`${isHighRep ? "text-[#D1FF4A] drop-shadow-[0_0_5px_rgba(209,255,74,0.6)] animate-pulse" : "text-primary"}`}>
         ⚡
       </span>
-      {reputation}
+      {reputation.toLocaleString()}
     </span>
   );
 }

@@ -86,7 +86,9 @@ const CreatePost = () => {
         author: { 
           uid: user?.uid,
           name: profile?.username || "Unknown", 
-          reputation: profile?.reputation || 0 
+          reputation: profile?.reputation || 0,
+          avatar: profile?.avatarUrl || undefined,
+          isVerifiedPro: profile?.isVerifiedPro || false,
         },
         score: 0,
         commentCount: 0,

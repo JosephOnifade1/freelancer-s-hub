@@ -21,6 +21,7 @@ export type UserProfile = {
   createdAt: any;
   avatarUrl?: string;
   isVerifiedPro?: boolean;
+  hasSeenVeteranCelebration?: boolean;
 };
 
 export const toggleBookmark = async (uid: string, postId: string) => {
@@ -107,6 +108,10 @@ export const getUserResourcesCount = async (uid: string) => {
     }
   });
   return count;
+};
+
+export const isVeteran = (reputation: number) => {
+  return (reputation || 0) >= 5000;
 };
 
 export const checkUsernameAvailability = async (username: string) => {
@@ -217,7 +222,7 @@ export const calculateReputation = async (uid: string) => {
   if (postsSnap.exists()) {
     postsSnap.forEach(postSnap => {
       const post = postSnap.val();
-      if (post.author?.uid === uid) {
+      if (post.author?.uid === uid && !post.isDeleted) {
         totalScore += (post.score || 0);
       }
     });
@@ -230,16 +235,11 @@ export const calculateReputation = async (uid: string) => {
     commentsSnap.forEach(postCommentsSnap => {
       postCommentsSnap.forEach(commentSnap => {
         const comment = commentSnap.val();
-        if (comment.authorUid === uid) {
+        if (comment.authorUid === uid && !comment.isDeleted) {
           totalScore += (comment.score || 0);
         }
       });
     });
-  }
-
-  // Seed Personas Benchmark: Static high starting reputation
-  if (['marcelo_dev', 'designkara', 'freelance_mike'].includes(uid)) {
-    totalScore = Math.max(totalScore, 1800);
   }
 
   // Update in DB

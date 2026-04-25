@@ -90,4 +90,9 @@ export const updateComment = async (postId: string, commentId: string, body: str
 
 export const softDeleteComment = async (postId: string, commentId: string) => {
   await set(ref(database, `post-comments/${postId}/${commentId}/isDeleted`), true);
+  // Decrement the post's comment count
+  const countRef = ref(database, `posts/${postId}/commentCount`);
+  await runTransaction(countRef, (currentCount) => {
+    return Math.max(0, (currentCount || 0) - 1);
+  });
 };

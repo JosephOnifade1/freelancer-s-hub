@@ -1,19 +1,141 @@
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { motion } from "framer-motion";
-import { achievements } from "@/data/mockAchievements";
 import { Progress } from "@/components/ui/progress";
-import { BadgeCheck, Info } from "lucide-react";
+import { BadgeCheck, Info, Loader2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Trophy, Flame, MessageSquare, Star, Calendar, BookOpen, Heart, Zap, type LucideIcon } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import { getUserProfile, getUserResourcesCount } from "@/lib/users";
+import { fetchPosts } from "@/lib/posts";
+import { fetchCommentsByAuthor } from "@/lib/comments";
+
+type AchievementDef = {
+  id: string;
+  name: string;
+  description: string;
+  icon: LucideIcon;
+  unlocked: boolean;
+};
 
 const Achievements = () => {
-  const unlockedCount = achievements.filter((a) => a.unlocked).length;
-  const isTrustedVoice = achievements.find(a => a.id === 'rep-1000')?.unlocked;
-  const isGenerous = achievements.find(a => a.id === 'resources-5')?.unlocked;
-  const canVerify = isTrustedVoice && isGenerous;
+  const { user } = useAuth();
 
-  // Calculate progress toward verification (0, 50, or 100)
+  const { data: profile, isLoading: loadingProfile } = useQuery({
+    queryKey: ['profile', user?.uid],
+    queryFn: () => user?.uid ? getUserProfile(user.uid) : null,
+    enabled: !!user?.uid,
+  });
+
+  const { data: allPosts = [] } = useQuery({
+    queryKey: ['posts'],
+    queryFn: fetchPosts,
+    enabled: !!profile,
+  });
+
+  const { data: resourceCount = 0 } = useQuery({
+    queryKey: ['user-resources-count', user?.uid],
+    queryFn: () => getUserResourcesCount(user!.uid),
+    enabled: !!user?.uid,
+  });
+
+  const { data: userComments = [] } = useQuery({
+    queryKey: ['userComments', profile?.uid],
+    queryFn: () => profile ? fetchCommentsByAuthor(profile) : [],
+    enabled: !!profile,
+  });
+
+  const reputation = profile?.reputation || 0;
+
+  const userPosts = profile
+    ? allPosts.filter(p =>
+        !p.isDeleted && (
+          p.author?.uid === profile.uid ||
+          p.author?.name === profile.username ||
+          p.author?.name === profile.displayName
+        )
+      )
+    : [];
+
+  // Count upvotes received on comments
+  const commentUpvotes = userComments.reduce((sum, c) => sum + Math.max(0, c.score || 0), 0);
+
+  // Dynamic achievements based on real data
+  const achievements: AchievementDef[] = [
+    {
+      id: "first-post",
+      name: "First Post",
+      description: "Publish your very first post.",
+      icon: Flame,
+      unlocked: userPosts.length >= 1,
+    },
+    {
+      id: "rep-100",
+      name: "Rising Voice",
+      description: "Reach 100 reputation points.",
+      icon: Zap,
+      unlocked: reputation >= 100,
+    },
+    {
+      id: "helper",
+      name: "Helper",
+      description: "Get 10 upvotes on comments.",
+      icon: Heart,
+      unlocked: commentUpvotes >= 10,
+    },
+    {
+      id: "rep-1000",
+      name: "Trusted Voice",
+      description: "Reach 1,000 reputation.",
+      icon: Star,
+      unlocked: reputation >= 1000,
+    },
+    {
+      id: "streak-30",
+      name: "Consistent",
+      description: "Post 30 days in a row.",
+      icon: Calendar,
+      unlocked: false, // Requires server-side streak tracking — future feature
+    },
+    {
+      id: "resources-5",
+      name: "Generous",
+      description: "Share 5 resource posts.",
+      icon: BookOpen,
+      unlocked: resourceCount >= 5,
+    },
+    {
+      id: "veteran",
+      name: "Veteran Freelancer",
+      description: "Reach 5,000 reputation.",
+      icon: Trophy,
+      unlocked: reputation >= 5000,
+    },
+    {
+      id: "convo-starter",
+      name: "Conversation Starter",
+      description: "Get 50 comments on a single post.",
+      icon: MessageSquare,
+      unlocked: userPosts.some(p => (p.commentCount || 0) >= 50),
+    },
+  ];
+
+  const unlockedCount = achievements.filter(a => a.unlocked).length;
+  const isTrustedVoice = achievements.find(a => a.id === 'rep-1000')?.unlocked ?? false;
+  const isGenerous = achievements.find(a => a.id === 'resources-5')?.unlocked ?? false;
+  const canVerify = isTrustedVoice && isGenerous;
   const verificationProgress = (isTrustedVoice ? 50 : 0) + (isGenerous ? 50 : 0);
+
+  if (loadingProfile) {
+    return (
+      <AppLayout>
+        <div className="flex h-[50vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -24,7 +146,7 @@ const Achievements = () => {
             subtitle={`${unlockedCount} of ${achievements.length} unlocked. Keep contributing to earn more.`}
             className="mb-0"
           />
-          
+
           <div className="bg-card border border-border rounded-xl p-5 shadow-sm min-w-[300px]">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -42,7 +164,7 @@ const Achievements = () => {
                 </Tooltip>
               </TooltipProvider>
             </div>
-            
+
             <div className="space-y-2">
               <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                 <span>Progress</span>
@@ -53,7 +175,7 @@ const Achievements = () => {
                 <p className="text-[11px] text-[#D1FF4A] font-medium mt-1">✨ You are eligible for Verification!</p>
               ) : (
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  Complete {!isTrustedVoice && "Trusted Voice"} {!isTrustedVoice && !isGenerous && "&"} {!isGenerous && "Generous"}
+                  Complete{!isTrustedVoice && " Trusted Voice"}{!isTrustedVoice && !isGenerous && " &"}{!isGenerous && " Generous"}
                 </p>
               )}
             </div>
@@ -69,29 +191,35 @@ const Achievements = () => {
               transition={{ delay: i * 0.04 }}
               className={`rounded-xl border p-4 text-center transition-all relative group overflow-hidden ${
                 a.unlocked
-                  ? "border-primary/30 bg-card hover:border-primary/60 shadow-sm"
+                  ? a.id === 'veteran'
+                    ? "border-[#6366F1] bg-card shadow-[0_0_20px_rgba(99,102,241,0.3)]"
+                    : "border-primary/30 bg-card hover:border-primary/60 shadow-sm"
                   : "border-dashed border-[#312E81] bg-card/10 opacity-70"
               }`}
             >
               {a.unlocked && (
-                <motion.div 
-                  className="absolute inset-0 bg-[#D1FF4A]/5 pointer-events-none"
-                  animate={{ opacity: [0, 0.5, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                <motion.div
+                  className={`absolute inset-0 pointer-events-none ${a.id === 'veteran' ? 'veteran-gradient-bg opacity-40' : 'bg-[#D1FF4A]/5'}`}
+                  animate={{ opacity: a.id === 'veteran' ? [0.2, 0.4, 0.2] : [0, 0.5, 0] }}
+                  transition={{ duration: a.id === 'veteran' ? 4 : 2, repeat: Infinity, ease: "easeInOut" }}
                 />
               )}
-              
+
               <div
                 className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full mb-3 relative z-10 ${
-                  a.unlocked ? "bg-primary/15 text-primary glow-primary" : "bg-secondary/50 text-muted-foreground/50"
+                  a.unlocked
+                    ? a.id === 'veteran'
+                      ? "bg-[#6366F1]/30 text-[#6366F1] shadow-[0_0_15px_rgba(99,102,241,0.5)]"
+                      : "bg-primary/15 text-primary glow-primary"
+                    : "bg-secondary/50 text-muted-foreground/50"
                 }`}
               >
-                <a.icon className="h-6 w-6" />
+                <a.icon className={`h-6 w-6 ${a.id === 'veteran' && a.unlocked ? "animate-pulse" : ""}`} />
                 {a.unlocked && (
-                  <div className="absolute -top-1 -right-1 h-3 w-3 bg-[#D1FF4A] rounded-full border-2 border-card animate-pulse" />
+                  <div className={`absolute -top-1 -right-1 h-3 w-3 rounded-full border-2 border-card animate-pulse ${a.id === 'veteran' ? "bg-[#6366F1]" : "bg-[#D1FF4A]"}`} />
                 )}
               </div>
-              <h3 className="font-heading text-sm font-semibold text-foreground mb-1 relative z-10">
+              <h3 className={`font-heading text-sm font-semibold mb-1 relative z-10 ${a.id === 'veteran' && a.unlocked ? "veteran-text-gradient" : "text-foreground"}`}>
                 {a.name}
               </h3>
               <p className="font-body text-[11px] text-muted-foreground leading-snug relative z-10">

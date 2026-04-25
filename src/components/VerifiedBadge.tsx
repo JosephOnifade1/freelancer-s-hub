@@ -1,4 +1,4 @@
-import { CheckCircle2 } from "lucide-react";
+import { BadgeCheck } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -36,9 +36,9 @@ export function VerifiedBadge({ isVerified, size = 14, showTooltip = true }: Ver
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <CheckCircle2 
+          <BadgeCheck 
             size={size} 
-            className="text-[#D1FF4A] drop-shadow-[0_0_4px_rgba(209,255,74,0.3)]" 
+            className="text-[#D1FF4A] drop-shadow-[0_0_6px_rgba(209,255,74,0.4)]" 
           />
         </TooltipTrigger>
         <TooltipContent className="font-body text-[11px] bg-[#D1FF4A] border-none text-black p-2">
