@@ -110,9 +110,9 @@ export function PostCard({ post, index }: PostCardProps) {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.05, duration: 0.3 }}
-        className="group flex gap-3 rounded-xl border border-border bg-card py-[13.6px] px-4 transition-colors"
+        className="group flex gap-3 rounded-xl border border-border bg-card py-[11.5px] px-4 transition-colors"
       >
-        <div className="flex flex-col items-center gap-1 w-8 opacity-50">
+        <div className="flex flex-col items-center justify-center gap-1.5 py-1 w-9 shrink-0">
            {/* Placeholder for vote controls, unclickable */}
            <div className="h-6 w-6 rounded text-muted-foreground flex items-center justify-center">^</div>
            <span className="font-heading text-xs font-bold text-muted-foreground">{post.score || 0}</span>
@@ -164,7 +164,7 @@ export function PostCard({ post, index }: PostCardProps) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.3 }}
-      className={`group flex gap-3 rounded-xl border bg-card py-[13.6px] px-4 transition-all duration-300 hover:bg-surface-elevated ${
+      className={`group flex gap-3 rounded-xl border bg-card py-[11.5px] px-4 transition-all duration-300 hover:bg-[#16161D] ${
         post.type === 'discussion' 
           ? 'border-[#6366F1]/30 shadow-[0_4px_15px_rgba(99,102,241,0.05)] hover:border-[#6366F1]/50' 
           : 'border-border hover:border-primary/20'
@@ -173,30 +173,27 @@ export function PostCard({ post, index }: PostCardProps) {
       <VoteControls score={post.score || 0} entityId={post.id} authorUid={post.author?.uid} type="post" />
 
       <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between mb-1.5">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <PostTypeBadge type={post.type} />
-            <span className="font-body text-xs text-muted-foreground flex items-center gap-1">
-              {formatTimeAgo(post.createdAt)}
-              {isVeteran(post.author?.reputation || 0) && (
-                <span className="text-[#6366F1] font-bold ml-1 flex items-center gap-0.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#6366F1] animate-pulse" />
-                  V
-                </span>
-              )}
-              {post.isEdited && <span className="italic text-[10px]">(edited)</span>}
-            </span>
           </div>
           
-          <div className="flex items-center gap-2">
-            <span className="font-body text-[11px] text-[#4B5563] flex items-center gap-1 opacity-80">
-              <Eye className="h-3.5 w-3.5" /> {post.views || 0}
+          <div className="flex items-center gap-2 opacity-60">
+            <span className="font-body text-[11px] text-muted-foreground flex items-center gap-1">
+              <Eye className="h-3 w-3" /> {post.views || 0}
+            </span>
+            <span className="text-muted-foreground/30">•</span>
+            <span className="font-body text-[11px] text-muted-foreground flex items-center gap-1">
+              {formatTimeAgo(post.createdAt)}
+              {isVeteran(post.author?.reputation || 0) && (
+                <span className="text-[#6366F1] font-bold ml-1">V</span>
+              )}
             </span>
           </div>
         </div>
 
         <Link to={`/post/${post.id}`} className="block">
-          <h3 className="font-heading text-base font-semibold text-foreground leading-snug mb-1 group-hover:text-primary transition-colors cursor-pointer">
+          <h3 className="font-heading text-[1.1rem] font-semibold text-foreground leading-tight mb-1.5 group-hover:text-primary transition-colors cursor-pointer">
             {post.title}
           </h3>
         </Link>
@@ -235,7 +232,7 @@ export function PostCard({ post, index }: PostCardProps) {
           </div>
         ) : (
           <Link to={`/post/${post.id}`} className="block">
-            <p className="font-body text-sm text-muted-foreground line-clamp-2 mb-3">
+            <p className="font-body text-sm text-[#94A3B8] leading-relaxed line-clamp-2 mb-3">
               {post.body}
             </p>
           </Link>
@@ -246,7 +243,7 @@ export function PostCard({ post, index }: PostCardProps) {
             <Link
               key={tag}
               to={`/tag/${tag}`}
-              className="rounded-md bg-secondary px-2 py-0.5 font-body text-[11px] font-medium text-secondary-foreground cursor-pointer hover:bg-primary/15 hover:text-primary transition-colors"
+              className="rounded-md bg-white/[0.03] border border-white/10 px-2 py-0.5 font-body text-[10px] font-medium text-muted-foreground/80 cursor-pointer hover:border-[#6366F1] hover:text-[#6366F1] transition-all"
             >
               #{tag}
             </Link>

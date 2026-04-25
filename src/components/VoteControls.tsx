@@ -69,7 +69,7 @@ export function VoteControls({ entityId, authorUid, score, type = "post", postId
   };
 
   return (
-    <div className="flex flex-col items-center justify-center gap-1.5 py-1 w-10 shrink-0">
+    <div className="flex flex-col items-center justify-center gap-1.5 py-1 w-9 shrink-0">
       <button
         onClick={() => handleVote("up")}
         className={`rounded-md p-1 transition-all duration-200 ${
