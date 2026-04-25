@@ -15,6 +15,7 @@ import {
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { cn } from "@/lib/utils";
 import {
   Sidebar,
   SidebarContent,
@@ -72,7 +73,7 @@ export function AppSidebar() {
       <SidebarContent>
 
         <SidebarGroup>
-          <SidebarGroupLabel className="font-body text-xs uppercase tracking-wider text-muted-foreground/60">
+          <SidebarGroupLabel>
             Feed
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -80,9 +81,12 @@ export function AppSidebar() {
               {mainNav.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                    <NavLink to={item.url} end>
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
+                    <NavLink to={item.url} end className={({ isActive }) => cn(
+                      "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-all duration-200",
+                      isActive ? "bg-white/5 text-white" : "text-muted-foreground/60 hover:bg-white/5 hover:text-white"
+                    )}>
+                      <item.icon className="h-[22px] w-[22px] shrink-0" strokeWidth={1.5} />
+                      {!collapsed && <span className="font-medium text-sm">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -92,7 +96,7 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel className="font-body text-xs uppercase tracking-wider text-muted-foreground/60">
+          <SidebarGroupLabel>
             Discover
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -100,9 +104,12 @@ export function AppSidebar() {
               {discover.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                    <NavLink to={item.url} end>
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
+                    <NavLink to={item.url} end className={({ isActive }) => cn(
+                      "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-all duration-200",
+                      isActive ? "bg-white/5 text-white" : "text-muted-foreground/60 hover:bg-white/5 hover:text-white"
+                    )}>
+                      <item.icon className="h-[22px] w-[22px] shrink-0" strokeWidth={1.5} />
+                      {!collapsed && <span className="font-medium text-sm">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -112,7 +119,7 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel className="font-body text-xs uppercase tracking-wider text-muted-foreground/60">
+          <SidebarGroupLabel>
             You
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -120,9 +127,12 @@ export function AppSidebar() {
               {personal.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                    <NavLink to={item.url} end>
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
+                    <NavLink to={item.url} end className={({ isActive }) => cn(
+                      "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-all duration-200",
+                      isActive ? "bg-white/5 text-white" : "text-muted-foreground/60 hover:bg-white/5 hover:text-white"
+                    )}>
+                      <item.icon className="h-[22px] w-[22px] shrink-0" strokeWidth={1.5} />
+                      {!collapsed && <span className="font-medium text-sm">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -143,7 +153,7 @@ export function AppSidebar() {
                 }}
                 className="flex w-full items-center gap-2 rounded-lg border border-border bg-secondary/50 p-3 font-body text-sm text-foreground transition-all hover:bg-secondary"
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-5 w-5" strokeWidth={1.5} />
                 Log Out
               </button>
             ) : (
@@ -151,7 +161,7 @@ export function AppSidebar() {
                 onClick={() => navigate("/login")}
                 className="flex w-full items-center gap-2 rounded-lg border border-border bg-secondary/50 p-3 font-body text-sm text-foreground transition-all hover:bg-secondary"
               >
-                <LogIn className="h-4 w-4" />
+                <LogIn className="h-5 w-5" strokeWidth={1.5} />
                 Log In
               </button>
             )}

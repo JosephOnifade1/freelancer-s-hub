@@ -241,7 +241,7 @@ export function PostCard({ post, index }: PostCardProps) {
           </Link>
         )}
 
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           {(post.tags || []).map((tag) => (
             <Link
               key={tag}

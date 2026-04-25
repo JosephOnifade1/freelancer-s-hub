@@ -133,22 +133,42 @@
     scrollbar-color: #312E81 #0D0D12;
   }
 
-  /* Sidebar Specific: Hide unless hovered */
+  /* Sidebar Specific: Stealth Mode */
   [data-sidebar="content"] {
     scrollbar-width: none;
     -ms-overflow-style: none;
+    overflow-y: auto;
   }
   
   [data-sidebar="content"]::-webkit-scrollbar {
-    width: 0;
+    display: none;
   }
 
   [data-sidebar="content"]:hover {
     scrollbar-width: thin;
+    scrollbar-color: #6366F1 transparent;
   }
 
   [data-sidebar="content"]:hover::-webkit-scrollbar {
-    width: 6px;
+    display: block;
+    width: 4px;
+  }
+
+  [data-sidebar="content"]:hover::-webkit-scrollbar-thumb {
+    background: #6366F1;
+    border-radius: 10px;
+  }
+
+  /* Navigation Section Headers */
+  [data-sidebar="group-label"] {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    color: #64748B !important;
+    margin-top: 24px !important;
+    height: auto !important;
+    padding-bottom: 8px !important;
   }
 }
 

@@ -150,9 +150,10 @@ const Profile = () => {
         setResolving(false);
       });
     } else if (handle) {
-      // Handle comes from /@:handle route — React Router strips the literal '@'
       setResolving(true);
-      getUidByUsername(handle).then(id => {
+      // Strip '@' if present at the start of the handle
+      const actualUsername = handle.startsWith("@") ? handle.substring(1) : handle;
+      getUidByUsername(actualUsername).then(id => {
         setResolvedUid(id);
         setResolving(false);
       });
@@ -193,6 +194,15 @@ const Profile = () => {
 
   // Availability Toggle State — initialized from profile, persisted on change
   const [isOpenToGigs, setIsOpenToGigs] = useState(true);
+
+  // Animation state for progress bar
+  const [showProgress, setShowProgress] = useState(false);
+  useEffect(() => {
+    if (profile) {
+      const timer = setTimeout(() => setShowProgress(true), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [profile]);
 
   useEffect(() => {
     if (profile?.status !== undefined) {
@@ -338,9 +348,19 @@ const Profile = () => {
                   
                   {/* Avatar Wrapper */}
                   <div className="relative group">
-                    <div className={`flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-primary/10 font-heading text-3xl font-bold text-primary overflow-hidden border-2 relative transition-all ${
-                      isVeteran(profile.reputation || 0) ? 'veteran-aura scale-105 border-[#6366F1]' : 'border-border'
-                    }`}>
+                    <div className={`flex h-24 w-24 shrink-0 items-center justify-center rounded-full font-heading text-3xl font-bold overflow-hidden border relative transition-all ${
+                      isVeteran(profile.reputation || 0) 
+                        ? 'veteran-aura scale-105 border-[#6366F1]' 
+                        : 'border-white/10 bg-[#1E1B4B] text-primary-foreground'
+                    }`}
+                    style={!isVeteran(profile.reputation || 0) ? {
+                      backgroundImage: `
+                        radial-gradient(at top left, #312E81, transparent), 
+                        radial-gradient(at top right, #1E1B4B, transparent), 
+                        radial-gradient(at bottom left, #4338CA, transparent)
+                      `
+                    } : {}}
+                    >
                       {profile.avatarUrl ? (
                         <img src={profile.avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
                       ) : (
@@ -622,19 +642,63 @@ const Profile = () => {
                   <span className="font-heading text-sm font-bold text-foreground">{profile.joined || "Recently"}</span>
                 </div>
                 
-                {/* Progress to Veteran */}
-                {!isVeteran(profile.reputation || 0) && (
-                  <div className="pt-2 space-y-2 border-t border-border/30 mt-2">
-                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider">
-                      <span className="text-muted-foreground">Progress to Veteran</span>
-                      <span className="text-primary">{Math.round(((profile.reputation || 0) / 5000) * 100)}%</span>
+                {/* Community Standing / Progress to Veteran */}
+                {profile.reputation && profile.reputation >= 500 ? (
+                  !isVeteran(profile.reputation) && (
+                    <div className="pt-2 space-y-2 border-t border-border/30 mt-2">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="space-y-3 cursor-help">
+                              <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider">
+                                <span className="text-muted-foreground">
+                                  {isOwnProfile ? "Progress to Veteran" : "Community Standing"}
+                                </span>
+                                {isOwnProfile && (
+                                  <span className="text-primary">{Math.round((profile.reputation / 5000) * 100)}%</span>
+                                )}
+                              </div>
+                              <div className="flex gap-[3px] h-1 w-full">
+                                {[0, 1, 2, 3, 4].map((i) => {
+                                  const segmentStart = i * 1000;
+                                  const segmentEnd = (i + 1) * 1000;
+                                  const isCompleted = profile.reputation >= segmentEnd;
+                                  const isCurrent = profile.reputation > segmentStart && profile.reputation < segmentEnd;
+                                  const fillPercent = isCompleted ? 100 : isCurrent ? ((profile.reputation - segmentStart) / 1000) * 100 : 0;
+                                  
+                                  return (
+                                    <div key={i} className="h-full flex-1 bg-secondary rounded-full overflow-hidden">
+                                      <div 
+                                        className="h-full bg-[#D1FF4A] transition-all ease-out" 
+                                        style={{ 
+                                          width: `${showProgress ? fillPercent : 0}%`,
+                                          transitionDuration: '800ms',
+                                          transitionDelay: showProgress ? `${i * 200}ms` : '0ms',
+                                          boxShadow: isCompleted ? '0 0 8px rgba(209, 255, 74, 0.4)' : 'none'
+                                        }} 
+                                      />
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </TooltipTrigger>
+                          {!isOwnProfile && (
+                            <TooltipContent className="font-body text-[11px] max-w-[200px] bg-card border-border text-foreground p-2 text-center">
+                              This member is on the path to Veteran Status based on high-signal contributions.
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
-                    <div className="h-1 w-full bg-secondary rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-[#D1FF4A] transition-all duration-1000 ease-out" 
-                        style={{ width: `${Math.min(100, ((profile.reputation || 0) / 5000) * 100)}%` }} 
-                      />
-                    </div>
+                  )
+                ) : (
+                  <div className="pt-2 border-t border-border/30 mt-2 flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Status</span>
+                    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 text-primary font-heading text-[10px] font-bold uppercase tracking-tight">
+                      <Star className="h-3 w-3 fill-primary/20" />
+                      New Member
+                    </span>
                   </div>
                 )}
               </div>

@@ -99,7 +99,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                     </div>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link to={profile?.username ? `/@${profile.username}` : `/profile`} className="cursor-pointer flex items-center">
+                      <Link to={user ? `/profile/${user.uid}` : `/profile`} className="cursor-pointer flex items-center">
                         <User className="mr-2 h-4 w-4" />
                         <span>Profile</span>
                       </Link>
