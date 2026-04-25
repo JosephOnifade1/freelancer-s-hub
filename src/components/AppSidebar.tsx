@@ -1,6 +1,5 @@
 import {
-  Flame,
-  Clock,
+  Home,
   Users,
   Compass,
   Bookmark,
@@ -31,9 +30,7 @@ import {
 } from "@/components/ui/sidebar";
 
 const mainNav = [
-  { title: "Hot Feed", url: "/", icon: Flame },
-  { title: "New", url: "/new", icon: Clock },
-  { title: "Following", url: "/following", icon: Users },
+  { title: "Home", url: "/", icon: Home },
 ];
 
 const discover = [
@@ -82,11 +79,11 @@ export function AppSidebar() {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
                     <NavLink to={item.url} end className={({ isActive }) => cn(
-                      "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-all duration-200",
+                      "flex items-center gap-[12px] w-full px-3 py-2 rounded-lg transition-all duration-200",
                       isActive ? "bg-white/5 text-white" : "text-muted-foreground/60 hover:bg-white/5 hover:text-white"
                     )}>
                       <item.icon className="h-[22px] w-[22px] shrink-0" strokeWidth={1.5} />
-                      {!collapsed && <span className="font-medium text-sm">{item.title}</span>}
+                      {!collapsed && <span className="font-medium text-sm flex items-center">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -105,11 +102,11 @@ export function AppSidebar() {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
                     <NavLink to={item.url} end className={({ isActive }) => cn(
-                      "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-all duration-200",
+                      "flex items-center gap-[12px] w-full px-3 py-2 rounded-lg transition-all duration-200",
                       isActive ? "bg-white/5 text-white" : "text-muted-foreground/60 hover:bg-white/5 hover:text-white"
                     )}>
                       <item.icon className="h-[22px] w-[22px] shrink-0" strokeWidth={1.5} />
-                      {!collapsed && <span className="font-medium text-sm">{item.title}</span>}
+                      {!collapsed && <span className="font-medium text-sm flex items-center">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -128,11 +125,11 @@ export function AppSidebar() {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
                     <NavLink to={item.url} end className={({ isActive }) => cn(
-                      "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-all duration-200",
+                      "flex items-center gap-[12px] w-full px-3 py-2 rounded-lg transition-all duration-200",
                       isActive ? "bg-white/5 text-white" : "text-muted-foreground/60 hover:bg-white/5 hover:text-white"
                     )}>
                       <item.icon className="h-[22px] w-[22px] shrink-0" strokeWidth={1.5} />
-                      {!collapsed && <span className="font-medium text-sm">{item.title}</span>}
+                      {!collapsed && <span className="font-medium text-sm flex items-center">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

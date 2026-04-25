@@ -48,11 +48,9 @@ export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
     <div className="space-y-5">
       {/* Trending Tags */}
       <div className="rounded-xl border border-border bg-card p-4">
-        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border/50">
+        <div className="widget-header mb-3 pb-2 border-b border-border/50">
           <TrendingUp className="h-4 w-4 text-primary" />
-          <h3 className="font-heading text-sm font-semibold text-foreground">
-            Trending Tags
-          </h3>
+          <h3>Trending Tags</h3>
         </div>
         {topTags.length === 0 ? (
           <p className="font-body text-xs text-muted-foreground">No tags yet.</p>
@@ -62,10 +60,10 @@ export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
               <Link
                 key={tag.name}
                 to={`/tag/${tag.name}`}
-                className="rounded-md bg-secondary px-2 py-1 font-body text-[11px] font-medium text-secondary-foreground transition-colors hover:bg-primary/15 hover:text-primary"
+                className="rounded-md bg-[#111118] px-2 py-1 font-body text-[11px] font-medium text-secondary-foreground transition-all hover:text-[#D1FF4A]"
               >
                 #{tag.name}
-                <span className="ml-1 text-muted-foreground">{tag.count}</span>
+                <span className="ml-1 text-muted-foreground/60">{tag.count}</span>
               </Link>
             ))}
           </div>
@@ -74,11 +72,9 @@ export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
 
       {/* Top Contributors */}
       <div className="rounded-xl border border-border bg-card p-4">
-        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border/50">
+        <div className="widget-header mb-3 pb-2 border-b border-border/50">
           <Sparkles className="h-4 w-4 text-badge-question" />
-          <h3 className="font-heading text-sm font-semibold text-foreground">
-            Top Contributors
-          </h3>
+          <h3>Top Contributors</h3>
         </div>
         {topContributors.length === 0 ? (
           <p className="font-body text-xs text-muted-foreground">No contributors yet.</p>
@@ -115,11 +111,9 @@ export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
 
       {/* Community Stats */}
       <div className="rounded-xl border border-border bg-card p-4">
-        <div className="flex items-center gap-2 mb-3">
+        <div className="widget-header mb-3">
           <Users className="h-4 w-4 text-badge-resource" />
-          <h3 className="font-heading text-sm font-semibold text-foreground">
-            Community Live Stats
-          </h3>
+          <h3>Community Live Stats</h3>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>

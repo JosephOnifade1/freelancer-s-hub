@@ -9,10 +9,10 @@
     --font-heading: 'Syne', sans-serif;
     --font-body: 'Plus Jakarta Sans', sans-serif;
 
-    --background: 230 30% 4%;
+    --background: 230 30% 7%; /* #121218 approx */
     --foreground: 220 20% 92%;
 
-    --card: 230 28% 7%;
+    --card: 230 28% 9%; /* #16161D approx */
     --card-foreground: 220 20% 92%;
 
     --popover: 230 28% 7%;
@@ -39,13 +39,13 @@
 
     --radius: 0.75rem;
 
-    --sidebar-background: 230 30% 5%;
+    --sidebar-background: 240 10% 6%; /* #0D0D12 approx */
     --sidebar-foreground: 220 15% 70%;
     --sidebar-primary: 239 84% 67%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 230 25% 10%;
     --sidebar-accent-foreground: 220 20% 90%;
-    --sidebar-border: 230 20% 12%;
+    --sidebar-border: transparent;
     --sidebar-ring: 239 84% 67%;
 
     /* Custom tokens */
@@ -134,33 +134,33 @@
   }
 
   /* Sidebar Specific: Stealth Mode */
-  [data-sidebar="content"] {
+  [data-sidebar="content"], .feed-container {
     scrollbar-width: none;
     -ms-overflow-style: none;
     overflow-y: auto;
   }
   
-  [data-sidebar="content"]::-webkit-scrollbar {
+  [data-sidebar="content"]::-webkit-scrollbar, .feed-container::-webkit-scrollbar {
     display: none;
   }
 
-  [data-sidebar="content"]:hover {
+  [data-sidebar="content"]:hover, .feed-container:hover {
     scrollbar-width: thin;
     scrollbar-color: #6366F1 transparent;
   }
 
-  [data-sidebar="content"]:hover::-webkit-scrollbar {
+  [data-sidebar="content"]:hover::-webkit-scrollbar, .feed-container:hover::-webkit-scrollbar {
     display: block;
     width: 4px;
   }
 
-  [data-sidebar="content"]:hover::-webkit-scrollbar-thumb {
+  [data-sidebar="content"]:hover::-webkit-scrollbar-thumb, .feed-container:hover::-webkit-scrollbar-thumb {
     background: #6366F1;
-    border-radius: 10px;
+    border-radius: 20px;
   }
 
   /* Navigation Section Headers */
-  [data-sidebar="group-label"] {
+  [data-sidebar="group-label"], .widget-header {
     font-size: 11px !important;
     font-weight: 700 !important;
     text-transform: uppercase !important;
@@ -169,6 +169,13 @@
     margin-top: 24px !important;
     height: auto !important;
     padding-bottom: 8px !important;
+  }
+
+  .widget-header {
+    margin-top: 0 !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 }
 
@@ -204,5 +211,16 @@
 
   .veteran-gradient-bg {
     background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%);
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .beta-shimmer {
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 5s infinite linear;
   }
 }
