@@ -1,4 +1,4 @@
-import { ref, get, push, set, serverTimestamp } from "firebase/database";
+import { ref, get, push, set, serverTimestamp, runTransaction } from "firebase/database";
 import { database } from "./firebase";
 
 export interface CommentData {
@@ -43,6 +43,12 @@ export const addComment = async (postId: string, commentData: Omit<CommentData, 
     ...commentData,
     score: 0,
     createdAt: serverTimestamp()
+  });
+
+  // Increment Post Comment Count
+  const countRef = ref(database, `posts/${postId}/commentCount`);
+  await runTransaction(countRef, (currentCount) => {
+    return (currentCount || 0) + 1;
   });
 
   return newCommentRef.key;

@@ -15,6 +15,15 @@ import { set, ref } from "firebase/database";
 import { database } from "@/lib/firebase";
 import { Switch } from "@/components/ui/switch";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { UserBadges } from "@/components/UserBadges";
+import { achievements } from "@/data/mockAchievements";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 type Tab = "Overview" | "Posts" | "Comments" | "Resources" | "Saved";
 
@@ -340,15 +349,15 @@ const Profile = () => {
                       <h1 className="font-heading text-2xl font-bold text-foreground">
                         {profile.displayName || profile.username}
                       </h1>
-                      <div className="flex items-center text-lime-500 bg-lime-500/10 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase font-heading">
-                        <BadgeCheck className="h-3 w-3 mr-1" />
-                        Verified Pro
-                      </div>
+                      <VerifiedBadge isVerified={profile.isVerifiedPro} size={18} />
                     </div>
                     
-                    <span className="text-muted-foreground font-body text-sm font-medium mr-2 block mb-3">
-                      @{profile.username}
-                    </span>
+                    <div className="flex flex-col mb-3">
+                      <span className="text-muted-foreground font-body text-sm font-medium">
+                        @{profile.username}
+                      </span>
+                      <UserBadges uid={profile.uid} />
+                    </div>
                     
                     {isOwnProfile && isEditingBio ? (
                       <div className="mb-4 mt-2">
@@ -389,7 +398,7 @@ const Profile = () => {
                 {/* CTAs */}
                 <div className="shrink-0 flex items-center gap-2">
                   {isOwnProfile ? (
-                    <Link to="/settings" className="rounded-full border border-border px-4 py-2 font-body text-sm font-semibold hover:bg-secondary transition-colors shadow-sm">
+                    <Link to="/settings" className="rounded-full border border-[#6366F1]/40 bg-transparent px-4 py-2 font-body text-sm font-semibold text-[#6366F1] hover:bg-[#6366F1]/5 transition-all shadow-sm">
                       Edit Profile
                     </Link>
                   ) : (
@@ -545,6 +554,11 @@ const Profile = () => {
                     className={isOpenToGigs ? "data-[state=checked]:bg-lime-500" : ""}
                   />
                 </div>
+                {!profile.isVerifiedPro && (
+                  <p className="font-body text-[10px] text-[#84CC16] mt-2 font-medium animate-pulse">
+                    ✨ Verified Pros get 3x more profile views.
+                  </p>
+                )}
               </div>
             )}
             
@@ -594,6 +608,38 @@ const Profile = () => {
                   ))
                 ) : (
                   <span className="font-body text-xs text-muted-foreground">No skills added yet.</span>
+                )}
+              </div>
+            </div>
+
+            {/* Recent Achievements Card */}
+            <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-4 pb-2 border-b border-border/50">
+                <h3 className="font-heading text-sm font-bold text-foreground">
+                  Recent Achievements
+                </h3>
+                <Link to="/achievements" className="text-[10px] text-primary hover:underline font-bold uppercase tracking-wider">
+                  View All
+                </Link>
+              </div>
+              <div className="flex items-center gap-3">
+                {achievements.filter(a => a.unlocked).slice(-3).map((achievement) => (
+                  <TooltipProvider key={achievement.id}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="h-10 w-10 rounded-lg bg-primary/5 border border-primary/10 flex items-center justify-center transition-all hover:scale-110 hover:bg-primary/10 cursor-help">
+                          <achievement.icon size={20} className="text-primary" />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent className="font-body text-[11px] bg-card border-border text-foreground p-2">
+                        <p className="font-bold mb-0.5">{achievement.name}</p>
+                        <p className="text-muted-foreground">{achievement.description}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ))}
+                {achievements.filter(a => a.unlocked).length === 0 && (
+                  <p className="text-xs text-muted-foreground italic">No achievements yet.</p>
                 )}
               </div>
             </div>

@@ -5,6 +5,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { VoteControls } from "@/components/VoteControls";
 import { PostTypeBadge } from "@/components/PostTypeBadge";
 import { LiveReputation } from "@/components/LiveReputation";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchPostById, incrementPostViews, updatePost, softDeletePost } from "@/lib/posts";
 import { fetchComments, addComment, updateComment, softDeleteComment, CommentData } from "@/lib/comments";
@@ -94,10 +95,10 @@ const CommentThread = ({ comment, postId, depth = 0 }: { comment: CommentData; p
 
   if (comment.isDeleted) {
     return (
-      <div className={depth > 0 ? "ml-6 pl-4 border-l border-dashed border-border/50 relative" : ""}>
-        {depth > 0 && <CornerDownRight className="absolute -left-[11px] top-4 h-4 w-4 text-border opacity-50" />}
+      <div className={`${depth > 0 ? "ml-4 sm:ml-8 pl-4 border-l-2 border-dashed border-[#6366F1]/20 relative" : ""}`}>
+        {depth > 0 && <div className="absolute -left-[2px] top-4 h-4 w-4 border-l-2 border-b-2 border-[#6366F1]/20 rounded-bl-lg" />}
         <div className="flex gap-3 py-3 opacity-60">
-          <div className="w-8" /> {/* Placeholder for missing votes */}
+          <div className="w-10 shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <div className="flex h-5 w-5 items-center justify-center rounded-full bg-muted font-heading text-[10px] font-bold text-muted-foreground">?</div>
@@ -117,8 +118,8 @@ const CommentThread = ({ comment, postId, depth = 0 }: { comment: CommentData; p
   }
 
   return (
-    <div className={depth > 0 ? "ml-6 pl-4 border-l border-border/50 relative" : ""}>
-      {depth > 0 && <CornerDownRight className="absolute -left-[11px] top-4 h-4 w-4 text-border" />}
+    <div className={`${depth > 0 ? "ml-4 sm:ml-8 pl-4 border-l-2 border-[#6366F1]/40 relative" : ""}`}>
+      {depth > 0 && <div className="absolute -left-[2px] top-4 h-4 w-4 border-l-2 border-b-2 border-[#6366F1]/40 rounded-bl-lg" />}
       <div className="flex gap-3 py-3">
         <VoteControls score={comment.score || 0} entityId={comment.id} authorUid={comment.authorUid} type="comment" postIdForComment={postId} />
         
@@ -126,10 +127,18 @@ const CommentThread = ({ comment, postId, depth = 0 }: { comment: CommentData; p
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
               <Link to={comment.authorUid ? `/profile/${comment.authorUid}` : "#"} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/20 font-heading text-[10px] font-bold text-primary">
+                <div className={`flex h-5 w-5 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden ${
+                  comment.authorUid === 'marcelo_dev' ? 'bg-[#4C1D95] text-white' :
+                  comment.authorUid === 'designkara' ? 'bg-[#84CC16] text-black' :
+                  comment.authorUid === 'freelance_mike' ? 'bg-[#475569] text-white' :
+                  'bg-primary/20 text-primary'
+                }`}>
                   {comment.author ? comment.author.charAt(0).toUpperCase() : '?'}
                 </div>
-                <span className="font-body text-xs font-semibold text-foreground">{comment.author || 'Anonymous'}</span>
+                <span className="font-body text-xs font-semibold text-foreground flex items-center gap-1">
+                  {comment.author || 'Anonymous'}
+                  <VerifiedBadge isVerified={comment.authorUid === 'marcelo_dev' || comment.authorUid === 'designkara' || comment.authorUid === 'freelance_mike'} size={12} showTooltip={false} />
+                </span>
                 <span className="font-body text-[10px] text-muted-foreground">
                   <LiveReputation uid={comment.authorUid} fallback={comment.reputation || 0} />
                 </span>
@@ -192,19 +201,25 @@ const CommentThread = ({ comment, postId, depth = 0 }: { comment: CommentData; p
           </button>
 
           {isReplying && (
-            <div className="mt-3 bg-secondary/30 rounded-lg p-3 border border-border">
+            <div className="mt-3 bg-secondary/30 rounded-lg p-3 border border-[#6366F1]/20 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
               <textarea
                 value={replyBody}
                 onChange={(e) => setReplyBody(e.target.value)}
                 rows={2}
                 placeholder="Write your reply..."
-                className="w-full resize-none rounded-md bg-background border border-border px-3 py-2 font-body text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40 transition-shadow"
+                className="w-full resize-none rounded-md bg-background border border-border px-3 py-2 font-body text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-[#6366F1]/40 transition-shadow"
               />
-              <div className="flex justify-end mt-2">
+              <div className="flex justify-end gap-2 mt-2">
+                <button 
+                  onClick={() => setIsReplying(false)}
+                  className="px-3 py-1.5 font-body text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Cancel
+                </button>
                 <button 
                   onClick={() => submitReply.mutate()}
                   disabled={submitReply.isPending || !replyBody.trim()}
-                  className="rounded-md bg-primary px-3 py-1.5 font-body text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-opacity"
+                  className="rounded-md bg-[#6366F1] px-4 py-1.5 font-body text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50 transition-opacity shadow-sm"
                 >
                   {submitReply.isPending ? "Posting..." : "Reply"}
                 </button>
@@ -446,7 +461,10 @@ const PostDetail = () => {
                     <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 font-heading text-xs font-bold text-primary">
                       {post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'}
                     </div>
-                    <span className="font-body text-sm font-medium text-foreground">{post.author?.name || 'Anonymous'}</span>
+                    <span className="font-body text-sm font-medium text-foreground flex items-center gap-1">
+                      {post.author?.name || 'Anonymous'}
+                      <VerifiedBadge isVerified={post.author?.uid === 'marcelo_dev' || post.author?.uid === 'designkara' || post.author?.uid === 'freelance_mike'} size={14} showTooltip={false} />
+                    </span>
                     <span className="font-body text-[11px] text-muted-foreground">
                       <LiveReputation uid={post.author?.uid} fallback={post.author?.reputation || 0} />
                     </span>

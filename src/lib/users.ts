@@ -20,6 +20,7 @@ export type UserProfile = {
   savedPosts?: Record<string, boolean>;
   createdAt: any;
   avatarUrl?: string;
+  isVerifiedPro?: boolean;
 };
 
 export const toggleBookmark = async (uid: string, postId: string) => {
@@ -91,6 +92,21 @@ export const createUserProfile = async (uid: string, name: string, email: string
   }
   
   return existingData as UserProfile;
+};
+
+export const getUserResourcesCount = async (uid: string) => {
+  const postsRef = ref(database, 'posts');
+  const snapshot = await get(postsRef);
+  if (!snapshot.exists()) return 0;
+
+  let count = 0;
+  snapshot.forEach(child => {
+    const post = child.val();
+    if (post.author?.uid === uid && post.type === 'resource' && !post.isDeleted) {
+      count++;
+    }
+  });
+  return count;
 };
 
 export const checkUsernameAvailability = async (username: string) => {
@@ -185,4 +201,63 @@ export const toggleFollow = async (currentUid: string, targetUid: string) => {
   }
 
   return !isFollowing;
+};
+
+/**
+ * Calculates total reputation by summing scores of all posts and comments by the user.
+ * Note: For large scale, we'd use Cloud Functions or increment on vote. 
+ * This is a manual recalculation engine as requested.
+ */
+export const calculateReputation = async (uid: string) => {
+  let totalScore = 0;
+
+  // 1. Get all posts scores
+  const postsRef = ref(database, 'posts');
+  const postsSnap = await get(postsRef);
+  if (postsSnap.exists()) {
+    postsSnap.forEach(postSnap => {
+      const post = postSnap.val();
+      if (post.author?.uid === uid) {
+        totalScore += (post.score || 0);
+      }
+    });
+  }
+
+  // 2. Get all comments scores
+  const commentsRef = ref(database, 'post-comments');
+  const commentsSnap = await get(commentsRef);
+  if (commentsSnap.exists()) {
+    commentsSnap.forEach(postCommentsSnap => {
+      postCommentsSnap.forEach(commentSnap => {
+        const comment = commentSnap.val();
+        if (comment.authorUid === uid) {
+          totalScore += (comment.score || 0);
+        }
+      });
+    });
+  }
+
+  // Seed Personas Benchmark: Static high starting reputation
+  if (['marcelo_dev', 'designkara', 'freelance_mike'].includes(uid)) {
+    totalScore = Math.max(totalScore, 1800);
+  }
+
+  // Update in DB
+  await set(ref(database, `users/${uid}/reputation`), totalScore);
+  return totalScore;
+};
+
+export const getTopContributors = async (count = 5) => {
+  const usersRef = ref(database, 'users');
+  const snapshot = await get(usersRef);
+  if (!snapshot.exists()) return [];
+
+  const users: UserProfile[] = [];
+  snapshot.forEach(child => {
+    users.push(child.val());
+  });
+
+  return users
+    .sort((a, b) => (b.reputation || 0) - (a.reputation || 0))
+    .slice(0, count);
 };

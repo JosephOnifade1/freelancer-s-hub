@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { VoteControls } from "@/components/VoteControls";
 import { PostTypeBadge } from "@/components/PostTypeBadge";
 import { LiveReputation } from "@/components/LiveReputation";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { formatTimeAgo } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -258,8 +259,9 @@ export function PostCard({ post, index }: PostCardProps) {
                 <span>{post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'}</span>
               )}
             </div>
-            <span className="font-body text-xs font-medium text-foreground">
+            <span className="font-body text-xs font-medium text-foreground flex items-center gap-1">
               {post.author?.name || 'Unknown'}
+              <VerifiedBadge isVerified={post.author?.uid === 'marcelo_dev' || post.author?.uid === 'designkara' || post.author?.uid === 'freelance_mike' || !!(post.author as any).isVerifiedPro} size={12} showTooltip={false} />
             </span>
             <span className="font-body text-[10px] text-muted-foreground">
               <LiveReputation uid={post.author?.uid} fallback={post.author?.reputation || 0} />

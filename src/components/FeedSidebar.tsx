@@ -3,11 +3,20 @@ import { TrendingUp, Sparkles, Users } from "lucide-react";
 import { PostData } from "@/components/PostCard";
 import { Link } from "react-router-dom";
 import { LiveReputation } from "@/components/LiveReputation";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { useQuery } from "@tanstack/react-query";
+import { getTopContributors } from "@/lib/users";
 
 export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
-  const { topTags, topContributors, stats } = useMemo(() => {
+  const { data: topContributors = [] } = useQuery({
+    queryKey: ['top-contributors'],
+    queryFn: () => getTopContributors(5),
+    refetchInterval: 60000 // Refresh every minute
+  });
+
+  const { topTags, stats } = useMemo(() => {
     const tagCounts: Record<string, number> = {};
-    const userMap: Record<string, { uid?: string; name: string; reputation: number }> = {};
+    const userMap: Record<string, boolean> = {};
 
     posts.forEach((post) => {
       // Tags
@@ -15,15 +24,9 @@ export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
         tagCounts[tag] = (tagCounts[tag] || 0) + 1;
       });
 
-      // Users
-      if (post.author?.name) {
-        if (!userMap[post.author.name] || (post.author.reputation || 0) > userMap[post.author.name].reputation) {
-          userMap[post.author.name] = {
-            uid: post.author.uid,
-            name: post.author.name,
-            reputation: post.author.reputation || 0
-          };
-        }
+      // Users for stats
+      if (post.author?.uid) {
+        userMap[post.author.uid] = true;
       }
     });
 
@@ -32,13 +35,8 @@ export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
       .sort((a, b) => b.count - a.count)
       .slice(0, 8);
 
-    const calculatedContributors = Object.values(userMap)
-      .sort((a, b) => b.reputation - a.reputation)
-      .slice(0, 5);
-
     return {
       topTags: calculatedTags,
-      topContributors: calculatedContributors,
       stats: {
         freelancers: Math.max(1, Object.keys(userMap).length),
         totalPosts: posts.length
@@ -95,11 +93,17 @@ export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
                 <span className="font-heading text-xs font-bold text-muted-foreground w-4">
                   {i + 1}
                 </span>
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 font-heading text-[10px] font-bold text-primary group-hover:bg-primary/30">
-                  {user.name.charAt(0).toUpperCase()}
+                <div className={`flex h-6 w-6 items-center justify-center rounded-full font-heading text-[10px] font-bold ${
+                  user.uid === 'marcelo_dev' ? 'bg-[#4C1D95] text-white' :
+                  user.uid === 'designkara' ? 'bg-[#84CC16] text-black' :
+                  user.uid === 'freelance_mike' ? 'bg-[#475569] text-white' :
+                  'bg-primary/20 text-primary'
+                } group-hover:opacity-90`}>
+                  {user.displayName?.charAt(0).toUpperCase() || user.username?.charAt(0).toUpperCase()}
                 </div>
-                <span className="flex-1 font-body text-xs font-medium text-foreground group-hover:text-primary transition-colors">
-                  {user.name}
+                <span className="flex-1 font-body text-xs font-medium text-foreground group-hover:text-primary transition-colors flex items-center gap-1">
+                  {user.displayName || user.username}
+                  <VerifiedBadge isVerified={user.uid === 'marcelo_dev' || user.uid === 'designkara' || user.uid === 'freelance_mike' || user.isVerifiedPro} size={10} showTooltip={false} />
                 </span>
                 <span className="font-body text-[10px] text-muted-foreground">
                   <LiveReputation uid={user.uid} fallback={user.reputation} />
