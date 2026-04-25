@@ -69,33 +69,37 @@ export function VoteControls({ entityId, authorUid, score, type = "post", postId
   };
 
   return (
-    <div className="flex flex-col items-center gap-0.5">
+    <div className="flex flex-col items-center justify-center gap-1.5 py-1 w-10 shrink-0">
       <button
         onClick={() => handleVote("up")}
-        className={`rounded-md p-1 transition-colors ${
+        className={`rounded-md p-1 transition-all duration-200 ${
           vote === "up"
-            ? "text-upvote bg-upvote/10"
-            : "text-muted-foreground hover:text-upvote hover:bg-upvote/5"
+            ? "text-[#6366F1] bg-[#6366F1]/10 shadow-[0_0_12px_rgba(99,102,241,0.3)]"
+            : "text-muted-foreground hover:text-[#6366F1] hover:bg-[#6366F1]/5"
         }`}
       >
         <ArrowBigUp className="h-5 w-5" fill={vote === "up" ? "currentColor" : "none"} />
       </button>
-      <motion.span
-        key={displayScore}
-        initial={{ scale: 1.2, opacity: 0.7 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className={`font-heading text-sm font-bold ${
-          vote === "up" ? "text-upvote" : vote === "down" ? "text-downvote" : "text-foreground"
-        }`}
-      >
-        {displayScore}
-      </motion.span>
+      
+      <div className="flex items-center justify-center min-h-[20px]">
+        <motion.span
+          key={displayScore}
+          initial={{ scale: 1.2, opacity: 0.7 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className={`font-heading text-sm font-bold leading-none ${
+            vote === "up" ? "text-[#6366F1]" : vote === "down" ? "text-[#64748B]" : "text-foreground"
+          }`}
+        >
+          {displayScore}
+        </motion.span>
+      </div>
+
       <button
         onClick={() => handleVote("down")}
-        className={`rounded-md p-1 transition-colors ${
+        className={`rounded-md p-1 transition-all duration-200 ${
           vote === "down"
-            ? "text-downvote bg-downvote/10"
-            : "text-muted-foreground hover:text-downvote hover:bg-downvote/5"
+            ? "text-[#64748B] bg-[#64748B]/10 shadow-[0_0_12px_rgba(100,116,139,0.3)]"
+            : "text-muted-foreground hover:text-[#64748B] hover:bg-[#64748B]/5"
         }`}
       >
         <ArrowBigDown className="h-5 w-5" fill={vote === "down" ? "currentColor" : "none"} />

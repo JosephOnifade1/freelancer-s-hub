@@ -17,8 +17,22 @@ export type UserProfile = {
   following: number;
   followingList?: Record<string, boolean>;
   followersList?: Record<string, boolean>;
+  savedPosts?: Record<string, boolean>;
   createdAt: any;
   avatarUrl?: string;
+};
+
+export const toggleBookmark = async (uid: string, postId: string) => {
+  if (!uid || !postId) return false;
+  const bookmarkRef = ref(database, `users/${uid}/savedPosts/${postId}`);
+  const snapshot = await get(bookmarkRef);
+  if (snapshot.exists()) {
+    await set(bookmarkRef, null);
+    return false; // unsaved
+  } else {
+    await set(bookmarkRef, true);
+    return true; // saved
+  }
 };
 
 export const updateUserAvatar = async (uid: string, base64Image: string) => {

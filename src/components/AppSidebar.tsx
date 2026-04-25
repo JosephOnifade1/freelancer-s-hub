@@ -70,17 +70,6 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        {!collapsed && (
-          <div className="px-4 pb-2">
-            <NavLink
-              to="/submit"
-              className="flex w-full items-center gap-2 rounded-lg bg-primary px-3 py-2.5 font-body text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 glow-primary"
-            >
-              <PenSquare className="h-4 w-4" />
-              New Post
-            </NavLink>
-          </div>
-        )}
 
         <SidebarGroup>
           <SidebarGroupLabel className="font-body text-xs uppercase tracking-wider text-muted-foreground/60">

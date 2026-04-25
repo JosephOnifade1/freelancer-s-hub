@@ -1,4 +1,4 @@
-import { ref, get, push, set, serverTimestamp, query, orderByChild, limitToLast } from "firebase/database";
+import { ref, get, push, set, serverTimestamp, query, orderByChild, limitToLast, runTransaction } from "firebase/database";
 import { database } from "./firebase";
 import { PostData } from "@/components/PostCard";
 
@@ -12,10 +12,13 @@ export const fetchPosts = async (): Promise<PostData[]> => {
 
   const posts: PostData[] = [];
   snapshot.forEach((childSnapshot) => {
-    posts.push({
-      id: childSnapshot.key as string,
-      ...childSnapshot.val()
-    });
+    const val = childSnapshot.val();
+    if (!val.isDeleted) {
+      posts.push({
+        id: childSnapshot.key as string,
+        ...val
+      });
+    }
   });
 
   // Sort locally by createdAt descending
@@ -50,4 +53,23 @@ export const fetchPostById = async (id: string): Promise<PostData | null> => {
     id: snapshot.key as string,
     ...snapshot.val()
   };
+};
+
+export const updatePost = async (id: string, body: string) => {
+  const postRef = ref(database, `posts/${id}`);
+  await set(ref(database, `posts/${id}/body`), body);
+  await set(ref(database, `posts/${id}/isEdited`), true);
+};
+
+export const softDeletePost = async (id: string) => {
+  const postRef = ref(database, `posts/${id}`);
+  await set(ref(database, `posts/${id}/isDeleted`), true);
+  // Do not delete comments as per user requirements
+};
+
+export const incrementPostViews = async (id: string) => {
+  const viewsRef = ref(database, `posts/${id}/views`);
+  await runTransaction(viewsRef, (currentViews) => {
+    return (currentViews || 0) + 1;
+  });
 };

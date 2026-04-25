@@ -24,6 +24,7 @@ const CreatePost = () => {
   const navigate = useNavigate();
   const [type, setType] = useState<PostType>("discussion");
   const [title, setTitle] = useState("");
+  const [externalLink, setExternalLink] = useState("");
   const [body, setBody] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
@@ -36,6 +37,28 @@ const CreatePost = () => {
     queryFn: () => user ? getUserProfile(user.uid) : null,
     enabled: !!user,
   });
+
+  const getPlaceholders = () => {
+    switch (type) {
+      case "resource":
+        return {
+          title: "A clear, specific title...",
+          body: "Describe the resource. What's the 'High-Signal' takeaway?"
+        };
+      case "question":
+        return {
+          title: "Ask a specific question...",
+          body: "What have you tried so far? Give the community context."
+        };
+      default:
+        return {
+          title: "A clear, specific title...",
+          body: "Share the details. Markdown supported soon."
+        };
+    }
+  };
+
+  const placeholders = getPlaceholders();
 
   const addTag = () => {
     const t = tagInput.trim().toLowerCase().replace(/^#/, "");
@@ -59,6 +82,7 @@ const CreatePost = () => {
         body,
         type,
         tags,
+        externalLink: type === "resource" ? externalLink : undefined,
         author: { 
           uid: user?.uid,
           name: profile?.username || "Unknown", 
@@ -94,11 +118,13 @@ const CreatePost = () => {
                   onClick={() => setType(t.id)}
                   className={`rounded-xl border p-4 text-left transition-all ${
                     isActive
-                      ? "border-primary bg-primary/10"
+                      ? t.id === 'resource' 
+                        ? "border-[#D1FF4A] bg-[#D1FF4A]/5 shadow-[0_0_15px_rgba(209,255,74,0.1)]"
+                        : "border-primary bg-primary/10"
                       : "border-border bg-card hover:border-primary/30"
                   }`}
                 >
-                  <t.icon className={`h-5 w-5 mb-2 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
+                  <t.icon className={`h-5 w-5 mb-2 ${isActive ? t.id === 'resource' ? "text-[#D1FF4A]" : "text-primary" : "text-muted-foreground"}`} />
                   <p className="font-heading text-sm font-semibold text-foreground">{t.label}</p>
                   <p className="font-body text-[11px] text-muted-foreground mt-0.5">{t.description}</p>
                 </button>
@@ -106,18 +132,36 @@ const CreatePost = () => {
             })}
           </div>
 
-          <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+          <div className={`rounded-xl border bg-card p-6 space-y-4 transition-all duration-300 ${
+            type === 'resource' 
+              ? 'border-[#D1FF4A]/40 ring-1 ring-[#D1FF4A]/10 shadow-[0_4px_20px_rgba(209,255,74,0.05)]' 
+              : 'border-border shadow-sm'
+          }`}>
             <div className="grid gap-2">
               <Label htmlFor="title">Title</Label>
               <Input
                 id="title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="A clear, specific title..."
+                placeholder={placeholders.title}
                 maxLength={140}
+                className="focus-visible:ring-offset-0 focus-visible:ring-primary/20"
               />
               <p className="font-body text-[11px] text-muted-foreground text-right">{title.length}/140</p>
             </div>
+
+            {type === "resource" && (
+              <div className="grid gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                <Label htmlFor="externalLink">External Link (Optional)</Label>
+                <Input
+                  id="externalLink"
+                  value={externalLink}
+                  onChange={(e) => setExternalLink(e.target.value)}
+                  placeholder="https://example.com/useful-resource"
+                  className="focus-visible:ring-[#D1FF4A]/30 border-border/60"
+                />
+              </div>
+            )}
 
             <div className="grid gap-2">
               <Label htmlFor="body">Body</Label>
@@ -126,7 +170,10 @@ const CreatePost = () => {
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
                 rows={8}
-                placeholder="Share the details. Markdown supported soon."
+                placeholder={placeholders.body}
+                className={`focus-visible:ring-offset-0 ${
+                  type === 'resource' ? 'focus-visible:ring-[#D1FF4A]/30' : 'focus-visible:ring-primary/20'
+                }`}
               />
             </div>
 

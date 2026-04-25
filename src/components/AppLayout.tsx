@@ -54,7 +54,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             </div>
 
             {user && (
-              <div className="flex items-center gap-2 sm:gap-4">
+              <div className="flex items-center gap-5">
                 <button className="p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-full transition-colors">
                   <MessageSquare className="h-5 w-5" />
                 </button>

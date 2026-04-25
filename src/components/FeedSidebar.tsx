@@ -50,7 +50,7 @@ export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
     <div className="space-y-5">
       {/* Trending Tags */}
       <div className="rounded-xl border border-border bg-card p-4">
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border/50">
           <TrendingUp className="h-4 w-4 text-primary" />
           <h3 className="font-heading text-sm font-semibold text-foreground">
             Trending Tags
@@ -76,7 +76,7 @@ export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
 
       {/* Top Contributors */}
       <div className="rounded-xl border border-border bg-card p-4">
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border/50">
           <Sparkles className="h-4 w-4 text-badge-question" />
           <h3 className="font-heading text-sm font-semibold text-foreground">
             Top Contributors
@@ -121,19 +121,19 @@ export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <p className="font-heading text-lg font-bold text-foreground">{stats.freelancers}</p>
-            <p className="font-body text-[10px] text-muted-foreground">Active Members</p>
+            <p className="font-body text-[11px] text-[#9CA3AF]">Active Members</p>
           </div>
           <div>
             <p className="font-heading text-lg font-bold text-foreground">{stats.totalPosts}</p>
-            <p className="font-body text-[10px] text-muted-foreground">Total Posts</p>
+            <p className="font-body text-[11px] text-[#9CA3AF]">Total Posts</p>
           </div>
           <div>
             <p className="font-heading text-lg font-bold text-foreground">98%</p>
-            <p className="font-body text-[10px] text-muted-foreground">Helpful rate</p>
+            <p className="font-body text-[11px] text-[#9CA3AF]">Helpful rate</p>
           </div>
           <div>
             <p className="font-heading text-lg font-bold text-foreground">&lt; 1h</p>
-            <p className="font-body text-[10px] text-muted-foreground">Avg Response</p>
+            <p className="font-body text-[11px] text-[#9CA3AF]">Avg Response</p>
           </div>
         </div>
       </div>

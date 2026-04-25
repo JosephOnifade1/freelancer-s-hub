@@ -107,6 +107,49 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
   }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #0D0D12;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #312E81;
+    border-radius: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #6366F1;
+  }
+
+  /* Firefox support */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #312E81 #0D0D12;
+  }
+
+  /* Sidebar Specific: Hide unless hovered */
+  [data-sidebar="content"] {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  [data-sidebar="content"]::-webkit-scrollbar {
+    width: 0;
+  }
+
+  [data-sidebar="content"]:hover {
+    scrollbar-width: thin;
+  }
+
+  [data-sidebar="content"]:hover::-webkit-scrollbar {
+    width: 6px;
+  }
 }
 
 @layer utilities {

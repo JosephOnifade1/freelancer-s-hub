@@ -11,6 +11,8 @@ export interface CommentData {
   createdAt: number;
   parentId?: string; // Used to structure flat comments into a tree
   replies?: CommentData[]; // Reserved for future thread implementation
+  isDeleted?: boolean;
+  isEdited?: boolean;
 }
 
 export const fetchComments = async (postId: string): Promise<CommentData[]> => {
@@ -46,7 +48,7 @@ export const addComment = async (postId: string, commentData: Omit<CommentData, 
   return newCommentRef.key;
 };
 
-export const fetchCommentsByAuthor = async (username: string): Promise<(CommentData & { postId: string })[]> => {
+export const fetchCommentsByAuthor = async (profile: { uid: string, username: string, displayName: string }): Promise<(CommentData & { postId: string })[]> => {
   const allCommentsRef = ref(database, 'post-comments');
   const snapshot = await get(allCommentsRef);
   if (!snapshot.exists()) return [];
@@ -56,7 +58,13 @@ export const fetchCommentsByAuthor = async (username: string): Promise<(CommentD
     const postId = postSnapshot.key as string;
     postSnapshot.forEach((commentSnapshot) => {
       const comment = commentSnapshot.val();
-      if (comment.author === username) {
+      if (
+        !comment.isDeleted && (
+          comment.authorUid === profile.uid || 
+          comment.author === profile.username || 
+          comment.author === profile.displayName
+        )
+      ) {
         userComments.push({
           id: commentSnapshot.key as string,
           postId,
@@ -67,4 +75,13 @@ export const fetchCommentsByAuthor = async (username: string): Promise<(CommentD
   });
 
   return userComments.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+};
+
+export const updateComment = async (postId: string, commentId: string, body: string) => {
+  await set(ref(database, `post-comments/${postId}/${commentId}/body`), body);
+  await set(ref(database, `post-comments/${postId}/${commentId}/isEdited`), true);
+};
+
+export const softDeleteComment = async (postId: string, commentId: string) => {
+  await set(ref(database, `post-comments/${postId}/${commentId}/isDeleted`), true);
 };

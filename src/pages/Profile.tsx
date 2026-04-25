@@ -1,21 +1,126 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Link as LinkIcon, MapPin, Calendar, Zap, ArrowUp, UserPlus, MessageSquare, Edit2, Check, X, Camera, BadgeCheck, CheckCircle2 } from "lucide-react";
+import { Link as LinkIcon, MapPin, Calendar, Zap, ArrowUp, UserPlus, MessageSquare, Edit2, Check, X, Camera, BadgeCheck, CheckCircle2, Loader2, MoreHorizontal, Trash2 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { PostCard } from "@/components/PostCard";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { getUserProfile, toggleFollow, getUidByUsername, updateUserAvatar } from "@/lib/users";
 import { fetchPosts } from "@/lib/posts";
-import { fetchCommentsByAuthor } from "@/lib/comments";
+import { fetchCommentsByAuthor, updateComment, softDeleteComment } from "@/lib/comments";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatTimeAgo } from "@/lib/utils";
 import { toast } from "sonner";
 import { set, ref } from "firebase/database";
 import { database } from "@/lib/firebase";
 import { Switch } from "@/components/ui/switch";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-type Tab = "Overview" | "Posts" | "Resources" | "Saved";
+type Tab = "Overview" | "Posts" | "Comments" | "Resources" | "Saved";
+
+const ProfileCommentCard = ({ comment, isOwnProfile }: { comment: any, isOwnProfile: boolean }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editBody, setEditBody] = useState(comment.body);
+  const queryClient = useQueryClient();
+
+  const updateMutation = useMutation({
+    mutationFn: async () => updateComment(comment.postId, comment.id, editBody),
+    onSuccess: () => {
+      setIsEditing(false);
+      queryClient.invalidateQueries({ queryKey: ['userComments'] });
+      toast.success("Comment updated");
+    },
+    onError: () => toast.error("Failed to update comment")
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => softDeleteComment(comment.postId, comment.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['userComments'] });
+      toast.success("Comment deleted");
+    },
+    onError: () => toast.error("Failed to delete comment")
+  });
+
+  if (comment.isDeleted) {
+    return (
+      <div className="rounded-xl border border-dashed border-border/50 bg-card p-5 opacity-60 flex gap-4">
+        <div className="mt-1"><MessageSquare className="h-5 w-5 text-muted-foreground/50" /></div>
+        <div className="flex-1 min-w-0">
+          <div className="font-body text-xs text-muted-foreground mb-1">
+             Comment removed <span className="mx-2">•</span> {formatTimeAgo(comment.createdAt)}
+          </div>
+          <p className="font-body text-sm text-muted-foreground/70 italic leading-relaxed">
+             This insight was removed by the author.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-5 hover:border-primary/40 transition-colors shadow-sm flex gap-4">
+      <div className="mt-1">
+        <MessageSquare className="h-5 w-5 text-muted-foreground/50" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between mb-1">
+          <div className="font-body text-xs text-muted-foreground">
+            Commented on <Link to={`/post/${comment.postId}`} className="font-medium text-foreground hover:text-primary transition-colors">a post</Link>
+            <span className="mx-2">•</span>
+            {formatTimeAgo(comment.createdAt)}
+            {comment.isEdited && <span className="italic ml-1">(edited)</span>}
+          </div>
+          
+          {isOwnProfile && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus:outline-none">
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40 font-body">
+                <DropdownMenuItem onClick={() => setIsEditing(true)} className="cursor-pointer">
+                  <Edit2 className="h-4 w-4 mr-2" />
+                  <span>Edit</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => deleteMutation.mutate()} className="cursor-pointer text-destructive focus:text-destructive">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  <span>Delete</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+
+        {isEditing ? (
+          <div className="mt-2 mb-2">
+            <textarea
+              value={editBody}
+              onChange={(e) => setEditBody(e.target.value)}
+              className="w-full resize-none rounded-md bg-background border border-border px-3 py-2 font-body text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
+              rows={3}
+            />
+            <div className="flex justify-end gap-2 mt-2">
+              <button onClick={() => setIsEditing(false)} className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground">Cancel</button>
+              <button 
+                onClick={() => updateMutation.mutate()} 
+                disabled={updateMutation.isPending || !editBody.trim()}
+                className="px-3 py-1 bg-primary text-primary-foreground text-xs rounded hover:opacity-90 disabled:opacity-50"
+              >
+                {updateMutation.isPending ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="font-body text-sm text-foreground/90 leading-relaxed whitespace-pre-line mt-1">
+            {comment.body}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const Profile = () => {
   const { uid, username, handle } = useParams();
@@ -66,12 +171,12 @@ const Profile = () => {
   });
 
   const { data: userComments = [], isLoading: loadingComments } = useQuery({
-    queryKey: ['userComments', profile?.username],
-    queryFn: () => profile?.username ? fetchCommentsByAuthor(profile.username) : [],
-    enabled: !!profile?.username
+    queryKey: ['userComments', profile?.uid],
+    queryFn: () => profile ? fetchCommentsByAuthor(profile) : [],
+    enabled: !!profile
   });
 
-  const tabs: Tab[] = isOwnProfile ? ["Overview", "Posts", "Resources", "Saved"] : ["Overview", "Posts", "Resources"];
+  const tabs: Tab[] = isOwnProfile ? ["Overview", "Posts", "Comments", "Resources", "Saved"] : ["Overview", "Posts", "Comments", "Resources"];
   const [active, setActive] = useState<Tab>("Overview");
   
   const [isEditingBio, setIsEditingBio] = useState(false);
@@ -125,24 +230,34 @@ const Profile = () => {
     };
     reader.readAsDataURL(file);
   };
-
-  // Derived Data
-  const userPosts = profile ? allPosts.filter((p) => p.author?.name === profile.username) : [];
-  const resourcePosts = userPosts.filter(p => p.category === "Resources" || p.tags?.includes("resource"));
+    // Derived Data (Filter out deleted content)
+  const userPosts = profile ? allPosts.filter((p) => 
+    !p.isDeleted && (
+      p.author?.uid === profile.uid || 
+      p.author?.name === profile.username || 
+      p.author?.name === profile.displayName
+    )
+  ) : [];
   
-  // Mixed Feed for Overview
-  const mixedFeed = [...userPosts, ...userComments].sort((a, b) => {
-    return b.createdAt - a.createdAt;
-  });
+  const resourcePosts = userPosts.filter(p => p.category === "Resources" || p.tags?.includes("resource"));
+  const savedPostsList = profile ? allPosts.filter(p => profile.savedPosts?.[p.id]) : [];
+  
+  // Mixed Feed for Overview: Top 3 Posts + Top 3 Comments
+  const recentPosts = userPosts.slice(0, 3);
+  const recentComments = userComments.filter(c => !c.isDeleted).slice(0, 3);
+  const mixedOverview = [...recentPosts, ...recentComments].sort((a, b) => b.createdAt - a.createdAt);
 
-  const totalContributions = userPosts.length + userComments.length;
+  const totalContributions = userPosts.length + userComments.filter(c => !c.isDeleted).length;
 
   const tabCounts: Record<Tab, string> = {
-    Overview: String(mixedFeed.length),
+    Overview: String(mixedOverview.length),
     Posts: String(userPosts.length),
+    Comments: String(userComments.filter(c => !c.isDeleted).length),
     Resources: String(resourcePosts.length),
-    Saved: "0"
+    Saved: String(savedPostsList.length)
   };
+  
+  const isFollowing = currentUser && profile?.followersList?.[currentUser.uid] === true;
 
   const followMutation = useMutation({
     mutationFn: async () => {
@@ -285,18 +400,23 @@ const Profile = () => {
                       >
                         <MessageSquare className="h-4 w-4" />
                       </button>
-                      <button 
-                        onClick={() => followMutation.mutate()}
-                        disabled={followMutation.isPending}
-                        className="flex items-center gap-2 rounded-full bg-primary px-5 py-2 font-body text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50 shadow-sm"
-                      >
-                        {followMutation.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <UserPlus className="h-4 w-4" />
-                        )}
-                        Follow
-                      </button>
+                      {!isOwnProfile && (
+                        <button 
+                          onClick={() => followMutation.mutate()}
+                          disabled={followMutation.isPending}
+                          className={`flex items-center gap-2 rounded-full px-5 py-2 font-body text-sm font-semibold transition-all shadow-sm ${
+                            isFollowing 
+                              ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border'
+                              : 'bg-primary text-primary-foreground hover:opacity-90'
+                          }`}
+                        >
+                          {followMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>{isFollowing ? "Following" : <> <UserPlus className="h-4 w-4" /> Follow</>}</>
+                          )}
+                        </button>
+                      )}
                     </>
                   )}
                 </div>
@@ -323,35 +443,37 @@ const Profile = () => {
             {/* Main Feed Content */}
             <div className="space-y-4">
               {active === "Overview" && (
-                mixedFeed.length === 0 ? (
-                  <div className="rounded-xl border border-border bg-card p-12 text-center font-body text-sm text-muted-foreground shadow-sm">
-                    No activity yet.
+                mixedOverview.length === 0 ? (
+                  <div className="rounded-xl border border-border bg-card p-12 text-center shadow-sm flex flex-col items-center gap-4">
+                    <div className="h-16 w-16 rounded-full bg-primary/5 flex items-center justify-center mb-2">
+                      <Zap className="h-8 w-8 text-primary/30" />
+                    </div>
+                    <div>
+                      <h3 className="font-heading text-lg font-bold text-foreground">No active history</h3>
+                      <p className="font-body text-sm text-muted-foreground max-w-[280px] mx-auto mt-1">
+                        {isOwnProfile 
+                          ? "You haven't shared any insights or resources yet. Start building your professional presence today."
+                          : "This user hasn't shared any insights yet."}
+                      </p>
+                    </div>
+                    {isOwnProfile && (
+                      <Link 
+                        to="/" 
+                        className="mt-2 rounded-full bg-primary px-6 py-2.5 font-heading text-sm font-bold text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all hover:scale-105"
+                      >
+                        Create your first post
+                      </Link>
+                    )}
                   </div>
                 ) : (
-                  mixedFeed.map((item: any, i) => {
+                  mixedOverview.map((item: any, i) => {
                     // Type guard for posts vs comments
                     if (item.title) {
                       // It's a post
                       return <PostCard key={item.id} post={item} index={i} />;
                     } else {
                       // It's a comment
-                      return (
-                        <div key={item.id} className="rounded-xl border border-border bg-card p-5 hover:border-primary/40 transition-colors shadow-sm flex gap-4">
-                          <div className="mt-1">
-                            <MessageSquare className="h-5 w-5 text-muted-foreground/50" />
-                          </div>
-                          <div>
-                            <div className="font-body text-xs text-muted-foreground mb-1">
-                              Commented on <Link to={`/post/${item.postId}`} className="font-medium text-foreground hover:text-primary transition-colors">a post</Link>
-                              <span className="mx-2">•</span>
-                              {formatTimeAgo(item.createdAt)}
-                            </div>
-                            <p className="font-body text-sm text-foreground/90 leading-relaxed">
-                              {item.body}
-                            </p>
-                          </div>
-                        </div>
-                      );
+                      return <ProfileCommentCard key={item.id} comment={item} isOwnProfile={isOwnProfile} />;
                     }
                   })
                 )
@@ -367,6 +489,18 @@ const Profile = () => {
                 )
               )}
 
+              {active === "Comments" && (
+                userComments.length === 0 ? (
+                  <div className="rounded-xl border border-border bg-card p-12 text-center font-body text-sm text-muted-foreground shadow-sm">
+                    No comments yet.
+                  </div>
+                ) : (
+                  userComments.map((comment) => (
+                    <ProfileCommentCard key={comment.id} comment={comment} isOwnProfile={isOwnProfile} />
+                  ))
+                )
+              )}
+
               {active === "Resources" && (
                 resourcePosts.length === 0 ? (
                   <div className="rounded-xl border border-border bg-card p-12 text-center font-body text-sm text-muted-foreground shadow-sm">
@@ -378,10 +512,14 @@ const Profile = () => {
               )}
 
               {active === "Saved" && isOwnProfile && (
-                <div className="rounded-xl border border-border bg-card p-12 text-center font-body text-sm text-muted-foreground shadow-sm flex flex-col items-center gap-3">
-                   <Zap className="h-8 w-8 text-muted-foreground/30" />
-                   <p className="max-w-xs">Your private saved posts will appear here. Only you can see this tab.</p>
-                </div>
+                savedPostsList.length === 0 ? (
+                  <div className="rounded-xl border border-border bg-card p-12 text-center font-body text-sm text-muted-foreground shadow-sm flex flex-col items-center gap-3">
+                     <Zap className="h-8 w-8 text-muted-foreground/30" />
+                     <p className="max-w-xs">Your private saved posts will appear here. Only you can see this tab.</p>
+                  </div>
+                ) : (
+                  savedPostsList.map((post, i) => <PostCard key={post.id} post={post} index={i} />)
+                )
               )}
             </div>
 
@@ -445,13 +583,13 @@ const Profile = () => {
                 Top Skills
               </h3>
               <div className="flex flex-wrap gap-2">
-                {profile.skills && profile.skills.length > 0 ? (
+                {Array.isArray(profile.skills) && profile.skills.length > 0 ? (
                   profile.skills.map(skill => (
                     <span 
                       key={skill} 
                       className="px-2.5 py-1 rounded bg-[#1e1b4b] text-white font-body text-xs font-medium tracking-wide shadow-sm"
                     >
-                      #{skill.toLowerCase().replace(/\s+/g, '')}
+                      #{typeof skill === 'string' ? skill.toLowerCase().replace(/\s+/g, '') : skill}
                     </span>
                   ))
                 ) : (
