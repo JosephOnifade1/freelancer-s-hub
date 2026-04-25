@@ -6,7 +6,7 @@ type PostType = "discussion" | "question" | "resource" | "weekly";
 const typeConfig: Record<PostType, { label: string; className: string; icon?: React.ReactNode }> = {
   discussion: { 
     label: "Discussion", 
-    className: "bg-sky-500/10 text-sky-500 border-sky-500/20", 
+    className: "bg-[#6366F1]/10 text-[#6366F1] border-[#6366F1]/20", 
     icon: <MessageSquare className="h-3.5 w-3.5" /> 
   },
   question: { 

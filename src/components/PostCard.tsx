@@ -161,7 +161,11 @@ export function PostCard({ post, index }: PostCardProps) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.3 }}
-      className="group flex gap-3 rounded-xl border border-border bg-card py-[13.6px] px-4 transition-colors hover:border-primary/20 hover:bg-surface-elevated"
+      className={`group flex gap-3 rounded-xl border bg-card py-[13.6px] px-4 transition-all duration-300 hover:bg-surface-elevated ${
+        post.type === 'discussion' 
+          ? 'border-[#6366F1]/30 shadow-[0_4px_15px_rgba(99,102,241,0.05)] hover:border-[#6366F1]/50' 
+          : 'border-border hover:border-primary/20'
+      }`}
     >
       <VoteControls score={post.score || 0} entityId={post.id} authorUid={post.author?.uid} type="post" />
 
@@ -242,8 +246,17 @@ export function PostCard({ post, index }: PostCardProps) {
 
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/50">
           <Link to={post.author?.uid ? `/profile/${post.author.uid}` : "#"} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 font-heading text-[10px] font-bold text-primary">
-              {post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'}
+            <div className={`flex h-6 w-6 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden ${
+              post.author?.name === 'marcelo_dev' ? 'bg-[#4C1D95] text-white' :
+              post.author?.name === 'designkara' ? 'bg-[#84CC16] text-black' :
+              post.author?.name === 'freelance_mike' ? 'bg-[#475569] text-white' :
+              'bg-primary/20 text-primary'
+            }`}>
+              {post.author?.avatar ? (
+                <img src={post.author.avatar} alt={post.author.name} className="h-full w-full object-cover" />
+              ) : (
+                <span>{post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'}</span>
+              )}
             </div>
             <span className="font-body text-xs font-medium text-foreground">
               {post.author?.name || 'Unknown'}
