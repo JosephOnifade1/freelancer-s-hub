@@ -9,10 +9,10 @@
     --font-heading: 'Syne', sans-serif;
     --font-body: 'Plus Jakarta Sans', sans-serif;
 
-    --background: 230 30% 7%; /* #121218 approx */
+    --background: 230 30% 4%;
     --foreground: 220 20% 92%;
 
-    --card: 230 28% 9%; /* #16161D approx */
+    --card: 230 28% 7%;
     --card-foreground: 220 20% 92%;
 
     --popover: 230 28% 7%;
@@ -39,13 +39,13 @@
 
     --radius: 0.75rem;
 
-    --sidebar-background: 240 10% 6%; /* #0D0D12 approx */
+    --sidebar-background: 230 30% 5%;
     --sidebar-foreground: 220 15% 70%;
     --sidebar-primary: 239 84% 67%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 230 25% 10%;
     --sidebar-accent-foreground: 220 20% 90%;
-    --sidebar-border: transparent;
+    --sidebar-border: 230 20% 12%;
     --sidebar-ring: 239 84% 67%;
 
     /* Custom tokens */
@@ -55,8 +55,73 @@
     --badge-question: 35 90% 55%;
     --badge-resource: 150 70% 45%;
     --badge-weekly: 280 70% 60%;
-    --upvote: 25 95% 55%;
-    --downvote: 239 60% 50%;
+    /* Standardized semantic variables (Dark - Default) */
+    --bg-app: #09090B;
+    --bg-surface: #0D0D11;
+    --bg-sidebar: #070709;
+    --text-primary: #ECECEE;
+    --text-muted: #94A3B8;
+    --brand-primary: #6366F1;
+    --brand-accent: #D1FF4A;
+    --brand-danger: #EF4444;
+    --border-main: rgba(255, 255, 255, 0.1);
+    --border-strong: rgba(255, 255, 255, 0.2);
+  }
+
+  .theme-dark {
+    --bg-app: #09090B;
+    --bg-surface: #0D0D11;
+    --bg-sidebar: #070709;
+    --text-primary: #ECECEE;
+    --text-muted: #94A3B8;
+    --brand-primary: #6366F1;
+    --brand-accent: #D1FF4A;
+    --brand-danger: #EF4444;
+    --border-main: rgba(255, 255, 255, 0.1);
+    --border-strong: rgba(255, 255, 255, 0.2);
+  }
+
+  .theme-light {
+    /* Soft-Light Palette (Reddit Fidelity) */
+    --bg-app: #F0F2F5;
+    --bg-surface: #FFFFFF;
+    --bg-sidebar: #F7F9FA;
+    --text-primary: #1A1A1B;
+    --text-muted: #57606A;
+    --brand-primary: #5865F2;
+    --brand-accent: #6AB344;
+    --brand-danger: #D97706; /* Amber for better visibility on white */
+    --border-main: #EDEFF1;
+    --border-strong: #D1D5DB;
+    --soft-shadow: 0 2px 4px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
+
+    /* Tailwind HSL Mappings for seamless integration */
+    --background: 216 17% 95%; 
+    --foreground: 220 10% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 10% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 10% 10%;
+    --primary: 235 86% 65%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 20% 98%;
+    --secondary-foreground: 220 10% 10%;
+    --muted: 210 20% 96%;
+    --muted-foreground: 212 10% 38%;
+    --accent: 99 44% 48%;
+    --accent-foreground: 0 0% 100%;
+    --border: 210 20% 90%;
+    --input: 210 20% 90%;
+    --ring: 235 86% 65%;
+    --sidebar-background: 200 15% 97%;
+    --sidebar-foreground: 212 10% 38%;
+    --sidebar-border: 210 20% 92%;
+  }
+
+  .theme-light .card,
+  .theme-light [class*="Card"] {
+    border: none !important;
+    box-shadow: var(--soft-shadow) !important;
   }
 
   .landing-theme {
@@ -102,84 +167,19 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-body);
+    transition: all 0.25s ease;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
   }
-
-  /* Custom Scrollbar */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: #0D0D12;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: #312E81;
-    border-radius: 10px;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: #6366F1;
-  }
-
-  /* Firefox support */
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: #312E81 #0D0D12;
-  }
-
-  /* Sidebar Specific: Stealth Mode */
-  [data-sidebar="content"], .feed-container {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    overflow-y: auto;
-  }
-  
-  [data-sidebar="content"]::-webkit-scrollbar, .feed-container::-webkit-scrollbar {
-    display: none;
-  }
-
-  [data-sidebar="content"]:hover, .feed-container:hover {
-    scrollbar-width: thin;
-    scrollbar-color: #6366F1 transparent;
-  }
-
-  [data-sidebar="content"]:hover::-webkit-scrollbar, .feed-container:hover::-webkit-scrollbar {
-    display: block;
-    width: 4px;
-  }
-
-  [data-sidebar="content"]:hover::-webkit-scrollbar-thumb, .feed-container:hover::-webkit-scrollbar-thumb {
-    background: #6366F1;
-    border-radius: 20px;
-  }
-
-  /* Navigation Section Headers */
-  [data-sidebar="group-label"], .widget-header {
-    font-size: 11px !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.08em !important;
-    color: #64748B !important;
-    margin-top: 24px !important;
-    height: auto !important;
-    padding-bottom: 8px !important;
-  }
-
-  .widget-header {
-    margin-top: 0 !important;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
 }
 
 @layer utilities {
+  .theme-transition {
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
   .glow-primary {
     box-shadow: 0 0 20px -5px hsl(var(--glow-primary) / 0.4);
   }
@@ -189,38 +189,5 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-  }
-
-  @keyframes veteran-heartbeat {
-    0% { box-shadow: 0 0 10px rgba(99, 102, 241, 0.2); }
-    50% { box-shadow: 0 0 25px rgba(99, 102, 241, 0.5); }
-    100% { box-shadow: 0 0 10px rgba(99, 102, 241, 0.2); }
-  }
-
-  .veteran-aura {
-    animation: veteran-heartbeat 4s ease-in-out infinite;
-    border-color: rgba(99, 102, 241, 0.6) !important;
-  }
-
-  .veteran-text-gradient {
-    background: linear-gradient(135deg, #6366F1 0%, #A855F7 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .veteran-gradient-bg {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%);
-  }
-
-  @keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-  }
-
-  .beta-shimmer {
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-    background-size: 200% 100%;
-    animation: shimmer 5s infinite linear;
   }
 }

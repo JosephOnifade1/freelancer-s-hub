@@ -56,7 +56,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className={collapsed ? "p-2 py-4" : "p-4"}>
         <div className={`flex items-center overflow-hidden h-10 w-full ${collapsed ? "justify-center" : "relative"}`}>
-          <div className={`h-8 w-8 shrink-0 rounded overflow-hidden ${collapsed ? "mx-auto" : "absolute top-1/2 -translate-y-1/2 left-0"}`}>
+          <div className={`h-8 w-8 shrink-0 rounded overflow-hidden ${collapsed ? "mx-auto" : "absolute top-1/2 -translate-y-1/2 left-0"} bg-white/5`}>
             <img src="/logo-transparent.png" alt="Soloboard Logo" className="h-full w-full object-cover transform scale-[1.3]" />
           </div>
           {!collapsed && (
@@ -78,9 +78,9 @@ export function AppSidebar() {
               {mainNav.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                    <NavLink to={item.url} end className={({ isActive }) => cn(
+                    <NavLink to={item.url} end className={({ isActive }: { isActive: boolean }) => cn(
                       "flex items-center gap-[12px] w-full px-3 py-2 rounded-lg transition-all duration-200",
-                      isActive ? "bg-white/5 text-white" : "text-muted-foreground/60 hover:bg-white/5 hover:text-white"
+                      isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                     )}>
                       <item.icon className="h-[22px] w-[22px] shrink-0" strokeWidth={1.5} />
                       {!collapsed && <span className="font-medium text-sm flex items-center">{item.title}</span>}
@@ -101,9 +101,9 @@ export function AppSidebar() {
               {discover.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                    <NavLink to={item.url} end className={({ isActive }) => cn(
+                    <NavLink to={item.url} end className={({ isActive }: { isActive: boolean }) => cn(
                       "flex items-center gap-[12px] w-full px-3 py-2 rounded-lg transition-all duration-200",
-                      isActive ? "bg-white/5 text-white" : "text-muted-foreground/60 hover:bg-white/5 hover:text-white"
+                      isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                     )}>
                       <item.icon className="h-[22px] w-[22px] shrink-0" strokeWidth={1.5} />
                       {!collapsed && <span className="font-medium text-sm flex items-center">{item.title}</span>}
@@ -124,9 +124,9 @@ export function AppSidebar() {
               {personal.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                    <NavLink to={item.url} end className={({ isActive }) => cn(
+                    <NavLink to={item.url} end className={({ isActive }: { isActive: boolean }) => cn(
                       "flex items-center gap-[12px] w-full px-3 py-2 rounded-lg transition-all duration-200",
-                      isActive ? "bg-white/5 text-white" : "text-muted-foreground/60 hover:bg-white/5 hover:text-white"
+                      isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                     )}>
                       <item.icon className="h-[22px] w-[22px] shrink-0" strokeWidth={1.5} />
                       {!collapsed && <span className="font-medium text-sm flex items-center">{item.title}</span>}
@@ -162,7 +162,7 @@ export function AppSidebar() {
                 Log In
               </button>
             )}
-            <div className="rounded-lg border border-border bg-secondary/50 p-3">
+            <div className="rounded-lg border border-[var(--border-main)] bg-[var(--bg-surface)]/50 p-3">
               <p className="font-body text-xs text-muted-foreground">
                 Built for freelancers, by freelancers.
               </p>

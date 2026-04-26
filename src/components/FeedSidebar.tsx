@@ -47,9 +47,9 @@ export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
   return (
     <div className="space-y-5">
       {/* Trending Tags */}
-      <div className="rounded-xl border border-border bg-card p-4">
-        <div className="widget-header mb-3 pb-2 border-b border-border/50">
-          <TrendingUp className="h-4 w-4 text-primary" />
+      <div className="rounded-xl border border-[var(--border-main)] bg-[var(--bg-surface)] p-4">
+        <div className="widget-header mb-3 pb-2 border-b border-[var(--border-main)]/50">
+          <TrendingUp className="h-4 w-4 text-[var(--brand-primary)]" />
           <h3>Trending Tags</h3>
         </div>
         {topTags.length === 0 ? (
@@ -60,7 +60,7 @@ export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
               <Link
                 key={tag.name}
                 to={`/tag/${tag.name}`}
-                className="rounded-md bg-[#111118] px-2 py-1 font-body text-[11px] font-medium text-secondary-foreground transition-all hover:text-[#D1FF4A]"
+                className="rounded-md bg-white/5 border border-[var(--border-main)] px-2 py-1 font-body text-[11px] font-medium text-[var(--text-muted)] transition-all hover:text-[var(--brand-accent)]"
               >
                 #{tag.name}
                 <span className="ml-1 text-muted-foreground/60">{tag.count}</span>
@@ -71,9 +71,9 @@ export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
       </div>
 
       {/* Top Contributors */}
-      <div className="rounded-xl border border-border bg-card p-4">
-        <div className="widget-header mb-3 pb-2 border-b border-border/50">
-          <Sparkles className="h-4 w-4 text-badge-question" />
+      <div className="rounded-xl border border-[var(--border-main)] bg-[var(--bg-surface)] p-4">
+        <div className="widget-header mb-3 pb-2 border-b border-[var(--border-main)]/50">
+          <Sparkles className="h-4 w-4 text-[var(--brand-accent)]" />
           <h3>Top Contributors</h3>
         </div>
         {topContributors.length === 0 ? (
@@ -110,27 +110,27 @@ export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
       </div>
 
       {/* Community Stats */}
-      <div className="rounded-xl border border-border bg-card p-4">
-        <div className="widget-header mb-3">
-          <Users className="h-4 w-4 text-badge-resource" />
+      <div className="rounded-xl border border-[var(--border-main)] bg-[var(--bg-surface)] p-4">
+        <div className="widget-header mb-3 pb-2 border-b border-[var(--border-main)]/50">
+          <Users className="h-4 w-4 text-[var(--brand-primary)]" />
           <h3>Community Live Stats</h3>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <p className="font-heading text-lg font-bold text-foreground">{stats.freelancers}</p>
-            <p className="font-body text-[11px] text-[#9CA3AF]">Active Members</p>
+            <p className="font-heading text-lg font-bold text-[var(--text-primary)]">{stats.freelancers}</p>
+            <p className="font-body text-[11px] text-[var(--text-muted)]">Active Members</p>
           </div>
           <div>
-            <p className="font-heading text-lg font-bold text-foreground">{stats.totalPosts}</p>
-            <p className="font-body text-[11px] text-[#9CA3AF]">Total Posts</p>
+            <p className="font-heading text-lg font-bold text-[var(--text-primary)]">{stats.totalPosts}</p>
+            <p className="font-body text-[11px] text-[var(--text-muted)]">Total Posts</p>
           </div>
           <div>
-            <p className="font-heading text-lg font-bold text-foreground">98%</p>
-            <p className="font-body text-[11px] text-[#9CA3AF]">Helpful rate</p>
+            <p className="font-heading text-lg font-bold text-[var(--text-primary)]">98%</p>
+            <p className="font-body text-[11px] text-[var(--text-muted)]">Helpful rate</p>
           </div>
           <div>
-            <p className="font-heading text-lg font-bold text-foreground">&lt; 1h</p>
-            <p className="font-body text-[11px] text-[#9CA3AF]">Avg Response</p>
+            <p className="font-heading text-lg font-bold text-[var(--text-primary)]">&lt; 1h</p>
+            <p className="font-body text-[11px] text-[var(--text-muted)]">Avg Response</p>
           </div>
         </div>
       </div>

@@ -38,10 +38,10 @@ export function VerifiedBadge({ isVerified, size = 14, showTooltip = true }: Ver
         <TooltipTrigger asChild>
           <BadgeCheck 
             size={size} 
-            className="text-[#D1FF4A] drop-shadow-[0_0_6px_rgba(209,255,74,0.4)]" 
+            className="text-[var(--brand-accent)] drop-shadow-[0_0_6px_rgba(209,255,74,0.4)]" 
           />
         </TooltipTrigger>
-        <TooltipContent className="font-body text-[11px] bg-[#D1FF4A] border-none text-black p-2">
+        <TooltipContent className="font-body text-[11px] bg-[var(--brand-accent)] border-none text-black p-2">
           <p className="font-bold">Verified Pro</p>
           <p className="opacity-80">This freelancer is vetted for high-signal quality.</p>
         </TooltipContent>

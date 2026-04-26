@@ -1,12 +1,12 @@
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, MessageSquare, CircleHelp } from "lucide-react";
+import { BookOpen, MessageSquare, CircleHelp, Sparkles } from "lucide-react";
 
 type PostType = "discussion" | "question" | "resource" | "weekly";
 
 const typeConfig: Record<PostType, { label: string; className: string; icon?: React.ReactNode }> = {
   discussion: { 
     label: "Discussion", 
-    className: "bg-[#6366F1]/10 text-[#6366F1] border-[#6366F1]/20", 
+    className: "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] border-[var(--brand-primary)]/20", 
     icon: <MessageSquare className="h-3.5 w-3.5" /> 
   },
   question: { 
@@ -16,8 +16,8 @@ const typeConfig: Record<PostType, { label: string; className: string; icon?: Re
   },
   resource: { 
     label: "Resource", 
-    className: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20", 
-    icon: <BookOpen className="h-3.5 w-3.5" /> 
+    className: "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] border-[var(--brand-primary)]/20", 
+    icon: <Sparkles className="h-3.5 w-3.5" /> 
   },
   weekly: { 
     label: "Weekly", 

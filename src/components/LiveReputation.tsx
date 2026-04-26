@@ -19,7 +19,7 @@ export function LiveReputation({ uid, fallback }: LiveReputationProps) {
 
   return (
     <span className="inline-flex items-center gap-1">
-      <span className={`${isHighRep ? "text-[#D1FF4A] drop-shadow-[0_0_5px_rgba(209,255,74,0.6)] animate-pulse" : "text-primary"} translate-y-[-1px]`}>
+      <span className={`${isHighRep ? "text-[var(--brand-accent)] drop-shadow-[0_0_5px_rgba(209,255,74,0.6)] animate-pulse" : "text-[var(--brand-primary)]"} translate-y-[-1px]`}>
         ⚡
       </span>
       {reputation.toLocaleString()}

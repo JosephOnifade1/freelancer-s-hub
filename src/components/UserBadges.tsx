@@ -1,4 +1,4 @@
-import { Sparkles, Trophy } from "lucide-react";
+import { Sparkles, Trophy, Shield } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getUserResourcesCount } from "@/lib/users";
 import {
@@ -21,12 +21,21 @@ export function UserBadges({ uid }: UserBadgesProps) {
 
   const badges = [
     {
-      id: 'beta',
-      label: 'Beta Member',
+      id: 'staff',
+      label: 'Staff',
+      icon: Shield,
+      color: 'text-[var(--brand-primary)]',
+      bgColor: 'bg-[var(--brand-primary)]/10',
+      description: 'A verified staff member of Soloboard.',
+      active: false
+    },
+    {
+      id: 'early_adopter',
+      label: 'Early Adopter',
       icon: Sparkles,
-      color: 'text-[#6366F1]',
-      bgColor: 'bg-[#6366F1]/10',
-      description: 'An early adopter of Soloboard. Joined during the private beta.',
+      color: 'text-[var(--brand-accent)]',
+      bgColor: 'bg-[var(--brand-accent)]/10',
+      description: 'An early adopter of Soloboard.',
       active: true
     },
     {

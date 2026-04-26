@@ -164,10 +164,10 @@ export function PostCard({ post, index }: PostCardProps) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.3 }}
-      className={`group flex gap-3 rounded-xl border border-white/5 bg-card py-[11.5px] px-4 transition-all duration-300 hover:bg-[#16161D] hover:border-b-[#6366F1]/40 hover:border-b-2 ${
+      className={`group flex gap-3 rounded-xl border border-[var(--border-main)] bg-[var(--bg-surface)] py-[11.5px] px-4 transition-all duration-300 hover:bg-white/5 hover:border-[var(--brand-primary)]/40 hover:border-b-2 ${
         post.type === 'discussion' 
-          ? 'border-[#6366F1]/30 shadow-[0_4px_15px_rgba(99,102,241,0.05)] hover:border-[#6366F1]/50' 
-          : 'border-border hover:border-primary/20'
+          ? 'border-[var(--brand-primary)]/30 shadow-[0_4px_15px_rgba(99,102,241,0.05)] hover:border-[var(--brand-primary)]/50' 
+          : 'border-[var(--border-main)] hover:border-[var(--brand-primary)]/20'
       } ${isVeteran(post.author?.reputation || 0) ? 'veteran-aura' : ''}`}
     >
       <VoteControls score={post.score || 0} entityId={post.id} authorUid={post.author?.uid} type="post" />
@@ -179,21 +179,21 @@ export function PostCard({ post, index }: PostCardProps) {
           </div>
           
           <div className="flex items-center gap-2 opacity-100">
-            <span className="font-body text-[12px] text-[#94A3B8] flex items-center gap-1">
+            <span className="font-body text-[12px] text-[var(--text-muted)] flex items-center gap-1">
               <Eye className="h-3 w-3" /> {post.views || 0}
             </span>
-            <span className="text-[#94A3B8]/30">•</span>
-            <span className="font-body text-[12px] text-[#94A3B8] flex items-center gap-1">
+            <span className="text-[var(--text-muted)]/30">•</span>
+            <span className="font-body text-[12px] text-[var(--text-muted)] flex items-center gap-1">
               {formatTimeAgo(post.createdAt)}
               {isVeteran(post.author?.reputation || 0) && (
-                <span className="text-[#6366F1] font-bold ml-1">V</span>
+                <span className="text-[var(--brand-primary)] font-bold ml-1">V</span>
               )}
             </span>
           </div>
         </div>
 
         <Link to={`/post/${post.id}`} className="block">
-          <h3 className="font-heading text-[1.1rem] font-semibold text-[#FFFFFF] leading-tight mb-1.5 group-hover:text-primary transition-colors cursor-pointer">
+          <h3 className="font-heading text-[1.1rem] font-semibold text-[var(--text-primary)] leading-tight mb-1.5 group-hover:text-[var(--brand-primary)] transition-colors cursor-pointer">
             {post.title}
           </h3>
         </Link>
@@ -204,7 +204,7 @@ export function PostCard({ post, index }: PostCardProps) {
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-1.5 font-body text-[11px] text-primary hover:underline mb-2"
+            className="inline-flex items-center gap-1.5 font-body text-[11px] text-[var(--brand-primary)] hover:underline mb-2"
           >
             <ExternalLink className="h-3 w-3" />
             Source Reference
@@ -232,7 +232,7 @@ export function PostCard({ post, index }: PostCardProps) {
           </div>
         ) : (
           <Link to={`/post/${post.id}`} className="block">
-            <p className="font-body text-sm text-[#94A3B8] leading-relaxed line-clamp-2 mb-3">
+            <p className="font-body text-sm text-[var(--text-muted)] leading-relaxed line-clamp-2 mb-3">
               {post.body}
             </p>
           </Link>
@@ -243,7 +243,7 @@ export function PostCard({ post, index }: PostCardProps) {
             <Link
               key={tag}
               to={`/tag/${tag}`}
-              className="rounded-md bg-white/[0.03] border border-white/10 px-2 py-0.5 font-body text-[10px] font-medium text-muted-foreground/80 cursor-pointer hover:border-[#6366F1] hover:text-[#6366F1] transition-all"
+              className="rounded-md bg-white/5 border border-[var(--border-main)] px-2 py-0.5 font-body text-[10px] font-medium text-[var(--text-muted)] cursor-pointer hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)] transition-all"
             >
               #{tag}
             </Link>
@@ -259,17 +259,17 @@ export function PostCard({ post, index }: PostCardProps) {
                 <span>{post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'}</span>
               )}
             </div>
-            <span className="font-body text-[12px] font-medium text-[#94A3B8] flex items-center gap-1">
+            <span className="font-body text-[12px] font-medium text-[var(--text-muted)] flex items-center gap-1">
               {post.author?.name || 'Unknown'}
               <VerifiedBadge isVerified={!!post.author?.isVerifiedPro} size={12} showTooltip={false} />
             </span>
-            <span className="font-body text-[12px] text-[#94A3B8]">
+            <span className="font-body text-[12px] text-[var(--text-muted)]">
               <LiveReputation uid={post.author?.uid} fallback={post.author?.reputation || 0} />
             </span>
           </Link>
 
           <div className="flex items-center gap-1">
-            <Link to={`/post/${post.id}`} className="flex items-center gap-1 rounded-md px-2 py-1 font-body text-[12px] text-[#94A3B8] transition-colors hover:bg-secondary hover:text-foreground">
+            <Link to={`/post/${post.id}`} className="flex items-center gap-1 rounded-md px-2 py-1 font-body text-[12px] text-[var(--text-muted)] transition-colors hover:bg-white/5 hover:text-[var(--text-primary)]">
               <MessageSquare className="h-3.5 w-3.5" />
               {post.commentCount || 0}
             </Link>
@@ -282,7 +282,7 @@ export function PostCard({ post, index }: PostCardProps) {
             <button 
               onClick={(e) => { e.preventDefault(); bookmarkMutation.mutate(); }}
               disabled={bookmarkMutation.isPending}
-              className={`rounded-md p-1 transition-colors hover:bg-secondary ${isSaved ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`rounded-md p-1 transition-colors hover:bg-white/5 ${isSaved ? 'text-[var(--brand-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
             >
               <Bookmark className="h-3.5 w-3.5" fill={isSaved ? "currentColor" : "none"} />
             </button>
