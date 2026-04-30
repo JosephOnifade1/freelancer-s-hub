@@ -53,37 +53,27 @@ export function AppSidebar() {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader className={collapsed ? "p-2 py-4" : "p-4"}>
-        <div className={`flex items-center overflow-hidden h-10 w-full ${collapsed ? "justify-center" : "relative"}`}>
-          <div className={`h-8 w-8 shrink-0 rounded overflow-hidden ${collapsed ? "mx-auto" : "absolute top-1/2 -translate-y-1/2 left-0"} bg-white/5`}>
-            <img src="/logo-transparent.png" alt="Soloboard Logo" className="h-full w-full object-cover transform scale-[1.3]" />
-          </div>
-          {!collapsed && (
-            <span className="font-heading text-lg font-bold tracking-tight text-foreground ml-11">
-              Soloboard
-            </span>
-          )}
-        </div>
-      </SidebarHeader>
-
-      <SidebarContent>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>
+    <Sidebar collapsible="icon" className="overflow-hidden">
+      <SidebarContent className="pt-6">
+        <SidebarGroup className="px-0">
+          <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 px-8 h-10 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] opacity-100">
             Feed
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {mainNav.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                <SidebarMenuItem key={item.title} className="px-8">
+                  <SidebarMenuButton asChild isActive={isActive(item.url)} variant="ghost" className="p-0 h-auto hover:bg-transparent overflow-hidden">
                     <NavLink to={item.url} end className={({ isActive }: { isActive: boolean }) => cn(
-                      "flex items-center gap-[12px] w-full px-3 py-2 rounded-lg transition-all duration-200",
-                      isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-all duration-300",
+                      isActive 
+                        ? "bg-accent text-foreground font-bold shadow-sm" 
+                        : "text-[var(--text-muted)] hover:bg-accent/50 hover:text-[var(--text-primary)]"
                     )}>
-                      <item.icon className="h-[22px] w-[22px] shrink-0" strokeWidth={1.5} />
-                      {!collapsed && <span className="font-medium text-sm flex items-center">{item.title}</span>}
+                      <item.icon className="h-[17px] w-[17px] shrink-0" strokeWidth={isActive(item.url) ? 2.5 : 1.5} />
+                      <span className="text-[14px] whitespace-nowrap transition-all duration-300 opacity-100">
+                        {item.title}
+                      </span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -92,21 +82,25 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>
+        <SidebarGroup className="px-0">
+          <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 px-8 h-10 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] opacity-100">
             Discover
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {discover.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                <SidebarMenuItem key={item.title} className="px-8">
+                  <SidebarMenuButton asChild isActive={isActive(item.url)} variant="ghost" className="p-0 h-auto hover:bg-transparent overflow-hidden">
                     <NavLink to={item.url} end className={({ isActive }: { isActive: boolean }) => cn(
-                      "flex items-center gap-[12px] w-full px-3 py-2 rounded-lg transition-all duration-200",
-                      isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-all duration-300",
+                      isActive 
+                        ? "bg-accent text-foreground font-bold shadow-sm" 
+                        : "text-[var(--text-muted)] hover:bg-accent/50 hover:text-[var(--text-primary)]"
                     )}>
-                      <item.icon className="h-[22px] w-[22px] shrink-0" strokeWidth={1.5} />
-                      {!collapsed && <span className="font-medium text-sm flex items-center">{item.title}</span>}
+                      <item.icon className="h-[17px] w-[17px] shrink-0" strokeWidth={isActive(item.url) ? 2.5 : 1.5} />
+                      <span className="text-[14px] whitespace-nowrap transition-all duration-300 opacity-100">
+                        {item.title}
+                      </span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -115,21 +109,25 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>
+        <SidebarGroup className="px-0">
+          <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 px-8 h-10 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] opacity-100">
             You
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {personal.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                <SidebarMenuItem key={item.title} className="px-8">
+                  <SidebarMenuButton asChild isActive={isActive(item.url)} variant="ghost" className="p-0 h-auto hover:bg-transparent overflow-hidden">
                     <NavLink to={item.url} end className={({ isActive }: { isActive: boolean }) => cn(
-                      "flex items-center gap-[12px] w-full px-3 py-2 rounded-lg transition-all duration-200",
-                      isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-all duration-300",
+                      isActive 
+                        ? "bg-accent text-foreground font-bold shadow-sm" 
+                        : "text-[var(--text-muted)] hover:bg-accent/50 hover:text-[var(--text-primary)]"
                     )}>
-                      <item.icon className="h-[22px] w-[22px] shrink-0" strokeWidth={1.5} />
-                      {!collapsed && <span className="font-medium text-sm flex items-center">{item.title}</span>}
+                      <item.icon className="h-[17px] w-[17px] shrink-0" strokeWidth={isActive(item.url) ? 2.5 : 1.5} />
+                      <span className="text-[14px] whitespace-nowrap transition-all duration-300 opacity-100">
+                        {item.title}
+                      </span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -139,36 +137,14 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4">
-        {!collapsed && (
-          <div className="flex flex-col gap-2">
-            {user ? (
-              <button
-                onClick={async () => {
-                  await signOut();
-                  navigate("/");
-                }}
-                className="flex w-full items-center gap-2 rounded-lg border border-border bg-secondary/50 p-3 font-body text-sm text-foreground transition-all hover:bg-secondary"
-              >
-                <LogOut className="h-5 w-5" strokeWidth={1.5} />
-                Log Out
-              </button>
-            ) : (
-              <button
-                onClick={() => navigate("/login")}
-                className="flex w-full items-center gap-2 rounded-lg border border-border bg-secondary/50 p-3 font-body text-sm text-foreground transition-all hover:bg-secondary"
-              >
-                <LogIn className="h-5 w-5" strokeWidth={1.5} />
-                Log In
-              </button>
-            )}
-            <div className="rounded-lg border border-[var(--border-main)] bg-[var(--bg-surface)]/50 p-3">
-              <p className="font-body text-xs text-muted-foreground">
-                Built for freelancers, by freelancers.
-              </p>
-            </div>
+      <SidebarFooter className="p-4 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] opacity-100">
+        <div className="flex flex-col gap-2">
+          <div className="rounded-lg border border-[var(--border-main)] bg-[var(--bg-surface)]/50 p-3 text-center">
+            <p className="font-body text-xs text-muted-foreground">
+              Built for freelancers, by freelancers.
+            </p>
           </div>
-        )}
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

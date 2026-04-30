@@ -20,6 +20,7 @@ import Signup from "./pages/Signup.tsx";
 import Landing from "./pages/Landing.tsx";
 import { ProtectedRoute } from "./components/ProtectedRoute.tsx";
 import { ErrorBoundary } from "./components/ErrorBoundary.tsx";
+import { SidebarProvider } from "./components/ui/sidebar.tsx";
 
 import { useAuth, AuthProvider } from "./hooks/useAuth.tsx";
 
@@ -37,27 +38,29 @@ const App = () => (
       <Toaster />
       <Sonner />
       <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<RootRoute />} />
-            <Route path="/new" element={<ProtectedRoute><NewFeed /></ProtectedRoute>} />
-            <Route path="/following" element={<ProtectedRoute><Following /></ProtectedRoute>} />
-            <Route path="/tag/:tagName" element={<ProtectedRoute><TagFeed /></ProtectedRoute>} />
-            <Route path="/communities" element={<ProtectedRoute><Communities /></ProtectedRoute>} />
-            <Route path="/bookmarks" element={<ProtectedRoute><Bookmarks /></ProtectedRoute>} />
-            <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
-            <Route path="/profile" element={<ProtectedRoute><ErrorBoundary><Profile /></ErrorBoundary></ProtectedRoute>} />
-            <Route path="/profile/:uid" element={<ProtectedRoute><ErrorBoundary><Profile /></ErrorBoundary></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-            <Route path="/submit" element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
-            <Route path="/post/:id" element={<ProtectedRoute><PostDetail /></ProtectedRoute>} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="/:handle" element={<ProtectedRoute><ErrorBoundary><Profile /></ErrorBoundary></ProtectedRoute>} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <SidebarProvider style={{ "--sidebar-top": "3.5rem" } as React.CSSProperties}>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<RootRoute />} />
+              <Route path="/new" element={<ProtectedRoute><NewFeed /></ProtectedRoute>} />
+              <Route path="/following" element={<ProtectedRoute><Following /></ProtectedRoute>} />
+              <Route path="/tag/:tagName" element={<ProtectedRoute><TagFeed /></ProtectedRoute>} />
+              <Route path="/communities" element={<ProtectedRoute><Communities /></ProtectedRoute>} />
+              <Route path="/bookmarks" element={<ProtectedRoute><Bookmarks /></ProtectedRoute>} />
+              <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
+              <Route path="/profile" element={<ProtectedRoute><ErrorBoundary><Profile /></ErrorBoundary></ProtectedRoute>} />
+              <Route path="/profile/:uid" element={<ProtectedRoute><ErrorBoundary><Profile /></ErrorBoundary></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/submit" element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
+              <Route path="/post/:id" element={<ProtectedRoute><PostDetail /></ProtectedRoute>} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="/:handle" element={<ProtectedRoute><ErrorBoundary><Profile /></ErrorBoundary></ProtectedRoute>} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </SidebarProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>

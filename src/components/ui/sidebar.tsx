@@ -14,9 +14,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 const SIDEBAR_COOKIE_NAME = "sidebar:state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-const SIDEBAR_WIDTH = "16rem";
+const SIDEBAR_WIDTH = "270px";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
-const SIDEBAR_WIDTH_ICON = "3rem";
+const SIDEBAR_WIDTH_ICON = "30px";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
 type SidebarContext = {
@@ -27,6 +27,10 @@ type SidebarContext = {
   setOpenMobile: (open: boolean) => void;
   isMobile: boolean;
   toggleSidebar: () => void;
+  isPinned: boolean;
+  setIsPinned: (pinned: boolean) => void;
+  isHovered: boolean;
+  setIsHovered: (hovered: boolean) => void;
 };
 
 const SidebarContext = React.createContext<SidebarContext | null>(null);
@@ -53,21 +57,25 @@ const SidebarProvider = React.forwardRef<
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
-  const [_open, _setOpen] = React.useState(defaultOpen);
-  const open = openProp ?? _open;
+  const [_isPinned, _setIsPinned] = React.useState(defaultOpen);
+  const isPinned = openProp ?? _isPinned;
+  const [isHovered, setIsHovered] = React.useState(false);
+
+  const open = isPinned || isHovered;
+
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
-      const openState = typeof value === "function" ? value(open) : value;
+      const openState = typeof value === "function" ? value(isPinned) : value;
       if (setOpenProp) {
         setOpenProp(openState);
       } else {
-        _setOpen(openState);
+        _setIsPinned(openState);
       }
 
       // This sets the cookie to keep the sidebar state.
       document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
     },
-    [setOpenProp, open],
+    [setOpenProp, isPinned],
   );
 
   // Helper to toggle the sidebar.
@@ -101,8 +109,12 @@ const SidebarProvider = React.forwardRef<
       openMobile,
       setOpenMobile,
       toggleSidebar,
+      isPinned,
+      setIsPinned: setOpen,
+      isHovered,
+      setIsHovered,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar],
+    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, isPinned, isHovered],
   );
 
   return (
@@ -136,7 +148,7 @@ const Sidebar = React.forwardRef<
     collapsible?: "offcanvas" | "icon" | "none";
   }
 >(({ side = "left", variant = "sidebar", collapsible = "offcanvas", className, children, ...props }, ref) => {
-  const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+  const { isMobile, state, openMobile, setOpenMobile, isPinned, isHovered, setIsHovered } = useSidebar();
 
   if (collapsible === "none") {
     return (
@@ -178,35 +190,48 @@ const Sidebar = React.forwardRef<
       data-collapsible={state === "collapsed" ? collapsible : ""}
       data-variant={variant}
       data-side={side}
+      onMouseEnter={() => {
+        if (!isMobile) setIsHovered(true)
+      }}
+      onMouseLeave={() => {
+        if (!isMobile) setIsHovered(false)
+      }}
     >
       {/* This is what handles the sidebar gap on desktop */}
       <div
         className={cn(
-          "relative h-svh w-[--sidebar-width] bg-transparent transition-[width] duration-200 ease-linear",
+          "relative h-svh w-[--sidebar-width] bg-transparent transition-[width] duration-300 ease-in-out",
           "group-data-[collapsible=offcanvas]:w-0",
           "group-data-[side=right]:rotate-180",
-          variant === "floating" || variant === "inset"
-            ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
-            : "group-data-[collapsible=icon]:w-[--sidebar-width-icon]",
+          // Only push content if pinned. If just hovering, stay at icon width.
+          (!isPinned && isHovered)
+            ? (variant === "floating" || variant === "inset"
+                ? "w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
+                : "w-[--sidebar-width-icon]")
+            : (variant === "floating" || variant === "inset"
+                ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
+                : "group-data-[collapsible=icon]:w-[--sidebar-width-icon]"),
         )}
       />
       <div
         className={cn(
-          "fixed inset-y-0 z-10 hidden h-svh w-[--sidebar-width] transition-[left,right,width] duration-200 ease-linear md:flex",
+          "fixed top-[var(--sidebar-top,0)] bottom-0 z-20 hidden h-[calc(100svh-var(--sidebar-top,0))] w-[--sidebar-width] transition-[left,right,width] duration-300 ease-in-out md:flex overflow-hidden",
           side === "left"
             ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
             : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
           // Adjust the padding for floating and inset variants.
           variant === "floating" || variant === "inset"
             ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
-            : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l",
+            : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l border-border/80 dark:border-white/10",
+          // Add shadow when hovering but not pinned (overlay mode)
+          !isPinned && isHovered && "shadow-[10px_0_30px_-5px_rgba(0,0,0,0.1)]",
           className,
         )}
         {...props}
       >
         <div
           data-sidebar="sidebar"
-          className="flex h-full w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow"
+          className="flex h-full w-[--sidebar-width] flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow transition-transform duration-300 ease-in-out group-data-[state=collapsed]:-translate-x-full"
         >
           {children}
         </div>
@@ -412,13 +437,14 @@ const SidebarMenuItem = React.forwardRef<HTMLLIElement, React.ComponentProps<"li
 SidebarMenuItem.displayName = "SidebarMenuItem";
 
 const sidebarMenuButtonVariants = cva(
-  "peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-[width,height,padding] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-sidebar-accent data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground data-[state=open]:hover:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-2 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0",
+  "peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-[width,height,padding] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-sidebar-accent data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground data-[state=open]:hover:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0",
   {
     variants: {
       variant: {
         default: "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
         outline:
           "bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]",
+        ghost: "hover:bg-transparent hover:text-sidebar-accent-foreground",
       },
       size: {
         default: "h-8 text-sm",

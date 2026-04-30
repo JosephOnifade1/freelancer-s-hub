@@ -13,6 +13,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { getUserProfile, toggleBookmark } from "@/lib/users";
 import { formatTimeAgo } from "@/lib/utils";
 import { toast } from "sonner";
+import { Editor } from "@/components/editor/Editor";
+import { MarkdownRenderer } from "@/components/editor/MarkdownRenderer";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -167,11 +169,12 @@ const CommentThread = ({ comment, postId, depth = 0 }: { comment: CommentData; p
           
           {isEditing ? (
             <div className="mb-2">
-              <textarea
+              <Editor
                 value={editBody}
-                onChange={(e) => setEditBody(e.target.value)}
-                className="w-full resize-none rounded-md bg-background border border-border px-3 py-2 font-body text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
-                rows={2}
+                onChange={setEditBody}
+                placeholder="Edit your comment..."
+                minHeight="100px"
+                className="mb-2"
               />
               <div className="flex justify-end gap-2 mt-2">
                 <button onClick={() => setIsEditing(false)} className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground">Cancel</button>
@@ -185,7 +188,7 @@ const CommentThread = ({ comment, postId, depth = 0 }: { comment: CommentData; p
               </div>
             </div>
           ) : (
-            <p className="font-body text-sm text-foreground/90 leading-relaxed mb-1 whitespace-pre-line">{comment.body}</p>
+            <MarkdownRenderer content={comment.body} className="mb-1" />
           )}
           
           <button 
@@ -197,12 +200,12 @@ const CommentThread = ({ comment, postId, depth = 0 }: { comment: CommentData; p
 
           {isReplying && (
             <div className="mt-3 bg-secondary/30 rounded-lg p-3 border border-[#6366F1]/20 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
-              <textarea
+              <Editor
                 value={replyBody}
-                onChange={(e) => setReplyBody(e.target.value)}
-                rows={2}
+                onChange={setReplyBody}
                 placeholder="Write your reply..."
-                className="w-full resize-none rounded-md bg-background border border-border px-3 py-2 font-body text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-[#6366F1]/40 transition-shadow"
+                minHeight="100px"
+                className="mb-2"
               />
               <div className="flex justify-end gap-2 mt-2">
                 <button 
@@ -420,11 +423,12 @@ const PostDetail = () => {
                 
                 {isEditingPost ? (
                   <div className="mb-4">
-                    <textarea
+                    <Editor
                       value={editPostBody}
-                      onChange={(e) => setEditPostBody(e.target.value)}
-                      className="w-full resize-none rounded-md bg-background border border-border px-3 py-2 font-body text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
-                      rows={4}
+                      onChange={setEditPostBody}
+                      placeholder="Edit your post..."
+                      minHeight="200px"
+                      className="mb-4"
                     />
                     <div className="flex justify-end gap-2 mt-2">
                       <button onClick={() => setIsEditingPost(false)} className="px-3 py-1.5 text-sm font-body text-muted-foreground hover:text-foreground">Cancel</button>
@@ -438,9 +442,7 @@ const PostDetail = () => {
                     </div>
                   </div>
                 ) : (
-                  <p className="font-body text-sm text-foreground/85 leading-relaxed mb-4 whitespace-pre-line">
-                    {post.body}
-                  </p>
+                  <MarkdownRenderer content={post.body} className="mb-4" />
                 )}
                 
                 <div className="flex flex-wrap gap-1.5 mb-4">
@@ -507,12 +509,12 @@ const PostDetail = () => {
         {/* Comment box */}
         {!post.isDeleted && (
           <div className="rounded-xl border border-border bg-card p-4 mb-6 shadow-sm">
-            <textarea
+            <Editor
               value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              rows={3}
+              onChange={setNewComment}
               placeholder="Share your thoughts..."
-              className="w-full resize-none rounded-lg bg-background border border-border px-3 py-2 font-body text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-shadow"
+              minHeight="120px"
+              className="mb-2"
             />
             <div className="flex justify-end mt-2">
               <button 

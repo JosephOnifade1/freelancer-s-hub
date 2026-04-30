@@ -64,7 +64,7 @@ const Index = () => {
           {/* Main Feed */}
           <div className="flex-1 min-w-0">
             {/* Scope & Sort Header */}
-            <div className="mb-6 flex items-center justify-between border-b border-white/5 pb-4">
+            <div className="mb-6 flex items-center justify-between border-b border-[var(--border-main)] pb-4">
               <div className="flex items-center gap-6">
                 <button
                   onClick={() => setScope("all")}
@@ -75,7 +75,7 @@ const Index = () => {
                 >
                   All Feed
                   {scope === "all" && (
-                    <div className="absolute -bottom-[17px] left-0 right-0 h-[2px] bg-primary rounded-full shadow-[0_0_8px_rgba(99,102,241,0.5)]" />
+                    <div className="absolute -bottom-[17px] left-0 right-0 h-[2px] bg-[var(--brand-primary)] rounded-full shadow-[0_0_8px_var(--brand-primary)]" />
                   )}
                 </button>
                 <button
@@ -87,37 +87,37 @@ const Index = () => {
                 >
                   Following
                   {scope === "following" && (
-                    <div className="absolute -bottom-[17px] left-0 right-0 h-[2px] bg-primary rounded-full shadow-[0_0_8px_rgba(99,102,241,0.5)]" />
+                    <div className="absolute -bottom-[17px] left-0 right-0 h-[2px] bg-[var(--brand-primary)] rounded-full shadow-[0_0_8px_var(--brand-primary)]" />
                   )}
                 </button>
               </div>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="flex items-center gap-2 rounded-full bg-transparent border border-[#94A3B8]/30 px-4 py-1.5 font-body text-xs font-medium text-[#94A3B8] hover:text-foreground hover:border-foreground transition-all">
+                  <button className="flex items-center gap-2 rounded-full bg-transparent border border-[var(--border-main)] px-4 py-1.5 font-body text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--text-muted)] transition-all">
                     <SortIcon className="h-3.5 w-3.5" />
                     <span className="capitalize">{sort}</span>
                     <ChevronDown className="h-3.5 w-3.5" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-32 bg-[#111118] border-white/10 font-body">
+                <DropdownMenuContent align="end" className="w-32 bg-[var(--bg-surface)] border-[var(--border-main)] font-body">
                   <DropdownMenuItem 
                     onClick={() => setSort("best")}
-                    className={cn("cursor-pointer flex items-center gap-2", sort === "best" && "bg-primary/10 text-primary focus:bg-primary/10 focus:text-primary")}
+                    className={cn("cursor-pointer flex items-center gap-2", sort === "best" && "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] focus:bg-[var(--brand-primary)]/10 focus:text-[var(--brand-primary)]")}
                   >
                     <TrendingUp className="h-4 w-4" />
                     <span>Best</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={() => setSort("hot")}
-                    className={cn("cursor-pointer flex items-center gap-2", sort === "hot" && "bg-primary/10 text-primary focus:bg-primary/10 focus:text-primary")}
+                    className={cn("cursor-pointer flex items-center gap-2", sort === "hot" && "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] focus:bg-[var(--brand-primary)]/10 focus:text-[var(--brand-primary)]")}
                   >
                     <Flame className="h-4 w-4" />
                     <span>Hot</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={() => setSort("new")}
-                    className={cn("cursor-pointer flex items-center gap-2", sort === "new" && "bg-primary/10 text-primary focus:bg-primary/10 focus:text-primary")}
+                    className={cn("cursor-pointer flex items-center gap-2", sort === "new" && "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] focus:bg-[var(--brand-primary)]/10 focus:text-[var(--brand-primary)]")}
                   >
                     <Clock className="h-4 w-4" />
                     <span>New</span>

@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getUserProfile } from "@/lib/users";
 import { createPost } from "@/lib/posts";
+import { Editor } from "@/components/editor/Editor";
 
 type PostType = "discussion" | "question" | "resource";
 
@@ -167,15 +168,11 @@ const CreatePost = () => {
 
             <div className="grid gap-2">
               <Label htmlFor="body">Body</Label>
-              <Textarea
-                id="body"
+              <Editor
                 value={body}
-                onChange={(e) => setBody(e.target.value)}
-                rows={8}
+                onChange={setBody}
                 placeholder={placeholders.body}
-                className={`focus-visible:ring-offset-0 ${
-                  type === 'resource' ? 'focus-visible:ring-[#D1FF4A]/30' : 'focus-visible:ring-primary/20'
-                }`}
+                minHeight="300px"
               />
             </div>
 

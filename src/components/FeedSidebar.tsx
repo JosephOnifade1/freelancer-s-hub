@@ -60,7 +60,7 @@ export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
               <Link
                 key={tag.name}
                 to={`/tag/${tag.name}`}
-                className="rounded-md bg-white/5 border border-[var(--border-main)] px-2 py-1 font-body text-[11px] font-medium text-[var(--text-muted)] transition-all hover:text-[var(--brand-accent)]"
+                className="rounded-md bg-[var(--bg-app)] border border-[var(--border-main)] px-2 py-1 font-body text-[11px] font-medium text-[var(--text-muted)] transition-all hover:text-[var(--brand-accent)] hover:bg-[var(--bg-surface)]"
               >
                 #{tag.name}
                 <span className="ml-1 text-muted-foreground/60">{tag.count}</span>
@@ -96,7 +96,7 @@ export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
                     user.displayName?.charAt(0).toUpperCase() || user.username?.charAt(0).toUpperCase()
                   )}
                 </div>
-                <span className="flex-1 font-body text-xs font-medium text-foreground group-hover:text-primary transition-colors flex items-center gap-1">
+                <span className="flex-1 font-body text-xs font-medium text-[var(--text-primary)] group-hover:text-[var(--brand-primary)] transition-colors flex items-center gap-1">
                   {user.displayName || user.username}
                   <VerifiedBadge isVerified={user.isVerifiedPro} size={10} showTooltip={false} />
                 </span>

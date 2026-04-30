@@ -9,7 +9,18 @@ function applyTheme(theme: ThemeMode) {
   const root = document.documentElement;
   // Strip all theme classes then apply the chosen one — synchronously
   THEME_CLASSES.forEach(cls => root.classList.remove(`theme-${cls}`));
+  // Also remove the generic 'dark' class if present to prevent Tailwind conflicts
+  root.classList.remove("dark");
+  
   root.classList.add(`theme-${theme}`);
+  
+  // If dark mode is explicitly active, add the 'dark' class for Tailwind compatibility
+  if (theme === 'dark') {
+    root.classList.add("dark");
+  } else if (theme === 'system') {
+    const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    if (isDark) root.classList.add("dark");
+  }
 }
 
 // Called immediately in <script> tag or on import to prevent FOUC

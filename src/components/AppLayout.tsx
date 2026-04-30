@@ -1,4 +1,4 @@
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { VeteranCelebration } from "./VeteranCelebration";
 import { MessageSquare, Plus, Bell, User, LogOut, Settings, Search, X, FileText, Sparkles, Monitor, Sun, Moon, Trophy, Circle, Shield, Check } from "lucide-react";
@@ -41,6 +41,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const mobileInputRef = useRef<HTMLInputElement>(null);
   const { theme, setTheme } = useTheme();
+  const { state } = useSidebar();
 
   useEffect(() => {
     if (user?.uid) {
@@ -146,140 +147,239 @@ export function AppLayout({ children }: AppLayoutProps) {
   };
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <AppSidebar />
-        <div className="flex-1 flex flex-col min-w-0">
-          <header 
-            className={cn(
-              "sticky top-0 z-30 w-full border-b border-border bg-background/80 backdrop-blur-md transition-all duration-300",
-              isAvatarMenuOpen && "bg-background/95 shadow-2xl"
-            )}
-          >
-            <div className="h-14 flex items-center justify-between px-4 relative z-10">
-            <div className={`flex items-center gap-2 ${isSearchExpanded ? "hidden sm:flex" : "flex"}`}>
-              <SidebarTrigger className="mr-2" />
-              <Link to="/" className="flex items-center gap-2">
-                <h1 className="font-heading text-sm font-semibold text-foreground hidden min-[380px]:block">
-                  Soloboard
-                </h1>
-                <span className="relative rounded-full bg-primary/15 px-2 py-0.5 font-body text-[10px] font-medium text-primary hidden sm:inline-block overflow-hidden">
-                  <div className="absolute inset-0 beta-shimmer opacity-50" />
-                  Beta
-                </span>
+    <div className="min-h-screen flex flex-col w-full">
+      <header 
+        className={cn(
+          "sticky top-0 z-30 w-full border-b border-border transition-all duration-300",
+          theme === 'light' ? "bg-white/80 border-slate-200" : "bg-background/80 border-white/10 backdrop-blur-md",
+          isAvatarMenuOpen && "bg-background/95 shadow-2xl"
+        )}
+      >
+        <div className="h-14 flex items-center justify-between px-4 relative z-10">
+          <div className={`flex items-center shrink-0 ${isSearchExpanded ? "hidden sm:flex" : "flex"}`}>
+            {/* Mobile-only Trigger */}
+            <SidebarTrigger className="md:hidden mr-2 hover:bg-accent text-muted-foreground hover:text-foreground transition-all duration-200" />
+            
+            {/* Branding Group (Reddit Style) */}
+            <div className="flex items-center pl-0 md:pl-4">
+              <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                <div className="h-8 w-8 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/20">
+                  <img 
+                    src="/logo-transparent.png" 
+                    alt="Soloboard Logo" 
+                    className="h-full w-full object-cover transform scale-125" 
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-heading text-lg font-bold tracking-tight text-foreground leading-none">
+                    Soloboard
+                  </span>
+                  <span className="relative rounded-full bg-primary/10 px-2.5 py-1 font-body text-[10px] font-bold text-primary border border-primary/20 leading-none">
+                    BETA
+                  </span>
+                </div>
               </Link>
             </div>
+          </div>
 
-            {/* Search Bar (Command Center) */}
+          {/* Search Bar (Command Center) */}
+          <div className={cn(
+            "flex-1 flex justify-center transition-all duration-500",
+            isSearchExpanded ? "absolute inset-x-0 top-0 h-full bg-background z-40 px-4 items-center" : "relative mx-4"
+          )}>
+            {/* Desktop Search (Flexible width like Reddit) */}
             <div className={cn(
-              "flex-1 flex justify-center transition-all duration-300",
-              isSearchExpanded ? "absolute inset-x-0 top-0 h-full bg-background z-40 px-4 items-center" : "relative mx-4"
+              "hidden lg:flex items-center w-full max-w-[640px] h-10 rounded-full px-4 group transition-all duration-300 theme-transition",
+              theme === 'light' ? "bg-muted/40 border border-border hover:bg-muted/60" : "bg-muted/20 border border-border hover:bg-muted/30",
+              isSearchExpanded && "hidden"
             )}>
-              {/* Desktop Search (Fixed 500px) */}
+              <Search className="h-4 w-4 text-muted-foreground mr-3" />
+              <input 
+                ref={searchInputRef}
+                type="text" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Find anything" 
+                className="bg-transparent border-none outline-none w-full font-body text-sm text-foreground placeholder:text-muted-foreground/60"
+              />
+              <div className="flex items-center gap-1.5 px-1.5 py-1 rounded-md border border-border bg-background/50 font-mono text-[9px] text-muted-foreground ml-2">
+                <span className="opacity-70">⌘</span>K
+              </div>
+              
+              {/* Instant Results Dropdown (Desktop) */}
               <div className={cn(
-                "hidden lg:flex items-center w-[500px] h-9 rounded-full px-4 group focus-within:ring-2 focus-within:ring-primary/20 transition-all theme-transition",
-                theme === 'light' ? "bg-[var(--bg-app)] border border-[var(--border-strong)]" : "bg-[var(--bg-app)] border border-[var(--border-main)]",
-                isSearchExpanded && "hidden"
+                "hidden group-focus-within:block absolute top-full left-0 right-0 mt-2 bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl shadow-2xl z-50 p-2 max-h-[480px] overflow-auto scrollbar-stealth theme-transition",
+                (!searchQuery || (allResults.length === 0 && !isSearching)) && "group-focus-within:hidden"
               )}>
-                <Search className="h-4 w-4 text-muted-foreground mr-2" />
-                <input 
-                  ref={searchInputRef}
-                  type="text" 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Search discussions, resources, or freelancers..." 
-                  className="bg-transparent border-none outline-none w-full font-body text-xs text-foreground placeholder:text-muted-foreground/50"
-                />
-                <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-white/10 bg-white/5 font-body text-[10px] text-muted-foreground ml-2">
-                  <span className="text-[8px] opacity-70">⌘</span>K
+                {isSearching ? (
+                  <div className="p-4 space-y-4">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="flex gap-3 animate-pulse">
+                        <div className="h-8 w-8 rounded-full bg-white/5" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-2 bg-white/5 rounded w-1/2" />
+                          <div className="h-2 bg-white/5 rounded w-1/4" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {searchResults.users.length > 0 && (
+                      <div>
+                        <p className="px-3 py-2 text-[10px] uppercase tracking-wider font-bold text-muted-foreground">People</p>
+                        {searchResults.users.map((u, i) => (
+                          <button
+                            key={u.uid}
+                            onClick={() => handleNav(`/profile/${u.uid}`)}
+                            onMouseEnter={() => setActiveIndex(i)}
+                            className={cn(
+                              "flex items-center gap-3 w-full p-2 rounded-lg transition-all text-left",
+                              activeIndex === i ? "bg-primary/10" : "hover:bg-white/5"
+                            )}
+                          >
+                            <div className="h-8 w-8 rounded-full overflow-hidden bg-primary/20 flex items-center justify-center shrink-0">
+                              {u.avatarUrl ? (
+                                <img src={u.avatarUrl} alt={u.displayName} className="h-full w-full object-cover" />
+                              ) : (
+                                <span className="text-[10px] font-bold">{u.displayName?.charAt(0)}</span>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs font-semibold text-foreground truncate">{u.displayName}</span>
+                                <VerifiedBadge isVerified={u.isVerifiedPro} size={10} showTooltip={false} />
+                              </div>
+                              <div className="text-[10px] text-muted-foreground">
+                                <LiveReputation uid={u.uid} fallback={u.reputation} />
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {searchResults.posts.length > 0 && (
+                      <div>
+                        <p className="px-3 py-2 text-[10px] uppercase tracking-wider font-bold text-muted-foreground mt-2">Posts</p>
+                        {searchResults.posts.map((p, i) => {
+                          const idx = searchResults.users.length + i;
+                          return (
+                            <button
+                              key={p.id}
+                              onClick={() => handleNav(`/post/${p.id}`)}
+                              onMouseEnter={() => setActiveIndex(idx)}
+                              className={cn(
+                                "flex items-center gap-3 w-full p-2 rounded-lg transition-all text-left",
+                                activeIndex === idx ? "bg-primary/10" : "hover:bg-white/5"
+                              )}
+                            >
+                              <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
+                                {p.type === 'resource' ? <Sparkles className="h-4 w-4 text-[var(--brand-accent)]" /> : <FileText className="h-4 w-4 text-[var(--brand-primary)]" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs font-semibold text-foreground truncate">{p.title}</div>
+                                <div className="text-[10px] text-muted-foreground truncate opacity-60">#{p.tags?.join(' #')}</div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {searchQuery && allResults.length === 0 && !isSearching && (
+                      <div className="p-8 text-center">
+                        <p className="text-xs text-muted-foreground">
+                          No results for <span className="text-foreground font-bold">"{searchQuery}"</span>. Try a different keyword.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Mobile Expanded Search */}
+            {isSearchExpanded && (
+              <div className="flex flex-col w-full h-full lg:hidden">
+                <div className="flex items-center w-full gap-3 h-14">
+                  <Search className="h-5 w-5 text-primary" />
+                  <input 
+                    ref={mobileInputRef}
+                    autoFocus
+                    type="text" 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search..." 
+                    className="bg-transparent border-none outline-none w-full font-body text-sm text-foreground placeholder:text-muted-foreground/50"
+                  />
+                  <button onClick={() => { setIsSearchExpanded(false); setSearchQuery(""); }} className="p-2 hover:bg-white/5 rounded-full">
+                    <X className="h-5 w-5" />
+                  </button>
                 </div>
-                
-                {/* Instant Results Dropdown (Desktop) */}
-                <div className={cn(
-                  "hidden group-focus-within:block absolute top-full left-0 right-0 mt-2 bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl shadow-2xl z-50 p-2 max-h-[480px] overflow-auto scrollbar-stealth theme-transition",
-                  (!searchQuery || (allResults.length === 0 && !isSearching)) && "group-focus-within:hidden"
-                )}>
+
+                {/* Mobile Results Overlay */}
+                <div className="flex-1 overflow-auto p-2">
                   {isSearching ? (
-                    <div className="p-4 space-y-4">
-                      {[1, 2, 3].map(i => (
+                     <div className="p-4 space-y-4">
+                      {[1, 2, 3, 4].map(i => (
                         <div key={i} className="flex gap-3 animate-pulse">
-                          <div className="h-8 w-8 rounded-full bg-white/5" />
-                          <div className="flex-1 space-y-2">
-                            <div className="h-2 bg-white/5 rounded w-1/2" />
-                            <div className="h-2 bg-white/5 rounded w-1/4" />
+                          <div className="h-10 w-10 rounded-full bg-white/5" />
+                          <div className="flex-1 space-y-2 py-1">
+                            <div className="h-2.5 bg-white/5 rounded w-2/3" />
+                            <div className="h-2.5 bg-white/5 rounded w-1/3" />
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="space-y-1">
-                      {searchResults.users.length > 0 && (
-                        <div>
-                          <p className="px-3 py-2 text-[10px] uppercase tracking-wider font-bold text-muted-foreground">People</p>
-                          {searchResults.users.map((u, i) => (
-                            <button
-                              key={u.uid}
-                              onClick={() => handleNav(`/profile/${u.uid}`)}
-                              onMouseEnter={() => setActiveIndex(i)}
-                              className={cn(
-                                "flex items-center gap-3 w-full p-2 rounded-lg transition-all text-left",
-                                activeIndex === i ? "bg-primary/10" : "hover:bg-white/5"
-                              )}
-                            >
-                              <div className="h-8 w-8 rounded-full overflow-hidden bg-primary/20 flex items-center justify-center shrink-0">
-                                {u.avatarUrl ? (
-                                  <img src={u.avatarUrl} alt={u.displayName} className="h-full w-full object-cover" />
-                                ) : (
-                                  <span className="text-[10px] font-bold">{u.displayName?.charAt(0)}</span>
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1">
-                                  <span className="text-xs font-semibold text-foreground truncate">{u.displayName}</span>
-                                  <VerifiedBadge isVerified={u.isVerifiedPro} size={10} showTooltip={false} />
-                                </div>
-                                <div className="text-[10px] text-muted-foreground">
-                                  <LiveReputation uid={u.uid} fallback={u.reputation} />
-                                </div>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                    <div className="space-y-2">
+                       {searchResults.users.map((u) => (
+                        <button
+                          key={u.uid}
+                          onClick={() => handleNav(`/profile/${u.uid}`)}
+                          className="flex items-center gap-3 w-full p-3 rounded-xl bg-white/5"
+                        >
+                          <div className="h-10 w-10 rounded-full overflow-hidden bg-primary/20 flex items-center justify-center shrink-0">
+                            {u.avatarUrl ? (
+                              <img src={u.avatarUrl} alt={u.displayName} className="h-full w-full object-cover" />
+                            ) : (
+                              <span className="font-bold">{u.displayName?.charAt(0)}</span>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0 text-left">
+                            <div className="flex items-center gap-1">
+                              <span className="text-sm font-semibold text-foreground">{u.displayName}</span>
+                              <VerifiedBadge isVerified={u.isVerifiedPro} size={12} showTooltip={false} />
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              <LiveReputation uid={u.uid} fallback={u.reputation} />
+                            </div>
+                          </div>
+                        </button>
+                      ))}
 
-                      {searchResults.posts.length > 0 && (
-                        <div>
-                          <p className="px-3 py-2 text-[10px] uppercase tracking-wider font-bold text-muted-foreground mt-2">Posts</p>
-                          {searchResults.posts.map((p, i) => {
-                            const idx = searchResults.users.length + i;
-                            return (
-                              <button
-                                key={p.id}
-                                onClick={() => handleNav(`/post/${p.id}`)}
-                                onMouseEnter={() => setActiveIndex(idx)}
-                                className={cn(
-                                  "flex items-center gap-3 w-full p-2 rounded-lg transition-all text-left",
-                                  activeIndex === idx ? "bg-primary/10" : "hover:bg-white/5"
-                                )}
-                              >
-                                <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
-                                  {p.type === 'resource' ? <Sparkles className="h-4 w-4 text-[var(--brand-accent)]" /> : <FileText className="h-4 w-4 text-[var(--brand-primary)]" />}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-xs font-semibold text-foreground truncate">{p.title}</div>
-                                  <div className="text-[10px] text-muted-foreground truncate opacity-60">#{p.tags?.join(' #')}</div>
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
+                      {searchResults.posts.map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => handleNav(`/post/${p.id}`)}
+                          className="flex items-center gap-3 w-full p-3 rounded-xl bg-white/5"
+                        >
+                          <div className="h-10 w-10 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
+                            {p.type === 'resource' ? <Sparkles className="h-5 w-5 text-[var(--brand-accent)]" /> : <FileText className="h-5 w-5 text-[var(--brand-primary)]" />}
+                          </div>
+                          <div className="flex-1 min-w-0 text-left">
+                            <div className="text-sm font-semibold text-foreground truncate">{p.title}</div>
+                            <div className="text-xs text-muted-foreground truncate opacity-60">#{p.tags?.join(' #')}</div>
+                          </div>
+                        </button>
+                      ))}
 
                       {searchQuery && allResults.length === 0 && !isSearching && (
-                        <div className="p-8 text-center">
-                          <p className="text-xs text-muted-foreground">
-                            No results for <span className="text-foreground font-bold">"{searchQuery}"</span>. Try a different keyword.
+                        <div className="p-12 text-center">
+                          <p className="text-sm text-muted-foreground">
+                            No results for <span className="text-foreground font-bold">"{searchQuery}"</span>.
                           </p>
                         </div>
                       )}
@@ -287,245 +387,191 @@ export function AppLayout({ children }: AppLayoutProps) {
                   )}
                 </div>
               </div>
-
-              {/* Mobile Expanded Search */}
-              {isSearchExpanded && (
-                <div className="flex flex-col w-full h-full lg:hidden">
-                  <div className="flex items-center w-full gap-3 h-14">
-                    <Search className="h-5 w-5 text-primary" />
-                    <input 
-                      ref={mobileInputRef}
-                      autoFocus
-                      type="text" 
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search..." 
-                      className="bg-transparent border-none outline-none w-full font-body text-sm text-foreground placeholder:text-muted-foreground/50"
-                    />
-                    <button onClick={() => { setIsSearchExpanded(false); setSearchQuery(""); }} className="p-2 hover:bg-white/5 rounded-full">
-                      <X className="h-5 w-5" />
-                    </button>
-                  </div>
-
-                  {/* Mobile Results Overlay */}
-                  <div className="flex-1 overflow-auto p-2">
-                    {isSearching ? (
-                       <div className="p-4 space-y-4">
-                        {[1, 2, 3, 4].map(i => (
-                          <div key={i} className="flex gap-3 animate-pulse">
-                            <div className="h-10 w-10 rounded-full bg-white/5" />
-                            <div className="flex-1 space-y-2 py-1">
-                              <div className="h-2.5 bg-white/5 rounded w-2/3" />
-                              <div className="h-2.5 bg-white/5 rounded w-1/3" />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                         {searchResults.users.map((u) => (
-                          <button
-                            key={u.uid}
-                            onClick={() => handleNav(`/profile/${u.uid}`)}
-                            className="flex items-center gap-3 w-full p-3 rounded-xl bg-white/5"
-                          >
-                            <div className="h-10 w-10 rounded-full overflow-hidden bg-primary/20 flex items-center justify-center shrink-0">
-                              {u.avatarUrl ? (
-                                <img src={u.avatarUrl} alt={u.displayName} className="h-full w-full object-cover" />
-                              ) : (
-                                <span className="font-bold">{u.displayName?.charAt(0)}</span>
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0 text-left">
-                              <div className="flex items-center gap-1">
-                                <span className="text-sm font-semibold text-foreground">{u.displayName}</span>
-                                <VerifiedBadge isVerified={u.isVerifiedPro} size={12} showTooltip={false} />
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                <LiveReputation uid={u.uid} fallback={u.reputation} />
-                              </div>
-                            </div>
-                          </button>
-                        ))}
-
-                        {searchResults.posts.map((p) => (
-                          <button
-                            key={p.id}
-                            onClick={() => handleNav(`/post/${p.id}`)}
-                            className="flex items-center gap-3 w-full p-3 rounded-xl bg-white/5"
-                          >
-                            <div className="h-10 w-10 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
-                              {p.type === 'resource' ? <Sparkles className="h-5 w-5 text-[var(--brand-accent)]" /> : <FileText className="h-5 w-5 text-[var(--brand-primary)]" />}
-                            </div>
-                            <div className="flex-1 min-w-0 text-left">
-                              <div className="text-sm font-semibold text-foreground truncate">{p.title}</div>
-                              <div className="text-xs text-muted-foreground truncate opacity-60">#{p.tags?.join(' #')}</div>
-                            </div>
-                          </button>
-                        ))}
-
-                        {searchQuery && allResults.length === 0 && !isSearching && (
-                          <div className="p-12 text-center">
-                            <p className="text-sm text-muted-foreground">
-                              No results for <span className="text-foreground font-bold">"{searchQuery}"</span>.
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {user && (
-              <div className={`flex items-center gap-5 shrink-0 ${isSearchExpanded ? "hidden" : "flex"}`}>
-                <button 
-                  onClick={() => setIsSearchExpanded(true)}
-                  className="lg:hidden p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-full transition-colors"
-                >
-                  <Search className="h-5 w-5" />
-                </button>
-
-                <button className="hidden md:block p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-full transition-colors">
-                  <MessageSquare className="h-5 w-5" />
-                </button>
-                
-                <Link to="/submit" className="flex items-center gap-[12px] p-2 px-3 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-full transition-colors font-body text-sm font-medium">
-                  <Plus className="h-5 w-5" />
-                  <span className="hidden sm:inline">Create</span>
-                </Link>
-
-                <button className="p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-full transition-colors relative">
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute top-1 right-1 flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                  </span>
-                </button>
-                
-                <div className="relative">
-                  <button
-                    onClick={() => setIsAvatarMenuOpen(prev => !prev)}
-                    className={cn(
-                      "flex items-center justify-center h-8 w-8 rounded-full ml-1 focus:outline-none relative border-[2px] transition-all z-50",
-                      isAvatarMenuOpen ? "border-primary ring-4 ring-primary/10" : "border-white/10"
-                    )}
-                  >
-                    <div className="h-full w-full rounded-full overflow-hidden bg-primary/10 hover:bg-primary/20 transition-colors flex items-center justify-center">
-                      {profile?.avatarUrl ? (
-                        <img src={profile.avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
-                      ) : (
-                        <span className="font-heading text-xs font-bold text-primary">
-                          {profile?.initial || "?"}
-                        </span>
-                      )}
-                    </div>
-                    <div className={cn(
-                      "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-[2px] border-background z-10 transition-colors",
-                      isOnline ? "bg-lime-500 shadow-[0_0_6px_rgba(132,204,22,1)]" : "bg-slate-500"
-                    )} />
-                  </button>
-
-                  {/* Floating Vertical Menu (Solid Reddit Style) */}
-                  <AnimatePresence>
-                    {isAvatarMenuOpen && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        transition={{ duration: 0.1, ease: "easeOut" }}
-                        className="absolute top-full right-0 mt-3 w-[240px] bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] z-[100] overflow-hidden theme-transition"
-                      >
-                        <div className="py-2">
-                          <button 
-                            onClick={() => { navigate(user ? `/profile/${user.uid}` : '/profile'); setIsAvatarMenuOpen(false); }}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-[var(--text-muted)] transition-all hover:bg-white/5 hover:text-[var(--text-primary)] group"
-                          >
-                            <User className="h-4 w-4" />
-                            <span>View Profile</span>
-                          </button>
-
-                          <button 
-                            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-[var(--text-muted)] transition-all hover:bg-white/5 hover:text-[var(--text-primary)] group"
-                          >
-                            <FileText className="h-4 w-4" />
-                            <span>Drafts</span>
-                          </button>
-
-                          <button 
-                            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-[var(--text-muted)] transition-all hover:bg-white/5 hover:text-[var(--text-primary)] group"
-                          >
-                            <Shield className="h-4 w-4" />
-                            <span>Premium</span>
-                          </button>
-
-                          <button 
-                            onClick={() => { setIsThemeModalOpen(true); setIsAvatarMenuOpen(false); }}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-[var(--text-muted)] transition-all hover:bg-white/5 hover:text-[var(--text-primary)] group"
-                          >
-                            <Moon className="h-4 w-4" />
-                            <span>Display Mode</span>
-                          </button>
-
-                          <div className="h-[1px] bg-white/5 my-1" />
-
-                          <button 
-                            onClick={handleSignOut}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-[var(--text-muted)] transition-all hover:bg-white/5 hover:text-[var(--brand-danger)] group"
-                          >
-                            <LogOut className="h-4 w-4" />
-                            <span>Log Out</span>
-                          </button>
-
-                          <button 
-                            onClick={() => { navigate('/settings'); setIsAvatarMenuOpen(false); }}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-[var(--text-muted)] transition-all hover:bg-white/5 hover:text-[var(--text-primary)] group"
-                          >
-                            <Settings className="h-4 w-4" />
-                            <span>Settings</span>
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </div>
             )}
-            </div>
+          </div>
 
-            {/* Immersion Backdrop (Click to Close) */}
-            <AnimatePresence>
-              {isAvatarMenuOpen && (
-                <div 
-                  onClick={() => setIsAvatarMenuOpen(false)}
-                  className="fixed inset-0 z-[90] bg-transparent cursor-default"
-                />
-              )}
-            </AnimatePresence>
+          {user && (
+            <div className={`flex items-center gap-2 lg:gap-3 shrink-0 ${isSearchExpanded ? "hidden" : "flex"}`}>
+              <button 
+                onClick={() => setIsSearchExpanded(true)}
+                className="lg:hidden p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/5 rounded-full transition-colors"
+              >
+                <Search className="h-5 w-5" />
+              </button>
 
+              <button className="hidden md:flex p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/5 rounded-full transition-colors">
+                <MessageSquare className="h-5 w-5" />
+              </button>
+              
+              <Link to="/submit" className="flex items-center gap-2 p-2 px-4 bg-accent/50 hover:bg-accent text-foreground rounded-full transition-colors font-body text-sm font-bold">
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Create</span>
+              </Link>
 
-          </header>
-
-          <main className="flex-1 overflow-y-auto flex flex-col">
-            <div className="flex-1">
-              {children}
-            </div>
-            
-            {/* Sticky Technical Footer */}
-            <footer className="sticky bottom-0 z-20 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-2 px-4 flex items-center justify-between text-xs text-muted-foreground font-body">
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-lime-500"></span>
+              <button className="p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/5 rounded-full transition-colors relative">
+                <Bell className="h-5 w-5" />
+                <span className="absolute top-2 right-2 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                 </span>
-                All systems operational
+              </button>
+              
+              <div className="relative">
+                <button
+                  onClick={() => setIsAvatarMenuOpen(prev => !prev)}
+                  className={cn(
+                    "flex items-center justify-center h-8 w-8 rounded-full ml-1 focus:outline-none relative border-[2px] transition-all z-50",
+                    isAvatarMenuOpen ? "border-primary ring-4 ring-primary/10" : "border-white/10"
+                  )}
+                >
+                  <div className="h-full w-full rounded-full overflow-hidden bg-primary/10 hover:bg-primary/20 transition-colors flex items-center justify-center">
+                    <img 
+                      src={profile?.avatarUrl || user?.photoURL || ""} 
+                      alt="Avatar" 
+                      className="h-full w-full object-cover" 
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                        if (fallback) fallback.style.display = 'flex';
+                      }}
+                      onLoad={(e) => {
+                        e.currentTarget.style.display = 'block';
+                        const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                        if (fallback) fallback.style.display = 'none';
+                      }}
+                    />
+                    <span 
+                      className="font-heading text-xs font-bold text-primary flex items-center justify-center h-full w-full"
+                      style={{ display: (profile?.avatarUrl || user?.photoURL) ? 'none' : 'flex' }}
+                    >
+                      {profile?.initial || user?.displayName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || "?"}
+                    </span>
+                  </div>
+                  <div className={cn(
+                    "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-[2px] border-background z-10 transition-colors",
+                    isOnline ? "bg-lime-500 shadow-[0_0_6px_rgba(132,204,22,1)]" : "bg-slate-500"
+                  )} />
+                </button>
+
+
               </div>
-              <div>&copy; {new Date().getFullYear()} Soloboard</div>
-            </footer>
-          </main>
+            </div>
+          )}
         </div>
+
+      </header>
+
+      <AnimatePresence>
+        {isAvatarMenuOpen && (
+          <>
+            {/* Backdrop */}
+            <div 
+              onClick={() => setIsAvatarMenuOpen(false)}
+              className="fixed inset-0 z-[998] bg-transparent cursor-default"
+            />
+            {/* Menu */}
+            <motion.div
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.95 }}
+              transition={{ duration: 0.1, ease: "easeOut" }}
+              className="fixed top-[3.75rem] right-4 w-[240px] bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] z-[999] overflow-hidden theme-transition"
+            >
+              <div className="py-2">
+                <button 
+                  onClick={() => { navigate(user ? `/profile/${user.uid}` : '/profile'); setIsAvatarMenuOpen(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-[var(--text-muted)] transition-all hover:bg-white/5 hover:text-[var(--text-primary)] group"
+                >
+                  <User className="h-4 w-4 shrink-0" />
+                  <span className="flex items-center">View Profile</span>
+                </button>
+
+                <button 
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-[var(--text-muted)] transition-all hover:bg-white/5 hover:text-[var(--text-primary)] group"
+                >
+                  <FileText className="h-4 w-4 shrink-0" />
+                  <span className="flex items-center">Drafts</span>
+                </button>
+
+                <button 
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-[var(--text-muted)] transition-all hover:bg-white/5 hover:text-[var(--text-primary)] group"
+                >
+                  <Shield className="h-4 w-4 shrink-0" />
+                  <span className="flex items-center">Premium</span>
+                </button>
+
+                <button 
+                  onClick={() => { setIsThemeModalOpen(true); setIsAvatarMenuOpen(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-[var(--text-muted)] transition-all hover:bg-white/5 hover:text-[var(--text-primary)] group"
+                >
+                  <Moon className="h-4 w-4 shrink-0" />
+                  <span className="flex items-center">Display Mode</span>
+                </button>
+
+                <div className="h-[1px] bg-white/5 my-1" />
+
+                <button 
+                  onClick={handleSignOut}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-[var(--text-muted)] transition-all hover:bg-white/5 hover:text-[var(--brand-danger)] group"
+                >
+                  <LogOut className="h-4 w-4 shrink-0" />
+                  <span className="flex items-center">Log Out</span>
+                </button>
+
+                <button 
+                  onClick={() => { navigate('/settings'); setIsAvatarMenuOpen(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-[var(--text-muted)] transition-all hover:bg-white/5 hover:text-[var(--text-primary)] group"
+                >
+                  <Settings className="h-4 w-4 shrink-0" />
+                  <span className="flex items-center">Settings</span>
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      <div className="flex-1 flex min-w-0 overflow-hidden relative">
+        <AppSidebar />
+        
+        {/* High-Grade Boundary Toggle */}
+        <div 
+          className={cn(
+            "fixed top-[5rem] z-50 transition-all duration-300 ease-in-out hidden md:flex pointer-events-none",
+            state === "expanded" ? "left-[270px]" : "left-[30px]",
+            "-translate-x-1/2"
+          )}
+        >
+          <SidebarTrigger 
+            className={cn(
+              "rounded-full w-8 h-8 flex items-center justify-center p-0 border border-border transition-all duration-300 shadow-[0_0_10px_rgba(99,102,241,0.3)] hover:scale-110 active:scale-95 pointer-events-auto",
+              theme === 'dark' ? "bg-[#0D0D12]/60 backdrop-blur-[8px]" : "bg-white"
+            )}
+          />
+        </div>
+
+        <main className="flex-1 overflow-y-auto bg-[var(--bg-app)] relative flex flex-col">
+          <div className="flex-1">
+            {children}
+          </div>
+          
+          {/* Sticky Technical Footer */}
+          <footer className={cn(
+            "sticky bottom-0 z-20 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-2 px-4 flex items-center justify-between text-xs text-muted-foreground font-body",
+            theme === 'light' ? "border-slate-200" : "border-white/10"
+          )}>
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-lime-500"></span>
+              </span>
+              All systems operational
+            </div>
+            <div>&copy; {new Date().getFullYear()} Soloboard</div>
+          </footer>
+        </main>
       </div>
+
       <VeteranCelebration />
 
       {/* Global Theme Selection Modal (Reddit Style) */}
@@ -546,16 +592,16 @@ export function AppLayout({ children }: AppLayoutProps) {
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
               className={cn(
-                "fixed z-[9999] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[420px] rounded-[20px] shadow-2xl overflow-hidden theme-transition",
+                "relative z-[9999] w-full max-w-[420px] rounded-[20px] shadow-2xl overflow-hidden theme-transition",
                 theme === 'light' ? "bg-[var(--bg-surface)] border border-black/5" : "bg-[var(--bg-surface)] border border-[var(--border-main)]"
               )}
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-5 border-b border-white/[0.05]">
-                <h2 className="text-lg font-bold text-foreground">Display Mode</h2>
+              <div className="flex items-center justify-between p-5 border-b border-[var(--border-main)]">
+                <h2 className="text-lg font-bold text-[var(--text-primary)]">Display Mode</h2>
                 <button 
                   onClick={() => setIsThemeModalOpen(false)}
-                  className="p-2 hover:bg-white/5 rounded-full text-muted-foreground transition-colors"
+                  className="p-2 hover:bg-white/5 rounded-full text-[var(--text-muted)] transition-colors"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -596,10 +642,10 @@ export function AppLayout({ children }: AppLayoutProps) {
               </div>
 
               {/* Footer */}
-              <div className="p-5 flex justify-end border-t border-white/[0.05]">
+              <div className="p-5 flex justify-end border-t border-[var(--border-main)]">
                 <button
                   onClick={() => setIsThemeModalOpen(false)}
-                  className="px-8 py-2.5 rounded-full bg-[var(--brand-primary)] hover:opacity-90 text-white text-sm font-bold transition-all shadow-lg shadow-purple-500/10"
+                  className="px-8 py-2.5 rounded-full bg-[var(--brand-primary)] hover:opacity-90 text-white text-sm font-bold transition-all shadow-lg shadow-primary/20"
                 >
                   Done
                 </button>
@@ -608,6 +654,6 @@ export function AppLayout({ children }: AppLayoutProps) {
           </div>
         )}
       </AnimatePresence>
-    </SidebarProvider>
+    </div>
   );
 }

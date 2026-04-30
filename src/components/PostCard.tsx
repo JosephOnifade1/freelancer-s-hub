@@ -13,6 +13,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getUserProfile, toggleBookmark } from "@/lib/users";
 import { updatePost, softDeletePost } from "@/lib/posts";
 import { useState } from "react";
+import { Editor } from "@/components/editor/Editor";
+import { stripMarkdown } from "@/lib/markdown";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -213,11 +215,12 @@ export function PostCard({ post, index }: PostCardProps) {
         
         {isEditing ? (
           <div className="mb-3">
-            <textarea
+            <Editor
               value={editBody}
-              onChange={(e) => setEditBody(e.target.value)}
-              className="w-full resize-none rounded-md bg-background border border-border px-3 py-2 font-body text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
-              rows={3}
+              onChange={setEditBody}
+              placeholder="Edit your post..."
+              minHeight="150px"
+              className="mb-3"
             />
             <div className="flex justify-end gap-2 mt-2">
               <button onClick={() => setIsEditing(false)} className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground">Cancel</button>
@@ -233,7 +236,7 @@ export function PostCard({ post, index }: PostCardProps) {
         ) : (
           <Link to={`/post/${post.id}`} className="block">
             <p className="font-body text-sm text-[var(--text-muted)] leading-relaxed line-clamp-2 mb-3">
-              {post.body}
+              {stripMarkdown(post.body)}
             </p>
           </Link>
         )}
