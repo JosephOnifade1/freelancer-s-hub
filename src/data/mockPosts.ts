@@ -39,7 +39,7 @@ export const mockPosts: PostData[] = [
     title: "🏆 Weekly Thread: Share your biggest win this week",
     body: "Every Friday we celebrate. Big or small — landed a new client, shipped a project, finally sent that invoice, took a day off. Drop your win below. Let's hype each other up.",
     type: "weekly",
-    author: { name: "soloboard_team", reputation: 9999 },
+    author: { name: "borynx_team", reputation: 9999 },
     score: 156,
     commentCount: 89,
     tags: ["wins", "community"],

@@ -26,7 +26,7 @@ export function UserBadges({ uid }: UserBadgesProps) {
       icon: Shield,
       color: 'text-[var(--brand-primary)]',
       bgColor: 'bg-[var(--brand-primary)]/10',
-      description: 'A verified staff member of Soloboard.',
+      description: 'A verified staff member of Borynx.',
       active: false
     },
     {
@@ -35,7 +35,7 @@ export function UserBadges({ uid }: UserBadgesProps) {
       icon: Sparkles,
       color: 'text-[var(--brand-accent)]',
       bgColor: 'bg-[var(--brand-accent)]/10',
-      description: 'An early adopter of Soloboard.',
+      description: 'An early adopter of Borynx.',
       active: true
     },
     {

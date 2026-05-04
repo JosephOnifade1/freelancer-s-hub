@@ -22,6 +22,7 @@ export type UserProfile = {
   avatarUrl?: string;
   isVerifiedPro?: boolean;
   hasSeenVeteranCelebration?: boolean;
+  favoriteTopics?: string[];
 };
 
 export const toggleBookmark = async (uid: string, postId: string) => {
@@ -69,7 +70,7 @@ export const createUserProfile = async (uid: string, name: string, email: string
       username: autoUsername,
       displayName: name || email.split("@")[0],
       initial: name ? name.charAt(0).toUpperCase() : email.charAt(0).toUpperCase(),
-      bio: "New to Soloboard!",
+      bio: "New to Borynx!",
       location: "Earth",
       website: "",
       joined: joinedYear,

@@ -128,7 +128,7 @@ const CommentThread = ({ comment, postId, depth = 0 }: { comment: CommentData; p
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
-              <Link to={comment.authorUid ? `/profile/${comment.authorUid}` : "#"} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <Link to={comment.authorUid ? `/f/${comment.authorUid}` : "#"} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                 <div className="flex h-5 w-5 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-primary/20 text-primary">
                   {comment.author ? comment.author.charAt(0).toUpperCase() : '?'}
                 </div>
@@ -454,7 +454,7 @@ const PostDetail = () => {
                 </div>
                 
                 <div className="flex items-center justify-between pt-3 border-t border-border/50">
-                  <Link to={post.author?.uid ? `/profile/${post.author.uid}` : "#"} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                  <Link to={post.author?.uid ? `/f/${post.author.uid}` : "#"} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                     <div className="flex h-7 w-7 items-center justify-center rounded-full font-heading text-xs font-bold overflow-hidden bg-primary/20 text-primary">
                       {post.author?.avatar ? (
                         <img src={post.author.avatar} alt={post.author.name} className="h-full w-full object-cover" />

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { Editor } from '@tiptap/react';
 import { 
   Bold, 
@@ -44,21 +44,12 @@ export const EditorToolbar = ({ editor, onSwitchMode, isMarkdown }: EditorToolba
     editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
   };
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !editor) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const base64 = e.target?.result as string;
-      editor.chain().focus().setImage({ src: base64 }).run();
-    };
-    reader.readAsDataURL(file);
-    
-    // Reset the input so the same file can be uploaded again if needed
-    event.target.value = '';
+  const addImage = () => {
+    if (!editor) return;
+    const url = window.prompt('Image URL');
+    if (url) {
+      editor.chain().focus().setImage({ src: url }).run();
+    }
   };
 
   const addYoutubeVideo = () => {
@@ -134,9 +125,9 @@ export const EditorToolbar = ({ editor, onSwitchMode, isMarkdown }: EditorToolba
           tooltip="Link"
         />
         <ToolbarButton
-          onClick={() => fileInputRef.current?.click()}
+          onClick={addImage}
           icon={ImageIcon}
-          tooltip="Upload Image"
+          tooltip="Image"
         />
         <ToolbarButton
           onClick={addYoutubeVideo}
@@ -168,8 +159,7 @@ export const EditorToolbar = ({ editor, onSwitchMode, isMarkdown }: EditorToolba
         <div className="w-[1px] h-4 bg-border mx-1" />
 
         <ToolbarButton
-          onClick={() => editor?.chain().focus().toggleMark('spoiler').run()}
-          active={editor?.isActive('spoiler')}
+          onClick={() => {}} // Placeholder for spoiler or similar
           icon={AlertCircle}
           tooltip="Spoiler"
         />
@@ -204,13 +194,6 @@ export const EditorToolbar = ({ editor, onSwitchMode, isMarkdown }: EditorToolba
         />
       </div>
 
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        onChange={handleImageUpload} 
-        accept="image/*" 
-        className="hidden" 
-      />
       <button
         onClick={onSwitchMode}
         className="ml-4 px-3 py-1 text-xs font-bold text-foreground hover:text-primary transition-colors whitespace-nowrap"
@@ -231,10 +214,7 @@ interface ToolbarButtonProps {
 const ToolbarButton = ({ onClick, active, icon: Icon, tooltip }: ToolbarButtonProps) => (
   <button
     type="button"
-    onMouseDown={(e) => {
-      e.preventDefault();
-      onClick();
-    }}
+    onClick={onClick}
     className={cn(
       "p-1.5 rounded-md hover:bg-muted transition-colors group relative",
       active ? "text-primary bg-primary/10" : "text-muted-foreground"

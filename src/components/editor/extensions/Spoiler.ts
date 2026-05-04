@@ -1,5 +1,13 @@
 import { Mark, mergeAttributes } from '@tiptap/core';
 
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    spoiler: {
+      toggleSpoiler: () => ReturnType;
+    };
+  }
+}
+
 export const Spoiler = Mark.create({
   name: 'spoiler',
 
@@ -29,6 +37,6 @@ export const Spoiler = Mark.create({
         ({ commands }) => {
           return commands.toggleMark(this.name);
         },
-    };
+    } as any;
   },
 });

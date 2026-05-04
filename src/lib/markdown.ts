@@ -1,3 +1,5 @@
+const MARKDOWN_IMAGE_REGEX = /!\[([^\]]*)\]\(([^)]+)\)/g;
+
 export const stripMarkdown = (markdown: string): string => {
   if (!markdown) return '';
   
@@ -25,4 +27,18 @@ export const stripMarkdown = (markdown: string): string => {
     // Replace multiple spaces/newlines
     .replace(/\s+/g, ' ')
     .trim();
+};
+
+export const extractMarkdownImages = (markdown: string) => {
+  if (!markdown) return [];
+
+  return [...markdown.matchAll(MARKDOWN_IMAGE_REGEX)].map((match) => ({
+    alt: match[1] || "Post image",
+    src: match[2],
+  }));
+};
+
+export const removeMarkdownImages = (markdown: string): string => {
+  if (!markdown) return "";
+  return markdown.replace(MARKDOWN_IMAGE_REGEX, "").trim();
 };

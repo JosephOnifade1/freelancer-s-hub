@@ -14,6 +14,7 @@ import Profile from "./pages/Profile.tsx";
 import Settings from "./pages/Settings.tsx";
 import CreatePost from "./pages/CreatePost.tsx";
 import PostDetail from "./pages/PostDetail.tsx";
+import CommunityDetail from "./pages/CommunityDetail.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Login from "./pages/Login.tsx";
 import Signup from "./pages/Signup.tsx";
@@ -24,8 +25,14 @@ import { SidebarProvider } from "./components/ui/sidebar.tsx";
 
 import { useAuth, AuthProvider } from "./hooks/useAuth.tsx";
 
-const queryClient = new QueryClient();
-
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 const RootRoute = () => {
   const { user, loading } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -48,15 +55,18 @@ const App = () => (
               <Route path="/communities" element={<ProtectedRoute><Communities /></ProtectedRoute>} />
               <Route path="/bookmarks" element={<ProtectedRoute><Bookmarks /></ProtectedRoute>} />
               <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
-              <Route path="/profile" element={<ProtectedRoute><ErrorBoundary><Profile /></ErrorBoundary></ProtectedRoute>} />
-              <Route path="/profile/:uid" element={<ProtectedRoute><ErrorBoundary><Profile /></ErrorBoundary></ProtectedRoute>} />
+              <Route path="/f" element={<ProtectedRoute><ErrorBoundary><Profile /></ErrorBoundary></ProtectedRoute>} />
+              <Route path="/f/:uid" element={<ProtectedRoute><ErrorBoundary><Profile /></ErrorBoundary></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/submit" element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
-              <Route path="/post/:id" element={<ProtectedRoute><PostDetail /></ProtectedRoute>} />
+              <Route path="/p/:id" element={<ProtectedRoute><PostDetail /></ProtectedRoute>} />
+              <Route path="/b/:slug/p/:id" element={<ProtectedRoute><PostDetail /></ProtectedRoute>} />
+              <Route path="/b/:slug" element={<ProtectedRoute><CommunityDetail /></ProtectedRoute>} />
+              <Route path="/l" element={<ProtectedRoute><NotFound /></ProtectedRoute>} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="/:handle" element={<ProtectedRoute><ErrorBoundary><Profile /></ErrorBoundary></ProtectedRoute>} />
+              <Route path="/f/:handle" element={<ProtectedRoute><ErrorBoundary><Profile /></ErrorBoundary></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

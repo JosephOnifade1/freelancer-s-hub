@@ -24,21 +24,29 @@ export const handleVote = async (
   if (previousVote === newVote) return; // No change
 
   const diff = newVote - previousVote;
+  const upDiff = (newVote === 1 ? 1 : 0) - (previousVote === 1 ? 1 : 0);
+  const downDiff = (newVote === -1 ? 1 : 0) - (previousVote === -1 ? 1 : 0);
 
   // 1. Save new user vote
   await set(voteRef, newVote);
 
-  // 2. Update entity score
-  let scoreRef;
-  if (type === "post") {
-    scoreRef = ref(database, `posts/${entityId}/score`);
-  } else {
-    scoreRef = ref(database, `post-comments/${postIdForComment}/${entityId}/score`);
-  }
+  // 2. Update entity score, ups, and downs
+  const entityBaseRef = type === "post" ? `posts/${entityId}` : `post-comments/${postIdForComment}/${entityId}`;
   
+  const scoreRef = ref(database, `${entityBaseRef}/score`);
   await runTransaction(scoreRef, (currentScore) => {
     return (currentScore || 0) + diff;
   });
+
+  if (upDiff !== 0) {
+    const upsRef = ref(database, `${entityBaseRef}/ups`);
+    await runTransaction(upsRef, (currentUps) => (currentUps || 0) + upDiff);
+  }
+
+  if (downDiff !== 0) {
+    const downsRef = ref(database, `${entityBaseRef}/downs`);
+    await runTransaction(downsRef, (currentDowns) => (currentDowns || 0) + downDiff);
+  }
 
   // 3. Update author reputation (Reddit style: 1:1 karma)
   if (authorUid && authorUid !== currentUserId) {

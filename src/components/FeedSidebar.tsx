@@ -83,7 +83,7 @@ export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
             {topContributors.map((user, i) => (
               <Link 
                 key={user.uid || user.username} 
-                to={user.uid ? `/profile/${user.uid}` : "#"} 
+                to={user.uid ? `/f/${user.uid}` : "#"} 
                 className="flex items-center gap-2 group hover:opacity-80 transition-opacity"
               >
                 <span className="font-heading text-xs font-bold text-muted-foreground w-4">

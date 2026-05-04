@@ -141,8 +141,8 @@ export function AppLayout({ children }: AppLayoutProps) {
       setActiveIndex(prev => (prev > 0 ? prev - 1 : prev));
     } else if (e.key === 'Enter' && activeIndex >= 0) {
       const result = allResults[activeIndex];
-      if (result.type === 'user') handleNav(`/profile/${result.data.uid}`);
-      else handleNav(`/post/${result.data.id}`);
+      if (result.type === 'user') handleNav(`/f/${result.data.uid}`);
+      else handleNav(`/p/${result.data.id}`);
     }
   };
 
@@ -156,23 +156,23 @@ export function AppLayout({ children }: AppLayoutProps) {
         )}
       >
         <div className="h-14 flex items-center justify-between px-4 relative z-10">
-          <div className={`flex items-center shrink-0 ${isSearchExpanded ? "hidden sm:flex" : "flex"}`}>
+          <div className={`flex items-center shrink-0 absolute left-4 ${isSearchExpanded ? "hidden sm:flex" : "flex"}`}>
             {/* Mobile-only Trigger */}
             <SidebarTrigger className="md:hidden mr-2 hover:bg-accent text-muted-foreground hover:text-foreground transition-all duration-200" />
             
             {/* Branding Group (Reddit Style) */}
-            <div className="flex items-center pl-0 md:pl-4">
+            <div className="flex items-center">
               <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                 <div className="h-8 w-8 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/20">
                   <img 
                     src="/logo-transparent.png" 
-                    alt="Soloboard Logo" 
+                    alt="Borynx Logo" 
                     className="h-full w-full object-cover transform scale-125" 
                   />
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-heading text-lg font-bold tracking-tight text-foreground leading-none">
-                    Soloboard
+                    Borynx
                   </span>
                   <span className="relative rounded-full bg-primary/10 px-2.5 py-1 font-body text-[10px] font-bold text-primary border border-primary/20 leading-none">
                     BETA
@@ -184,8 +184,8 @@ export function AppLayout({ children }: AppLayoutProps) {
 
           {/* Search Bar (Command Center) */}
           <div className={cn(
-            "flex-1 flex justify-center transition-all duration-500",
-            isSearchExpanded ? "absolute inset-x-0 top-0 h-full bg-background z-40 px-4 items-center" : "relative mx-4"
+            "transition-all duration-500 z-20",
+            isSearchExpanded ? "absolute inset-x-0 top-0 h-full bg-background z-40 px-4 flex items-center justify-center" : "absolute left-[260px] top-1/2 -translate-y-1/2 w-full max-w-[640px]"
           )}>
             {/* Desktop Search (Flexible width like Reddit) */}
             <div className={cn(
@@ -232,7 +232,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                         {searchResults.users.map((u, i) => (
                           <button
                             key={u.uid}
-                            onClick={() => handleNav(`/profile/${u.uid}`)}
+                            onClick={() => handleNav(`/f/${u.uid}`)}
                             onMouseEnter={() => setActiveIndex(i)}
                             className={cn(
                               "flex items-center gap-3 w-full p-2 rounded-lg transition-all text-left",
@@ -268,7 +268,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                           return (
                             <button
                               key={p.id}
-                              onClick={() => handleNav(`/post/${p.id}`)}
+                              onClick={() => handleNav(`/p/${p.id}`)}
                               onMouseEnter={() => setActiveIndex(idx)}
                               className={cn(
                                 "flex items-center gap-3 w-full p-2 rounded-lg transition-all text-left",
@@ -338,7 +338,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                        {searchResults.users.map((u) => (
                         <button
                           key={u.uid}
-                          onClick={() => handleNav(`/profile/${u.uid}`)}
+                          onClick={() => handleNav(`/f/${u.uid}`)}
                           className="flex items-center gap-3 w-full p-3 rounded-xl bg-white/5"
                         >
                           <div className="h-10 w-10 rounded-full overflow-hidden bg-primary/20 flex items-center justify-center shrink-0">
@@ -363,7 +363,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                       {searchResults.posts.map((p) => (
                         <button
                           key={p.id}
-                          onClick={() => handleNav(`/post/${p.id}`)}
+                          onClick={() => handleNav(`/p/${p.id}`)}
                           className="flex items-center gap-3 w-full p-3 rounded-xl bg-white/5"
                         >
                           <div className="h-10 w-10 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
@@ -391,7 +391,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           </div>
 
           {user && (
-            <div className={`flex items-center gap-2 lg:gap-3 shrink-0 ${isSearchExpanded ? "hidden" : "flex"}`}>
+            <div className={`flex items-center gap-2 lg:gap-3 shrink-0 ml-auto ${isSearchExpanded ? "hidden" : "flex"}`}>
               <button 
                 onClick={() => setIsSearchExpanded(true)}
                 className="lg:hidden p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/5 rounded-full transition-colors"
@@ -479,7 +479,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             >
               <div className="py-2">
                 <button 
-                  onClick={() => { navigate(user ? `/profile/${user.uid}` : '/profile'); setIsAvatarMenuOpen(false); }}
+                  onClick={() => { navigate(user ? `/f/${user.uid}` : '/f'); setIsAvatarMenuOpen(false); }}
                   className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-[var(--text-muted)] transition-all hover:bg-white/5 hover:text-[var(--text-primary)] group"
                 >
                   <User className="h-4 w-4 shrink-0" />
@@ -567,7 +567,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               </span>
               All systems operational
             </div>
-            <div>&copy; {new Date().getFullYear()} Soloboard</div>
+            <div>&copy; {new Date().getFullYear()} Borynx</div>
           </footer>
         </main>
       </div>

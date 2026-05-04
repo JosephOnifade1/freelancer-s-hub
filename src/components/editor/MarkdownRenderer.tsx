@@ -10,6 +10,12 @@ interface MarkdownRendererProps {
 }
 
 export const MarkdownRenderer = ({ content, className }: MarkdownRendererProps) => {
+  // Pre-process content to auto-link B-Spaces (e.g. b/logistics) and Freelancer profiles (e.g. f/username)
+  // Ensures we don't accidentally replace already-formatted markdown links by only matching after space, start of line, or parenthesis
+  const processedContent = content
+    .replace(/(^|\s|\()b\/([a-zA-Z0-9_]+)\b/g, '$1[b/$2](/b/$2)')
+    .replace(/(^|\s|\()f\/([a-zA-Z0-9_]+)\b/g, '$1[f/$2](/f/$2)');
+
   return (
     <div className={cn("prose prose-sm dark:prose-invert max-w-none break-words", className)}>
       <ReactMarkdown 
@@ -67,7 +73,7 @@ export const MarkdownRenderer = ({ content, className }: MarkdownRendererProps) 
           }
         }}
       >
-        {content}
+        {processedContent}
       </ReactMarkdown>
     </div>
   );

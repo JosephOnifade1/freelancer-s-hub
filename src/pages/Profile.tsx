@@ -74,7 +74,7 @@ const ProfileCommentCard = ({ comment, isOwnProfile }: { comment: any, isOwnProf
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-1">
           <div className="font-body text-xs text-muted-foreground">
-            Commented on <Link to={`/post/${comment.postId}`} className="font-medium text-foreground hover:text-primary transition-colors">a post</Link>
+            Commented on <Link to={`/p/${comment.postId}`} className="font-medium text-foreground hover:text-primary transition-colors">a post</Link>
             <span className="mx-2">•</span>
             {formatTimeAgo(comment.createdAt)}
             {comment.isEdited && <span className="italic ml-1">(edited)</span>}
@@ -305,7 +305,7 @@ const Profile = () => {
     },
     onSuccess: (isFollowing) => {
       queryClient.invalidateQueries({ queryKey: ['profile', profileUid] });
-      toast.success(isFollowing ? `Followed @${profile?.username}` : `Unfollowed @${profile?.username}`);
+      toast.success(isFollowing ? `Followed b/${profile?.username}` : `Unfollowed b/${profile?.username}`);
     },
     onError: () => {
       toast.error("Failed to follow user");
@@ -401,7 +401,7 @@ const Profile = () => {
                     
                     <div className="flex flex-col mb-3">
                       <span className="text-muted-foreground font-body text-sm font-medium">
-                        @{profile.username}
+                        b/{profile.username}
                       </span>
                       <UserBadges uid={profile.uid} />
                     </div>
@@ -452,7 +452,7 @@ const Profile = () => {
                     <>
                       <button 
                         className="flex items-center justify-center h-9 w-9 rounded-full border border-border bg-card hover:bg-secondary transition-colors shadow-sm"
-                        onClick={() => toast.success(`Message sent to @${profile.username}`)}
+                        onClick={() => toast.success(`Message sent to b/${profile.username}`)}
                       >
                         <MessageSquare className="h-4 w-4" />
                       </button>

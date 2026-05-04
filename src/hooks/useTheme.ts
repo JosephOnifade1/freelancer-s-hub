@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 
 export type ThemeMode = "system" | "light" | "dark";
 
-const STORAGE_KEY = "soloboard-theme";
+const STORAGE_KEY = "borynx-theme";
 const THEME_CLASSES: ThemeMode[] = ["system", "light", "dark"];
 
 function applyTheme(theme: ThemeMode) {

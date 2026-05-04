@@ -30,7 +30,7 @@ const Communities = () => {
       <div className="mx-auto max-w-6xl px-4 py-6">
         <PageHeader
           title="Communities"
-          subtitle="Niche spaces inside Soloboard. Join the ones relevant to your work."
+          subtitle="Niche spaces inside Borynx. Join the ones relevant to your work."
         />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {communities.map((c, i) => {

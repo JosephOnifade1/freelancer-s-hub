@@ -35,6 +35,8 @@ export interface PostData {
     isVerifiedPro?: boolean;
   };
   score: number;
+  ups?: number;
+  downs?: number;
   commentCount: number;
   tags: string[];
   timeAgo: string;
@@ -55,6 +57,15 @@ export function PostCard({ post, index }: PostCardProps) {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [editBody, setEditBody] = useState(post.body);
+
+  const previewText = stripMarkdown(post.body || "").substring(0, 150) + (stripMarkdown(post.body || "").length > 150 ? "..." : "");
+  
+  const postImages: { alt: string, src: string }[] = [];
+  const imageRegex = /!\[(.*?)\]\((.*?)\)/g;
+  let match;
+  while ((match = imageRegex.exec(post.body || "")) !== null) {
+    postImages.push({ alt: match[1], src: match[2] });
+  }
 
   const { data: profile } = useQuery({
     queryKey: ['profile', user?.uid],
@@ -102,7 +113,7 @@ export function PostCard({ post, index }: PostCardProps) {
 
   const handleShare = (e: React.MouseEvent) => {
     e.preventDefault();
-    navigator.clipboard.writeText(window.location.origin + `/post/${post.id}`);
+    navigator.clipboard.writeText(window.location.origin + `/p/${post.id}`);
     toast.success("Link copied to clipboard!");
   };
 
@@ -129,7 +140,7 @@ export function PostCard({ post, index }: PostCardProps) {
             </span>
           </div>
 
-          <Link to={`/post/${post.id}`} className="block">
+          <Link to={`/p/${post.id}`} className="block">
             <h3 className="font-heading text-base font-semibold text-muted-foreground leading-snug mb-1 transition-colors cursor-pointer line-through opacity-80">
               {post.title}
             </h3>
@@ -150,7 +161,7 @@ export function PostCard({ post, index }: PostCardProps) {
             </div>
 
             <div className="flex items-center gap-1">
-              <Link to={`/post/${post.id}`} className="flex items-center gap-1 rounded-md px-2 py-1 font-body text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
+              <Link to={`/p/${post.id}`} className="flex items-center gap-1 rounded-md px-2 py-1 font-body text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
                 <MessageSquare className="h-3.5 w-3.5" />
                 {post.commentCount || 0}
               </Link>
@@ -166,36 +177,51 @@ export function PostCard({ post, index }: PostCardProps) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.3 }}
-      className={`group flex gap-3 rounded-xl border border-[var(--border-main)] bg-[var(--bg-surface)] py-[11.5px] px-4 transition-all duration-300 hover:bg-white/5 hover:border-[var(--brand-primary)]/40 hover:border-b-2 ${
+      className={`group flex gap-3 rounded-xl border border-[var(--border-main)] bg-[var(--bg-surface)] py-3 px-4 transition-all duration-300 hover:bg-white/5 hover:border-[var(--brand-primary)]/40 hover:border-b-2 ${
         post.type === 'discussion' 
           ? 'border-[var(--brand-primary)]/30 shadow-[0_4px_15px_rgba(99,102,241,0.05)] hover:border-[var(--brand-primary)]/50' 
           : 'border-[var(--border-main)] hover:border-[var(--brand-primary)]/20'
       } ${isVeteran(post.author?.reputation || 0) ? 'veteran-aura' : ''}`}
     >
-      <VoteControls score={post.score || 0} entityId={post.id} authorUid={post.author?.uid} type="post" />
+      {postImages[0] && !isEditing && (
+        <Link to={`/p/${post.id}`} className="shrink-0 mt-1 block h-[72px] w-[96px] overflow-hidden rounded-md border border-[var(--border-main)] bg-muted/20">
+          <img
+            src={postImages[0].src}
+            alt={postImages[0].alt || "Post thumbnail"}
+            className="h-full w-full object-cover"
+          />
+        </Link>
+      )}
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <PostTypeBadge type={post.type} />
-          </div>
-          
-          <div className="flex items-center gap-2 opacity-100">
-            <span className="font-body text-[12px] text-[var(--text-muted)] flex items-center gap-1">
-              <Eye className="h-3 w-3" /> {post.views || 0}
-            </span>
-            <span className="text-[var(--text-muted)]/30">•</span>
-            <span className="font-body text-[12px] text-[var(--text-muted)] flex items-center gap-1">
-              {formatTimeAgo(post.createdAt)}
-              {isVeteran(post.author?.reputation || 0) && (
-                <span className="text-[var(--brand-primary)] font-bold ml-1">V</span>
+      <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Link to={post.author?.uid ? `/f/${post.author.uid}` : "#"} className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
+            <div className="flex h-5 w-5 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-primary/20 text-primary">
+              {post.author?.avatar ? (
+                <img src={post.author.avatar} alt={post.author.name} className="h-full w-full object-cover" />
+              ) : (
+                <span>{post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'}</span>
               )}
+            </div>
+            <span className="font-body text-[12px] font-medium text-[var(--text-primary)] hover:underline flex items-center gap-1">
+              {post.author?.name ? `b/${post.author.name.replace(/\s+/g, '')}` : 'b/Unknown'}
+              <VerifiedBadge isVerified={!!post.author?.isVerifiedPro} size={12} showTooltip={false} />
             </span>
+          </Link>
+          <span className="text-[var(--text-muted)] text-[12px]">•</span>
+          <span className="font-body text-[12px] text-[var(--text-muted)] flex items-center gap-1">
+            {formatTimeAgo(post.createdAt)}
+            {isVeteran(post.author?.reputation || 0) && (
+              <span className="text-[var(--brand-primary)] font-bold ml-1" title="Veteran">V</span>
+            )}
+          </span>
+          <div className="ml-auto flex items-center gap-2">
+             {post.type !== 'discussion' && <PostTypeBadge type={post.type} />}
           </div>
         </div>
 
-        <Link to={`/post/${post.id}`} className="block">
-          <h3 className="font-heading text-[1.1rem] font-semibold text-[var(--text-primary)] leading-tight mb-1.5 group-hover:text-[var(--brand-primary)] transition-colors cursor-pointer">
+        <Link to={`/p/${post.id}`} className="block">
+          <h3 className="font-heading text-[1.1rem] font-semibold text-[var(--text-primary)] leading-tight group-hover:text-[var(--brand-primary)] transition-colors cursor-pointer">
             {post.title}
           </h3>
         </Link>
@@ -206,7 +232,7 @@ export function PostCard({ post, index }: PostCardProps) {
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-1.5 font-body text-[11px] text-[var(--brand-primary)] hover:underline mb-2"
+            className="inline-flex items-center gap-1.5 font-body text-[11px] text-[var(--brand-primary)] hover:underline"
           >
             <ExternalLink className="h-3 w-3" />
             Source Reference
@@ -214,7 +240,7 @@ export function PostCard({ post, index }: PostCardProps) {
         )}
         
         {isEditing ? (
-          <div className="mb-3">
+          <div className="mb-2 mt-2">
             <Editor
               value={editBody}
               onChange={setEditBody}
@@ -234,82 +260,70 @@ export function PostCard({ post, index }: PostCardProps) {
             </div>
           </div>
         ) : (
-          <Link to={`/post/${post.id}`} className="block">
-            <p className="font-body text-sm text-[var(--text-muted)] leading-relaxed line-clamp-2 mb-3">
-              {stripMarkdown(post.body)}
-            </p>
-          </Link>
+          !postImages[0] && previewText && (
+            <Link to={`/p/${post.id}`} className="block mt-0.5">
+              <p className="font-body text-sm text-[var(--text-muted)] leading-relaxed line-clamp-2">
+                {previewText}
+              </p>
+            </Link>
+          )
         )}
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {(post.tags || []).map((tag) => (
-            <Link
-              key={tag}
-              to={`/tag/${tag}`}
-              className="rounded-md bg-white/5 border border-[var(--border-main)] px-2 py-0.5 font-body text-[10px] font-medium text-[var(--text-muted)] cursor-pointer hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)] transition-all"
-            >
-              #{tag}
-            </Link>
-          ))}
-        </div>
-
-        <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/50">
-          <Link to={post.author?.uid ? `/profile/${post.author.uid}` : "#"} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <div className="flex h-6 w-6 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-primary/20 text-primary">
-              {post.author?.avatar ? (
-                <img src={post.author.avatar} alt={post.author.name} className="h-full w-full object-cover" />
-              ) : (
-                <span>{post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'}</span>
-              )}
-            </div>
-            <span className="font-body text-[12px] font-medium text-[var(--text-muted)] flex items-center gap-1">
-              {post.author?.name || 'Unknown'}
-              <VerifiedBadge isVerified={!!post.author?.isVerifiedPro} size={12} showTooltip={false} />
-            </span>
-            <span className="font-body text-[12px] text-[var(--text-muted)]">
-              <LiveReputation uid={post.author?.uid} fallback={post.author?.reputation || 0} />
-            </span>
-          </Link>
-
-          <div className="flex items-center gap-1">
-            <Link to={`/post/${post.id}`} className="flex items-center gap-1 rounded-md px-2 py-1 font-body text-[12px] text-[var(--text-muted)] transition-colors hover:bg-white/5 hover:text-[var(--text-primary)]">
-              <MessageSquare className="h-3.5 w-3.5" />
-              {post.commentCount || 0}
-            </Link>
-            <button onClick={handleShare} className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
-              <Share2 className="h-3.5 w-3.5" />
-            </button>
-            
-            {/* The dropdown menu replaces the standalone save button for a cleaner look if we wanted, but we keep bookmark for quick access. 
-                Wait, let's keep bookmark and add the three dots! */}
-            <button 
-              onClick={(e) => { e.preventDefault(); bookmarkMutation.mutate(); }}
-              disabled={bookmarkMutation.isPending}
-              className={`rounded-md p-1 transition-colors hover:bg-white/5 ${isSaved ? 'text-[var(--brand-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
-            >
-              <Bookmark className="h-3.5 w-3.5" fill={isSaved ? "currentColor" : "none"} />
-            </button>
-
-            {isOwnPost && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus:outline-none">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-40 font-body">
-                  <DropdownMenuItem onClick={() => setIsEditing(true)} className="cursor-pointer">
-                    <Edit2 className="h-4 w-4 mr-2" />
-                    <span>Edit Post</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => deleteMutation.mutate()} className="cursor-pointer text-destructive focus:text-destructive">
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    <span>Delete Post</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+        {post.tags && post.tags.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap mt-0.5">
+            {post.tags.map((tag) => (
+              <Link
+                key={tag}
+                to={`/tag/${tag}`}
+                className="rounded-md bg-white/5 border border-[var(--border-main)] px-2 py-0.5 font-body text-[10px] font-medium text-[var(--text-muted)] cursor-pointer hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)] transition-all"
+              >
+                #{tag}
+              </Link>
+            ))}
           </div>
+        )}
+
+        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+          <VoteControls score={post.score || 0} entityId={post.id} authorUid={post.author?.uid} type="post" orientation="horizontal" />
+          
+          <Link to={`/p/${post.id}`} className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-body text-[12px] font-medium text-[var(--text-muted)] transition-colors hover:bg-muted/40 hover:text-[var(--text-primary)]">
+            <MessageSquare className="h-4 w-4" />
+            {post.commentCount || 0}
+          </Link>
+          
+          <button onClick={handleShare} className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-body text-[12px] font-medium text-[var(--text-muted)] transition-colors hover:bg-muted/40 hover:text-[var(--text-primary)]">
+            <Share2 className="h-4 w-4" />
+            Share
+          </button>
+          
+          <button 
+            onClick={(e) => { e.preventDefault(); bookmarkMutation.mutate(); }}
+            disabled={bookmarkMutation.isPending}
+            className={`flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-body text-[12px] font-medium transition-colors hover:bg-muted/40 ${isSaved ? 'text-[var(--brand-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+          >
+            <Bookmark className="h-4 w-4" fill={isSaved ? "currentColor" : "none"} />
+            Save
+          </button>
+
+          {isOwnPost && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[var(--text-muted)] transition-colors hover:bg-muted/40 hover:text-[var(--text-primary)] focus:outline-none">
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40 font-body">
+                <DropdownMenuItem onClick={() => setIsEditing(true)} className="cursor-pointer">
+                  <Edit2 className="h-4 w-4 mr-2" />
+                  <span>Edit Post</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => deleteMutation.mutate()} className="cursor-pointer text-destructive focus:text-destructive">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  <span>Delete Post</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
     </motion.div>

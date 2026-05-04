@@ -9,9 +9,9 @@ const Landing = () => {
         <Link to="/" className="flex items-center gap-2 group">
           {/* Logo */}
           <div className="flex h-8 w-8 items-center justify-center rounded overflow-hidden">
-            <img src="/logo-transparent.png" alt="Soloboard" className="h-full w-full object-cover transform scale-[1.3] transition-transform group-hover:scale-[1.4]" />
+            <img src="/logo-transparent.png" alt="Borynx" className="h-full w-full object-cover transform scale-[1.3] transition-transform group-hover:scale-[1.4]" />
           </div>
-          <span className="font-heading font-bold text-xl tracking-tight text-foreground">Soloboard</span>
+          <span className="font-heading font-bold text-xl tracking-tight text-foreground">Borynx</span>
         </Link>
         <div className="hidden md:flex items-center gap-8 font-medium text-sm">
           <Link to="/" className="text-foreground transition-colors hover:opacity-70">Feed</Link>
@@ -163,9 +163,9 @@ const Landing = () => {
             <div className="space-y-4 md:w-1/3">
               <Link to="/" className="flex items-center gap-2 group inline-flex">
                 <div className="flex h-8 w-8 items-center justify-center rounded overflow-hidden">
-                  <img src="/logo-transparent.png" alt="Soloboard" className="h-full w-full object-cover transform scale-[1.3] transition-transform group-hover:scale-[1.4]" />
+                  <img src="/logo-transparent.png" alt="Borynx" className="h-full w-full object-cover transform scale-[1.3] transition-transform group-hover:scale-[1.4]" />
                 </div>
-                <span className="font-heading font-bold text-xl tracking-tight text-foreground">Soloboard</span>
+                <span className="font-heading font-bold text-xl tracking-tight text-foreground">Borynx</span>
               </Link>
               <p className="text-muted-foreground text-sm font-medium">Built for freelancers, by freelancers.</p>
             </div>
@@ -205,7 +205,7 @@ const Landing = () => {
 
           {/* Footer Bottom */}
           <div className="pt-8 border-t border-border/50 text-center">
-            <p className="text-sm text-muted-foreground">© 2026 Soloboard. All rights reserved.</p>
+            <p className="text-sm text-muted-foreground">© 2026 Borynx. All rights reserved.</p>
           </div>
         </div>
       </footer>

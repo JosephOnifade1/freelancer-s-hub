@@ -14,14 +14,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SortType, sortPosts } from "@/lib/sorting";
+import { FeedFilter } from "@/components/FeedFilter";
 
 type Scope = "all" | "following";
-type Sort = "best" | "new" | "hot";
 
 const Index = () => {
   const { user } = useAuth();
   const [scope, setScope] = useState<Scope>("all");
-  const [sort, setSort] = useState<Sort>("hot");
+  const [sort, setSort] = useState<SortType>("hot");
   
   const { data: profile } = useQuery({
     queryKey: ['profile', user?.uid],
@@ -42,20 +43,8 @@ const Index = () => {
       filtered = filtered.filter((post) => post.author.uid && followingList[post.author.uid]);
     }
 
-    if (sort === "hot" || sort === "best") {
-      filtered.sort((a, b) => {
-        const scoreA = (a.score || 0) * 2 + (a.commentCount || 0);
-        const scoreB = (b.score || 0) * 2 + (b.commentCount || 0);
-        return scoreB - scoreA;
-      });
-    } else if (sort === "new") {
-      filtered.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-    }
-
-    return filtered;
+    return sortPosts(filtered, sort, profile?.favoriteTopics);
   }, [posts, scope, sort, profile]);
-
-  const SortIcon = sort === "hot" ? Flame : sort === "new" ? Clock : TrendingUp;
 
   return (
     <AppLayout>
@@ -92,38 +81,7 @@ const Index = () => {
                 </button>
               </div>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="flex items-center gap-2 rounded-full bg-transparent border border-[var(--border-main)] px-4 py-1.5 font-body text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--text-muted)] transition-all">
-                    <SortIcon className="h-3.5 w-3.5" />
-                    <span className="capitalize">{sort}</span>
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-32 bg-[var(--bg-surface)] border-[var(--border-main)] font-body">
-                  <DropdownMenuItem 
-                    onClick={() => setSort("best")}
-                    className={cn("cursor-pointer flex items-center gap-2", sort === "best" && "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] focus:bg-[var(--brand-primary)]/10 focus:text-[var(--brand-primary)]")}
-                  >
-                    <TrendingUp className="h-4 w-4" />
-                    <span>Best</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={() => setSort("hot")}
-                    className={cn("cursor-pointer flex items-center gap-2", sort === "hot" && "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] focus:bg-[var(--brand-primary)]/10 focus:text-[var(--brand-primary)]")}
-                  >
-                    <Flame className="h-4 w-4" />
-                    <span>Hot</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={() => setSort("new")}
-                    className={cn("cursor-pointer flex items-center gap-2", sort === "new" && "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] focus:bg-[var(--brand-primary)]/10 focus:text-[var(--brand-primary)]")}
-                  >
-                    <Clock className="h-4 w-4" />
-                    <span>New</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <FeedFilter value={sort} onChange={setSort} />
             </div>
 
             {/* Posts */}
