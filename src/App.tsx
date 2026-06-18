@@ -51,22 +51,24 @@ const App = () => (
               <Route path="/" element={<RootRoute />} />
               <Route path="/new" element={<ProtectedRoute><NewFeed /></ProtectedRoute>} />
               <Route path="/following" element={<ProtectedRoute><Following /></ProtectedRoute>} />
+              
+              {/* Specialized Borynx Routing */}
+              <Route path="/b/:slug/p/:id" element={<ProtectedRoute><PostDetail /></ProtectedRoute>} />
+              <Route path="/b/:slug" element={<ProtectedRoute><CommunityDetail /></ProtectedRoute>} />
+              <Route path="/p/:id" element={<ProtectedRoute><PostDetail /></ProtectedRoute>} />
+              <Route path="/f" element={<ProtectedRoute><ErrorBoundary><Profile /></ErrorBoundary></ProtectedRoute>} />
+              <Route path="/f/:uid" element={<ProtectedRoute><ErrorBoundary><Profile /></ErrorBoundary></ProtectedRoute>} />
+              <Route path="/f/:handle" element={<ProtectedRoute><ErrorBoundary><Profile /></ErrorBoundary></ProtectedRoute>} />
+              <Route path="/l" element={<ProtectedRoute><NotFound /></ProtectedRoute>} />
+              
               <Route path="/tag/:tagName" element={<ProtectedRoute><TagFeed /></ProtectedRoute>} />
               <Route path="/communities" element={<ProtectedRoute><Communities /></ProtectedRoute>} />
               <Route path="/bookmarks" element={<ProtectedRoute><Bookmarks /></ProtectedRoute>} />
               <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
-              <Route path="/f" element={<ProtectedRoute><ErrorBoundary><Profile /></ErrorBoundary></ProtectedRoute>} />
-              <Route path="/f/:uid" element={<ProtectedRoute><ErrorBoundary><Profile /></ErrorBoundary></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/submit" element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
-              <Route path="/p/:id" element={<ProtectedRoute><PostDetail /></ProtectedRoute>} />
-              <Route path="/b/:slug/p/:id" element={<ProtectedRoute><PostDetail /></ProtectedRoute>} />
-              <Route path="/b/:slug" element={<ProtectedRoute><CommunityDetail /></ProtectedRoute>} />
-              <Route path="/l" element={<ProtectedRoute><NotFound /></ProtectedRoute>} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="/f/:handle" element={<ProtectedRoute><ErrorBoundary><Profile /></ErrorBoundary></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
