@@ -207,7 +207,7 @@ export function PostCard({ post, index }: PostCardProps) {
               )}
             </div>
             <span className="font-body text-[12px] font-medium text-[var(--text-primary)] hover:underline flex items-center gap-1">
-              {post.author?.name ? `b/${post.author.name.replace(/\s+/g, '')}` : 'b/Unknown'}
+              {post.author?.name ? `f/${post.author.name.replace(/\s+/g, '')}` : 'f/Unknown'}
               <VerifiedBadge isVerified={!!post.author?.isVerifiedPro} size={12} showTooltip={false} />
             </span>
           </Link>

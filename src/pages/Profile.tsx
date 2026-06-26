@@ -514,7 +514,7 @@ const Profile = () => {
                     </div>
                     {isOwnProfile && (
                       <Link 
-                        to="/" 
+                        to="/submit" 
                         className="mt-2 rounded-full bg-primary px-6 py-2.5 font-heading text-sm font-bold text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all hover:scale-105"
                       >
                         Create your first post

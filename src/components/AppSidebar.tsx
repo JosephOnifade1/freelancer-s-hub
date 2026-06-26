@@ -1,16 +1,12 @@
 import {
   Home,
-  Users,
   Compass,
   Bookmark,
-  User,
   Settings,
-  PenSquare,
-  Zap,
   Trophy,
-  LogIn,
-  LogOut,
   Plus,
+  Briefcase,
+  UserCheck,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -33,10 +29,12 @@ import { CreateCommunityModal } from "@/components/modals/CreateCommunityModal";
 
 const mainNav = [
   { title: "Home", url: "/", icon: Home },
+  { title: "Following", url: "/following", icon: UserCheck },
 ];
 
 const discover = [
   { title: "Borynx Spaces", url: "/communities", icon: Compass },
+  { title: "Leads Board", url: "/l", icon: Briefcase },
   { title: "Bookmarks", url: "/bookmarks", icon: Bookmark },
   { title: "Achievements", url: "/achievements", icon: Trophy },
 ];
