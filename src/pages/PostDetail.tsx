@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, MessageSquare, Share2, Bookmark, Loader2, CornerDownRight, MoreHorizontal, Edit2, Trash2, Eye, ExternalLink } from "lucide-react";
+import { ArrowLeft, MessageSquare, Share2, Bookmark, Loader2, MoreHorizontal, Edit2, Trash2, Eye, ExternalLink } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { VoteControls } from "@/components/VoteControls";
 import { PostTypeBadge } from "@/components/PostTypeBadge";
@@ -40,6 +40,28 @@ const buildCommentTree = (flatComments: CommentData[]) => {
   return roots;
 };
 
+// ─── Plain-text comment textarea ─────────────────────────────────────────────
+const CommentTextarea = ({
+  value,
+  onChange,
+  placeholder = "Share your thoughts...",
+  minRows = 3,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  minRows?: number;
+}) => (
+  <textarea
+    value={value}
+    onChange={(e) => onChange(e.target.value)}
+    placeholder={placeholder}
+    rows={minRows}
+    className="w-full resize-none rounded-lg border border-border bg-card px-3 py-2.5 font-body text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all"
+  />
+);
+
+// ─── Comment Thread ──────────────────────────────────────────────────────────
 const CommentThread = ({ comment, postId, depth = 0 }: { comment: CommentData; postId: string; depth?: number }) => {
   const [isReplying, setIsReplying] = useState(false);
   const [replyBody, setReplyBody] = useState("");
@@ -128,7 +150,7 @@ const CommentThread = ({ comment, postId, depth = 0 }: { comment: CommentData; p
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
-              <Link to={comment.authorUid ? `/f/${comment.authorUid}` : "#"} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <Link to={comment.authorUid ? `/f/${comment.author || comment.authorUid}` : "#"} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                 <div className="flex h-5 w-5 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-primary/20 text-primary">
                   {comment.author ? comment.author.charAt(0).toUpperCase() : '?'}
                 </div>
@@ -169,13 +191,7 @@ const CommentThread = ({ comment, postId, depth = 0 }: { comment: CommentData; p
           
           {isEditing ? (
             <div className="mb-2">
-              <Editor
-                value={editBody}
-                onChange={setEditBody}
-                placeholder="Edit your comment..."
-                minHeight="100px"
-                className="mb-2"
-              />
+              <CommentTextarea value={editBody} onChange={setEditBody} placeholder="Edit your comment..." minRows={3} />
               <div className="flex justify-end gap-2 mt-2">
                 <button onClick={() => setIsEditing(false)} className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground">Cancel</button>
                 <button 
@@ -188,7 +204,10 @@ const CommentThread = ({ comment, postId, depth = 0 }: { comment: CommentData; p
               </div>
             </div>
           ) : (
-            <MarkdownRenderer content={comment.body} className="mb-1" />
+            // Plain text display for comments — no markdown rendering
+            <p className="font-body text-sm text-foreground/90 leading-relaxed mb-1 whitespace-pre-wrap">
+              {comment.body}
+            </p>
           )}
           
           <button 
@@ -200,13 +219,7 @@ const CommentThread = ({ comment, postId, depth = 0 }: { comment: CommentData; p
 
           {isReplying && (
             <div className="mt-3 bg-secondary/30 rounded-lg p-3 border border-[#6366F1]/20 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
-              <Editor
-                value={replyBody}
-                onChange={setReplyBody}
-                placeholder="Write your reply..."
-                minHeight="100px"
-                className="mb-2"
-              />
+              <CommentTextarea value={replyBody} onChange={setReplyBody} placeholder="Write your reply..." minRows={2} />
               <div className="flex justify-end gap-2 mt-2">
                 <button 
                   onClick={() => setIsReplying(false)}
@@ -355,9 +368,12 @@ const PostDetail = () => {
   return (
     <AppLayout>
       <div className="mx-auto max-w-3xl px-4 py-6">
-        <Link to="/" className="inline-flex items-center gap-1 mb-4 font-body text-sm text-muted-foreground hover:text-foreground transition-colors">
-          <ArrowLeft className="h-4 w-4" /> Back to feed
-        </Link>
+        <button
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-1 mb-4 font-body text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back
+        </button>
 
         {post.isDeleted ? (
           <div className="rounded-xl border border-dashed border-violet-500/50 bg-card p-5 mb-6 shadow-sm opacity-80">
@@ -421,6 +437,7 @@ const PostDetail = () => {
                   </a>
                 )}
                 
+                {/* Post edit uses the full rich text editor — appropriate for post body */}
                 {isEditingPost ? (
                   <div className="mb-4">
                     <Editor
@@ -442,6 +459,7 @@ const PostDetail = () => {
                     </div>
                   </div>
                 ) : (
+                  /* MarkdownRenderer ONLY for the post body */
                   <MarkdownRenderer content={post.body} className="mb-4" />
                 )}
                 
@@ -506,15 +524,15 @@ const PostDetail = () => {
           </div>
         )}
 
-        {/* Comment box */}
+        {/* Comment compose — plain textarea, no rich text toolbar */}
         {!post.isDeleted && (
           <div className="rounded-xl border border-border bg-card p-4 mb-6 shadow-sm">
-            <Editor
+            <p className="font-body text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Leave a comment</p>
+            <CommentTextarea
               value={newComment}
               onChange={setNewComment}
               placeholder="Share your thoughts..."
-              minHeight="120px"
-              className="mb-2"
+              minRows={3}
             />
             <div className="flex justify-end mt-2">
               <button 

@@ -45,6 +45,7 @@ export interface PostData {
   isEdited?: boolean;
   isDeleted?: boolean;
   externalLink?: string;
+  category?: string;
 }
 
 interface PostCardProps {
@@ -113,7 +114,9 @@ export function PostCard({ post, index }: PostCardProps) {
 
   const handleShare = (e: React.MouseEvent) => {
     e.preventDefault();
-    navigator.clipboard.writeText(window.location.origin + `/p/${post.id}`);
+    const spacePath = post.category ? `/b/${post.category}` : '';
+    const shareUrl = window.location.origin + `${spacePath}/p/${post.id}${user?.uid ? `?ref_id=${user.uid}` : ''}`;
+    navigator.clipboard.writeText(shareUrl);
     toast.success("Link copied to clipboard!");
   };
 
@@ -140,7 +143,7 @@ export function PostCard({ post, index }: PostCardProps) {
             </span>
           </div>
 
-          <Link to={`/p/${post.id}`} className="block">
+          <Link to={post.category ? `/b/${post.category}/p/${post.id}` : `/p/${post.id}`} className="block">
             <h3 className="font-heading text-base font-semibold text-muted-foreground leading-snug mb-1 transition-colors cursor-pointer line-through opacity-80">
               {post.title}
             </h3>
@@ -161,7 +164,7 @@ export function PostCard({ post, index }: PostCardProps) {
             </div>
 
             <div className="flex items-center gap-1">
-              <Link to={`/p/${post.id}`} className="flex items-center gap-1 rounded-md px-2 py-1 font-body text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
+              <Link to={post.category ? `/b/${post.category}/p/${post.id}` : `/p/${post.id}`} className="flex items-center gap-1 rounded-md px-2 py-1 font-body text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
                 <MessageSquare className="h-3.5 w-3.5" />
                 {post.commentCount || 0}
               </Link>
@@ -184,7 +187,7 @@ export function PostCard({ post, index }: PostCardProps) {
       } ${isVeteran(post.author?.reputation || 0) ? 'veteran-aura' : ''}`}
     >
       {postImages[0] && !isEditing && (
-        <Link to={`/p/${post.id}`} className="shrink-0 mt-1 block h-[72px] w-[96px] overflow-hidden rounded-md border border-[var(--border-main)] bg-muted/20">
+        <Link to={post.category ? `/b/${post.category}/p/${post.id}` : `/p/${post.id}`} className="shrink-0 mt-1 block h-[72px] w-[96px] overflow-hidden rounded-md border border-[var(--border-main)] bg-muted/20">
           <img
             src={postImages[0].src}
             alt={postImages[0].alt || "Post thumbnail"}
@@ -220,7 +223,7 @@ export function PostCard({ post, index }: PostCardProps) {
           </div>
         </div>
 
-        <Link to={`/p/${post.id}`} className="block">
+        <Link to={post.category ? `/b/${post.category}/p/${post.id}` : `/p/${post.id}`} className="block">
           <h3 className="font-heading text-[1.1rem] font-semibold text-[var(--text-primary)] leading-tight group-hover:text-[var(--brand-primary)] transition-colors cursor-pointer">
             {post.title}
           </h3>
@@ -261,7 +264,7 @@ export function PostCard({ post, index }: PostCardProps) {
           </div>
         ) : (
           !postImages[0] && previewText && (
-            <Link to={`/p/${post.id}`} className="block mt-0.5">
+            <Link to={post.category ? `/b/${post.category}/p/${post.id}` : `/p/${post.id}`} className="block mt-0.5">
               <p className="font-body text-sm text-[var(--text-muted)] leading-relaxed line-clamp-2">
                 {previewText}
               </p>
@@ -286,7 +289,7 @@ export function PostCard({ post, index }: PostCardProps) {
         <div className="flex items-center gap-2 mt-1.5 flex-wrap">
           <VoteControls score={post.score || 0} entityId={post.id} authorUid={post.author?.uid} type="post" orientation="horizontal" />
           
-          <Link to={`/p/${post.id}`} className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-body text-[12px] font-medium text-[var(--text-muted)] transition-colors hover:bg-muted/40 hover:text-[var(--text-primary)]">
+          <Link to={post.category ? `/b/${post.category}/p/${post.id}` : `/p/${post.id}`} className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-body text-[12px] font-medium text-[var(--text-muted)] transition-colors hover:bg-muted/40 hover:text-[var(--text-primary)]">
             <MessageSquare className="h-4 w-4" />
             {post.commentCount || 0}
           </Link>

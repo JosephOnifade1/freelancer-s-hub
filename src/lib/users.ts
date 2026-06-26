@@ -18,6 +18,7 @@ export type UserProfile = {
   followingList?: Record<string, boolean>;
   followersList?: Record<string, boolean>;
   savedPosts?: Record<string, boolean>;
+  communitiesList?: Record<string, boolean>;
   createdAt: any;
   avatarUrl?: string;
   isVerifiedPro?: boolean;

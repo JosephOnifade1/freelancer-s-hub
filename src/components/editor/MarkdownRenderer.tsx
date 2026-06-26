@@ -3,6 +3,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import { cn } from '@/lib/utils';
+import { UserHoverCard } from '../UserHoverCard';
 
 interface MarkdownRendererProps {
   content: string;
@@ -10,11 +11,27 @@ interface MarkdownRendererProps {
 }
 
 export const MarkdownRenderer = ({ content, className }: MarkdownRendererProps) => {
-  // Pre-process content to auto-link B-Spaces (e.g. b/logistics) and Freelancer profiles (e.g. f/username)
-  // Ensures we don't accidentally replace already-formatted markdown links by only matching after space, start of line, or parenthesis
-  const processedContent = content
-    .replace(/(^|\s|\()b\/([a-zA-Z0-9_]+)\b/g, '$1[b/$2](/b/$2)')
-    .replace(/(^|\s|\()f\/([a-zA-Z0-9_]+)\b/g, '$1[f/$2](/f/$2)');
+  const processedContent = content.replace(/(?:^|\s|\()([ubf]\/[a-zA-Z0-9_]+)\b/g, (match, p1, offset) => {
+    // Check if this match is inside a markdown link URL or label
+    const before = content.slice(0, offset);
+    const isInsideLink = /\[[^\]]*$/.test(before) || /\([^\)]*$/.test(before);
+    if (isInsideLink) return match;
+    
+    // Check if it's already a link by looking at preceding char
+    const prevChar = content[offset - 1];
+    if (prevChar === '/' || prevChar === '[') return match;
+
+    const start = match.indexOf(p1);
+    const prefixChar = match.substring(0, start);
+    
+    // Normalize prefix: b/ stays b/, u/ and f/ both resolve to /f/
+    let targetLink = p1;
+    if (p1.startsWith('u/')) {
+      targetLink = p1.replace('u/', 'f/');
+    }
+
+    return `${prefixChar}[${p1}](/${targetLink})`;
+  });
 
   return (
     <div className={cn("prose prose-sm dark:prose-invert max-w-none break-words", className)}>
@@ -37,9 +54,6 @@ export const MarkdownRenderer = ({ content, className }: MarkdownRendererProps) 
           }]
         ]}
         components={{
-          a: ({ node, ...props }) => (
-            <a {...props} className="text-primary hover:underline" target="_blank" rel="noopener noreferrer" />
-          ),
           img: ({ node, ...props }) => (
             <img {...props} className="rounded-lg border border-border my-4 shadow-sm" />
           ),
@@ -54,6 +68,24 @@ export const MarkdownRenderer = ({ content, className }: MarkdownRendererProps) 
           td: ({ node, ...props }) => (
             <td {...props} className="px-4 py-2 border-t border-border" />
           ),
+          a: ({ node, ...props }) => {
+            const href = props.href || "";
+            const isUserLink = (href.startsWith("/u/") || href.startsWith("/f/")) && href.length > 3;
+            
+            if (isUserLink) {
+              const handle = href.replace("/u/", "").replace("/f/", "");
+              return <UserHoverCard handle={handle}>{props.children}</UserHoverCard>;
+            }
+            
+            return (
+              <a 
+                {...props} 
+                className="text-primary hover:underline transition-all" 
+                target={href.startsWith("http") ? "_blank" : undefined}
+                rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
+              />
+            );
+          },
           code: ({ node, inline, ...props }: any) => (
             inline 
               ? <code {...props} className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono" />

@@ -40,7 +40,12 @@ const Index = () => {
 
     if (scope === "following") {
       const followingList = profile?.followingList || {};
-      filtered = filtered.filter((post) => post.author.uid && followingList[post.author.uid]);
+      const communitiesList = profile?.communitiesList || {};
+      filtered = filtered.filter((post) => {
+        const followedByUser = post.author.uid && followingList[post.author.uid];
+        const inJoinedCommunity = post.category && communitiesList[post.category];
+        return followedByUser || inJoinedCommunity;
+      });
     }
 
     return sortPosts(filtered, sort, profile?.favoriteTopics);

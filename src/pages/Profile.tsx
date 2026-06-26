@@ -74,7 +74,7 @@ const ProfileCommentCard = ({ comment, isOwnProfile }: { comment: any, isOwnProf
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-1">
           <div className="font-body text-xs text-muted-foreground">
-            Commented on <Link to={`/p/${comment.postId}`} className="font-medium text-foreground hover:text-primary transition-colors">a post</Link>
+            Commented on <Link to={comment.postCategory ? `/b/${comment.postCategory}/p/${comment.postId}` : `/p/${comment.postId}`} className="font-medium text-foreground hover:text-primary transition-colors">a post</Link>
             <span className="mx-2">•</span>
             {formatTimeAgo(comment.createdAt)}
             {comment.isEdited && <span className="italic ml-1">(edited)</span>}

@@ -36,7 +36,7 @@ const mainNav = [
 ];
 
 const discover = [
-  { title: "Communities", url: "/communities", icon: Compass },
+  { title: "Borynx Spaces", url: "/communities", icon: Compass },
   { title: "Bookmarks", url: "/bookmarks", icon: Bookmark },
   { title: "Achievements", url: "/achievements", icon: Trophy },
 ];
@@ -86,7 +86,7 @@ export function AppSidebar() {
 
         <SidebarGroup className="px-0">
           <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 px-8 h-10 transition-all duration-300 ease-in-out opacity-100">
-            Discover
+            Spaces
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -107,7 +107,7 @@ export function AppSidebar() {
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  {item.title === "Communities" && (
+                  {item.title === "Borynx Spaces" && (
                     <SidebarMenuItem className="px-8 mt-1 mb-1">
                       <CreateCommunityModal>
                         <SidebarMenuButton variant="ghost" className="p-0 h-auto hover:bg-transparent overflow-hidden">

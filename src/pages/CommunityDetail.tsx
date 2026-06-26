@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { fetchCommunity } from "@/lib/communities";
 import { AppLayout } from "@/components/AppLayout";
@@ -6,9 +6,11 @@ import { PageHeader } from "@/components/PageHeader";
 import { PostCard } from "@/components/PostCard";
 import { fetchPosts } from "@/lib/posts";
 import { useMemo } from "react";
+import { ArrowLeft } from "lucide-react";
 
 const CommunityDetail = () => {
   const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
   
   const { data: community, isLoading: isCommunityLoading } = useQuery({
     queryKey: ['community', slug],
@@ -58,6 +60,12 @@ const CommunityDetail = () => {
   return (
     <AppLayout>
       <div className="mx-auto max-w-6xl px-4 py-6">
+        <button
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-1.5 mb-5 font-body text-sm text-muted-foreground hover:text-foreground transition-colors group"
+        >
+          <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" /> Back
+        </button>
         <PageHeader 
           title={community.name}
           subtitle={community.description || `Welcome to the b/${community.slug} space.`}
