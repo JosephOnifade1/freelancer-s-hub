@@ -1,0 +1,58 @@
+{
+  "rules": {
+    "users": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "usernames": {
+      ".read": "auth != null",
+      "$username": {
+        ".write": "auth != null && (!data.exists() || data.val() === auth.uid) && (newData.val() === auth.uid || !newData.exists())"
+      }
+    },
+    "posts": {
+      ".read": "auth != null",
+      "$post_id": {
+        ".write": "auth != null && (!data.exists() || data.child('author/uid').val() === auth.uid || data.child('authorUid').val() === auth.uid || !newData.child('body').exists() && !newData.child('title').exists())"
+      }
+    },
+    "post-comments": {
+      ".read": "auth != null",
+      "$post_id": {
+        "$comment_id": {
+          ".write": "auth != null && (!data.exists() || data.child('authorUid').val() === auth.uid || !newData.child('body').exists() && !newData.child('authorUid').exists())"
+        }
+      }
+    },
+    "leads": {
+      ".read": "auth != null",
+      "$lead_id": {
+        ".write": "auth != null && (!data.exists() || data.child('postedBy/uid').val() === auth.uid)"
+      }
+    },
+    "communities": {
+      ".read": "auth != null",
+      "$community_slug": {
+        ".write": "auth != null && (!data.exists() || data.child('ownerId').val() === auth.uid || !newData.child('name').exists() && !newData.child('description').exists())"
+      }
+    },
+    "post-votes": {
+      ".read": "auth != null",
+      "$post_id": {
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid"
+        }
+      }
+    },
+    "comment-votes": {
+      ".read": "auth != null",
+      "$comment_id": {
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid"
+        }
+      }
+    }
+  }
+}
