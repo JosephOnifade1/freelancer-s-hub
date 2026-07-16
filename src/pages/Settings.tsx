@@ -8,8 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { getUserProfile, UserProfile, checkUsernameAvailability, claimUsername } from "@/lib/users";
-import { set, ref } from "firebase/database";
-import { database } from "@/lib/firebase";
+import { supabase } from "@/lib/supabase";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 
 const Section = ({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) => (
@@ -98,10 +97,12 @@ const Settings = () => {
         status: available ? "Available" : "Busy"
       };
 
-      await set(ref(database, `users/${user.uid}/displayName`), displayName);
-      await set(ref(database, `users/${user.uid}/bio`), bio);
-      await set(ref(database, `users/${user.uid}/website`), website);
-      await set(ref(database, `users/${user.uid}/status`), updates.status);
+      const { error } = await supabase
+        .from("profiles")
+        .update({ displayName, bio, website, status: updates.status })
+        .eq("uid", user.uid);
+
+      if (error) throw new Error(error.message);
 
       toast({ title: "Saved", description: "Your settings have been updated." });
     } catch (error: any) {

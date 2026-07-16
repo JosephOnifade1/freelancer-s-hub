@@ -15,26 +15,14 @@
     "posts": {
       ".read": "auth != null",
       "$post_id": {
-        ".write": "auth != null && (
-          !data.exists() || 
-          data.child('author/uid').val() == auth.uid || 
-          data.child('authorUid').val() == auth.uid || 
-          (
-            (!newData.child('body').exists() || data.child('body').val() == newData.child('body').val()) && 
-            (!newData.child('title').exists() || data.child('title').val() == newData.child('title').val())
-          )
-        )"
+        ".write": "auth != null && (!data.exists() || data.child('author/uid').val() == auth.uid || data.child('authorUid').val() == auth.uid || ((!newData.child('body').exists() || data.child('body').val() == newData.child('body').val()) && (!newData.child('title').exists() || data.child('title').val() == newData.child('title').val())))"
       }
     },
     "post-comments": {
       ".read": "auth != null",
       "$post_id": {
         "$comment_id": {
-          ".write": "auth != null && (
-            !data.exists() || 
-            data.child('authorUid').val() == auth.uid || 
-            (!newData.child('body').exists() || data.child('body').val() == newData.child('body').val())
-          )"
+          ".write": "auth != null && (!data.exists() || data.child('authorUid').val() == auth.uid || (!newData.child('body').exists() || data.child('body').val() == newData.child('body').val()))"
         }
       }
     },
@@ -47,14 +35,7 @@
     "communities": {
       ".read": "auth != null",
       "$community_slug": {
-        ".write": "auth != null && (
-          !data.exists() || 
-          data.child('ownerId').val() == auth.uid || 
-          (
-            (!newData.child('name').exists() || data.child('name').val() == newData.child('name').val()) && 
-            (!newData.child('description').exists() || data.child('description').val() == newData.child('description').val())
-          )
-        )"
+        ".write": "auth != null && (!data.exists() || data.child('ownerId').val() == auth.uid || ((!newData.child('name').exists() || data.child('name').val() == newData.child('name').val()) && (!newData.child('description').exists() || data.child('description').val() == newData.child('description').val())))"
       }
     },
     "post-votes": {

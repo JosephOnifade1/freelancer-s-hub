@@ -3,8 +3,7 @@ import confetti from "canvas-confetti";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getUserProfile, isVeteran } from "@/lib/users";
-import { ref, update } from "firebase/database";
-import { database } from "@/lib/firebase";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
 export function VeteranCelebration() {
@@ -19,9 +18,10 @@ export function VeteranCelebration() {
 
   const markCelebrated = useMutation({
     mutationFn: async (uid: string) => {
-      await update(ref(database, `users/${uid}`), { 
-        hasSeenVeteranCelebration: true 
-      });
+      await supabase
+        .from("profiles")
+        .update({ hasSeenVeteranCelebration: true })
+        .eq("uid", uid);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile', user?.uid] });

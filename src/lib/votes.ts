@@ -1,58 +1,96 @@
-import { ref, get, set, runTransaction } from "firebase/database";
-import { database } from "./firebase";
+import { supabase } from "./supabase";
 
-export const fetchUserVote = async (entityId: string, userId: string, type: "post" | "comment" = "post"): Promise<number> => {
-  const voteRef = ref(database, `${type}-votes/${entityId}/${userId}`);
-  const snapshot = await get(voteRef);
-  return snapshot.exists() ? snapshot.val() : 0;
+export const fetchUserVote = async (
+  entityId: string,
+  userId: string,
+  type: "post" | "comment" = "post"
+): Promise<number> => {
+  const { data } = await supabase
+    .from("votes")
+    .select("voteValue")
+    .eq("userId", userId)
+    .eq("entityType", type)
+    .eq("entityId", entityId)
+    .single();
+
+  return data?.voteValue ?? 0;
 };
 
 export const handleVote = async (
-  entityId: string, 
-  authorUid: string | undefined, 
-  currentUserId: string, 
+  entityId: string,
+  authorUid: string | undefined,
+  currentUserId: string,
   newVote: 1 | -1 | 0,
   type: "post" | "comment" = "post",
-  postIdForComment?: string // Required if type === 'comment' to locate the comment inside post-comments
+  _postIdForComment?: string // Kept for backward-compatibility, not needed in Supabase
 ) => {
   if (!currentUserId) throw new Error("Must be logged in to vote");
 
-  const voteRef = ref(database, `${type}-votes/${entityId}/${currentUserId}`);
-  const snapshot = await get(voteRef);
-  const previousVote: number = snapshot.exists() ? snapshot.val() : 0;
+  // Fetch the current vote for this user
+  const { data: existingVote } = await supabase
+    .from("votes")
+    .select("voteValue")
+    .eq("userId", currentUserId)
+    .eq("entityType", type)
+    .eq("entityId", entityId)
+    .single();
 
-  if (previousVote === newVote) return; // No change
+  const previousVote: number = existingVote?.voteValue ?? 0;
+  if (previousVote === newVote) return;
 
   const diff = newVote - previousVote;
   const upDiff = (newVote === 1 ? 1 : 0) - (previousVote === 1 ? 1 : 0);
   const downDiff = (newVote === -1 ? 1 : 0) - (previousVote === -1 ? 1 : 0);
 
-  // 1. Save new user vote
-  await set(voteRef, newVote);
-
-  // 2. Update entity score, ups, and downs
-  const entityBaseRef = type === "post" ? `posts/${entityId}` : `post-comments/${postIdForComment}/${entityId}`;
-  
-  const scoreRef = ref(database, `${entityBaseRef}/score`);
-  await runTransaction(scoreRef, (currentScore) => {
-    return (currentScore || 0) + diff;
-  });
-
-  if (upDiff !== 0) {
-    const upsRef = ref(database, `${entityBaseRef}/ups`);
-    await runTransaction(upsRef, (currentUps) => (currentUps || 0) + upDiff);
-  }
-
-  if (downDiff !== 0) {
-    const downsRef = ref(database, `${entityBaseRef}/downs`);
-    await runTransaction(downsRef, (currentDowns) => (currentDowns || 0) + downDiff);
-  }
-
-  // 3. Update author reputation (Reddit style: 1:1 karma)
-  if (authorUid && authorUid !== currentUserId) {
-    const repRef = ref(database, `users/${authorUid}/reputation`);
-    await runTransaction(repRef, (currentRep) => {
-      return (currentRep || 0) + diff; // changed from diff * 10
+  // 1. Upsert or delete vote record
+  if (newVote === 0) {
+    await supabase
+      .from("votes")
+      .delete()
+      .eq("userId", currentUserId)
+      .eq("entityType", type)
+      .eq("entityId", entityId);
+  } else {
+    await supabase.from("votes").upsert({
+      userId: currentUserId,
+      entityType: type,
+      entityId: entityId,
+      voteValue: newVote,
     });
+  }
+
+  // 2. Update entity score/ups/downs in the appropriate table
+  const table = type === "post" ? "posts" : "comments";
+  const { data: entity } = await supabase
+    .from(table)
+    .select("score, ups, downs")
+    .eq("id", entityId)
+    .single();
+
+  if (entity) {
+    await supabase
+      .from(table)
+      .update({
+        score: (entity.score || 0) + diff,
+        ups: (entity.ups || 0) + upDiff,
+        downs: (entity.downs || 0) + downDiff,
+      })
+      .eq("id", entityId);
+  }
+
+  // 3. Update author reputation
+  if (authorUid && authorUid !== currentUserId) {
+    const { data: authorProfile } = await supabase
+      .from("profiles")
+      .select("reputation")
+      .eq("uid", authorUid)
+      .single();
+
+    if (authorProfile) {
+      await supabase
+        .from("profiles")
+        .update({ reputation: (authorProfile.reputation || 0) + diff })
+        .eq("uid", authorUid);
+    }
   }
 };

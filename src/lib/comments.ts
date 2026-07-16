@@ -1,5 +1,4 @@
-import { ref, get, push, set, serverTimestamp, runTransaction } from "firebase/database";
-import { database } from "./firebase";
+import { supabase } from "./supabase";
 
 export interface CommentData {
   id: string;
@@ -9,90 +8,108 @@ export interface CommentData {
   body: string;
   score: number;
   createdAt: number;
-  parentId?: string; // Used to structure flat comments into a tree
-  replies?: CommentData[]; // Reserved for future thread implementation
+  parentId?: string;
+  replies?: CommentData[];
   isDeleted?: boolean;
   isEdited?: boolean;
 }
 
 export const fetchComments = async (postId: string): Promise<CommentData[]> => {
-  const commentsRef = ref(database, `post-comments/${postId}`);
-  const snapshot = await get(commentsRef);
-  
-  if (!snapshot.exists()) {
+  const { data, error } = await supabase
+    .from("comments")
+    .select(`
+      id, body, score, createdAt, parentId, isDeleted, isEdited, authorUid,
+      profiles!comments_authorUid_fkey (username, displayName, reputation)
+    `)
+    .eq("postId", postId)
+    .order("createdAt", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching comments:", error);
     return [];
   }
 
-  const comments: CommentData[] = [];
-  snapshot.forEach((childSnapshot) => {
-    comments.push({
-      id: childSnapshot.key as string,
-      ...childSnapshot.val()
-    });
-  });
-
-  // Simple sort by creation time (ascending)
-  return comments.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  return (data || []).map((c: any) => ({
+    id: c.id,
+    author: c.profiles?.displayName || c.profiles?.username || "Unknown",
+    authorUid: c.authorUid,
+    reputation: c.profiles?.reputation || 0,
+    body: c.body,
+    score: c.score,
+    createdAt: new Date(c.createdAt).getTime(),
+    parentId: c.parentId,
+    isDeleted: c.isDeleted,
+    isEdited: c.isEdited,
+  }));
 };
 
-export const addComment = async (postId: string, commentData: Omit<CommentData, 'id' | 'createdAt' | 'score'>) => {
-  const commentsRef = ref(database, `post-comments/${postId}`);
-  const newCommentRef = push(commentsRef);
-  
-  await set(newCommentRef, {
-    ...commentData,
-    score: 0,
-    createdAt: serverTimestamp()
-  });
+export const addComment = async (
+  postId: string,
+  commentData: Omit<CommentData, "id" | "createdAt" | "score">
+) => {
+  const { data, error } = await supabase
+    .from("comments")
+    .insert({
+      postId,
+      authorUid: commentData.authorUid,
+      body: commentData.body,
+      parentId: commentData.parentId || null,
+      score: 0,
+      isDeleted: false,
+      isEdited: false,
+    })
+    .select("id")
+    .single();
 
-  // Increment Post Comment Count
-  const countRef = ref(database, `posts/${postId}/commentCount`);
-  await runTransaction(countRef, (currentCount) => {
-    return (currentCount || 0) + 1;
-  });
+  if (error) throw new Error(error.message);
 
-  return newCommentRef.key;
-};
+  // Increment comment count on post
+  await supabase.rpc("increment_comment_count", { post_id: postId });
 
-export const fetchCommentsByAuthor = async (profile: { uid: string, username: string, displayName: string }): Promise<(CommentData & { postId: string })[]> => {
-  const allCommentsRef = ref(database, 'post-comments');
-  const snapshot = await get(allCommentsRef);
-  if (!snapshot.exists()) return [];
-
-  const userComments: (CommentData & { postId: string })[] = [];
-  snapshot.forEach((postSnapshot) => {
-    const postId = postSnapshot.key as string;
-    postSnapshot.forEach((commentSnapshot) => {
-      const comment = commentSnapshot.val();
-      if (
-        !comment.isDeleted && (
-          comment.authorUid === profile.uid || 
-          comment.author === profile.username || 
-          comment.author === profile.displayName
-        )
-      ) {
-        userComments.push({
-          id: commentSnapshot.key as string,
-          postId,
-          ...comment
-        });
-      }
-    });
-  });
-
-  return userComments.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  return data?.id as string;
 };
 
 export const updateComment = async (postId: string, commentId: string, body: string) => {
-  await set(ref(database, `post-comments/${postId}/${commentId}/body`), body);
-  await set(ref(database, `post-comments/${postId}/${commentId}/isEdited`), true);
+  const { error } = await supabase
+    .from("comments")
+    .update({ body, isEdited: true })
+    .eq("id", commentId);
+  if (error) throw new Error(error.message);
 };
 
 export const softDeleteComment = async (postId: string, commentId: string) => {
-  await set(ref(database, `post-comments/${postId}/${commentId}/isDeleted`), true);
-  // Decrement the post's comment count
-  const countRef = ref(database, `posts/${postId}/commentCount`);
-  await runTransaction(countRef, (currentCount) => {
-    return Math.max(0, (currentCount || 0) - 1);
-  });
+  const { error } = await supabase
+    .from("comments")
+    .update({ isDeleted: true })
+    .eq("id", commentId);
+  if (error) throw new Error(error.message);
+};
+
+export const fetchCommentsByAuthor = async (profile: {
+  uid: string;
+  username: string;
+  displayName: string;
+}): Promise<(CommentData & { postId: string })[]> => {
+  const { data, error } = await supabase
+    .from("comments")
+    .select("id, body, score, createdAt, parentId, isDeleted, isEdited, authorUid, postId")
+    .eq("authorUid", profile.uid)
+    .eq("isDeleted", false)
+    .order("createdAt", { ascending: false });
+
+  if (error) return [];
+
+  return (data || []).map((c: any) => ({
+    id: c.id,
+    author: profile.displayName || profile.username,
+    authorUid: c.authorUid,
+    reputation: 0,
+    body: c.body,
+    score: c.score,
+    createdAt: new Date(c.createdAt).getTime(),
+    parentId: c.parentId,
+    isDeleted: c.isDeleted,
+    isEdited: c.isEdited,
+    postId: c.postId,
+  }));
 };

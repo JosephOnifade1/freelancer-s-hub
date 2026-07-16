@@ -1,5 +1,4 @@
-import { ref, get, set, serverTimestamp, runTransaction } from "firebase/database";
-import { database } from "./firebase";
+import { supabase } from "./supabase";
 
 export interface CommunityData {
   id?: string;
@@ -13,70 +12,80 @@ export interface CommunityData {
   memberCount: number;
 }
 
-/** Seed default communities if they don't exist in Firebase. */
-const DEFAULT_COMMUNITIES: Omit<CommunityData, 'id' | 'createdAt'>[] = [
-  { slug: "design", name: "Design", description: "UI, UX, branding, illustration.", topics: ["ui", "ux", "branding"], ownerId: "system", memberCount: 0 },
-  { slug: "dev", name: "Freelance Dev", description: "Web, mobile, full-stack devs going solo.", topics: ["web", "mobile", "backend"], ownerId: "system", memberCount: 0 },
-  { slug: "writing", name: "Writing", description: "Copywriters, content writers, ghostwriters.", topics: ["copy", "content", "ghostwriting"], ownerId: "system", memberCount: 0 },
-  { slug: "marketing", name: "Marketing", description: "Growth, SEO, paid ads, email.", topics: ["seo", "growth", "ads"], ownerId: "system", memberCount: 0 },
-  { slug: "video", name: "Video & Motion", description: "Editors, motion designers, animators.", topics: ["video", "motion", "animation"], ownerId: "system", memberCount: 0 },
-  { slug: "consulting", name: "Consulting", description: "Strategy, ops, advisory work.", topics: ["strategy", "ops", "advisory"], ownerId: "system", memberCount: 0 },
-];
-
 export const seedDefaultCommunities = async () => {
-  for (const community of DEFAULT_COMMUNITIES) {
-    const communityRef = ref(database, `communities/${community.slug}`);
-    const snapshot = await get(communityRef);
-    if (!snapshot.exists()) {
-      await set(communityRef, { ...community, createdAt: serverTimestamp() });
-    }
-  }
+  // Default communities are already seeded by supabase_schema.sql.
+  // This function is a no-op kept for compatibility.
 };
 
-export const createCommunity = async (slug: string, data: Omit<CommunityData, 'createdAt' | 'memberCount' | 'id' | 'slug'>) => {
-  const communityRef = ref(database, `communities/${slug}`);
-  const snapshot = await get(communityRef);
-  if (snapshot.exists()) {
-    throw new Error("Community with this URL slug already exists.");
-  }
-  const communityData: CommunityData = {
-    ...data,
-    slug,
-    memberCount: 1,
-    createdAt: serverTimestamp()
-  };
-  await set(communityRef, communityData);
+export const createCommunity = async (
+  slug: string,
+  data: Omit<CommunityData, "createdAt" | "memberCount" | "id" | "slug">
+) => {
+  const { error } = await supabase
+    .from("communities")
+    .insert({ ...data, slug, memberCount: 1 });
+
+  if (error) throw new Error(error.message);
   return slug;
 };
 
 export const fetchCommunity = async (slug: string): Promise<CommunityData | null> => {
-  const communityRef = ref(database, `communities/${slug}`);
-  const snapshot = await get(communityRef);
-  if (!snapshot.exists()) return null;
-  return { id: snapshot.key as string, ...snapshot.val() };
+  const { data, error } = await supabase
+    .from("communities")
+    .select("*")
+    .eq("slug", slug)
+    .single();
+
+  if (error || !data) return null;
+  return data as CommunityData;
 };
 
 export const fetchAllCommunities = async (): Promise<CommunityData[]> => {
-  const communitiesRef = ref(database, 'communities');
-  const snapshot = await get(communitiesRef);
-  if (!snapshot.exists()) return [];
-  const communities: CommunityData[] = [];
-  snapshot.forEach((child) => {
-    communities.push({ id: child.key as string, ...child.val() });
-  });
-  return communities;
+  const { data, error } = await supabase
+    .from("communities")
+    .select("*")
+    .order("name");
+
+  if (error) return [];
+  return (data || []) as CommunityData[];
 };
 
 export const joinCommunity = async (uid: string, slug: string) => {
-  // Add to user's communitiesList
-  await set(ref(database, `users/${uid}/communitiesList/${slug}`), true);
-  // Increment community memberCount
-  await runTransaction(ref(database, `communities/${slug}/memberCount`), (val) => (val || 0) + 1);
+  const { error } = await supabase
+    .from("community_members")
+    .insert({ userId: uid, communitySlug: slug });
+
+  if (error && error.code !== "23505") throw new Error(error.message); // Ignore duplicate
+
+  await supabase.rpc("increment_community_members", { community_slug: slug });
+
+  await supabase
+    .from("profiles")
+    .update({
+      communitiesList: supabase.rpc("jsonb_set_community", {
+        uid,
+        slug,
+        value: true,
+      }) as any,
+    })
+    .eq("uid", uid);
 };
 
 export const leaveCommunity = async (uid: string, slug: string) => {
-  // Remove from user's communitiesList
-  await set(ref(database, `users/${uid}/communitiesList/${slug}`), null);
-  // Decrement community memberCount
-  await runTransaction(ref(database, `communities/${slug}/memberCount`), (val) => Math.max(0, (val || 0) - 1));
+  await supabase
+    .from("community_members")
+    .delete()
+    .eq("userId", uid)
+    .eq("communitySlug", slug);
+
+  await supabase.rpc("decrement_community_members", { community_slug: slug });
+};
+
+export const getUserCommunities = async (uid: string): Promise<string[]> => {
+  const { data } = await supabase
+    .from("community_members")
+    .select("communitySlug")
+    .eq("userId", uid);
+
+  return (data || []).map((row: any) => row.communitySlug);
 };

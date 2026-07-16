@@ -10,8 +10,7 @@ import { globalSearch, SearchResults } from "@/lib/search";
 import { VerifiedBadge } from "./VerifiedBadge";
 import { LiveReputation } from "./LiveReputation";
 import { useTheme, ThemeMode } from "@/hooks/useTheme";
-import { ref, set } from "firebase/database";
-import { database } from "@/lib/firebase";
+import { supabase } from "@/lib/supabase";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,7 +58,10 @@ export function AppLayout({ children }: AppLayoutProps) {
     if (!user?.uid) return;
     const newOnline = !isOnline;
     setIsOnline(newOnline);
-    await set(ref(database, `users/${user.uid}/status`), newOnline ? 'online' : 'offline');
+    await supabase
+      .from("profiles")
+      .update({ status: newOnline ? "Available" : "offline" })
+      .eq("uid", user.uid);
   };
 
   const handleSignOut = async () => {
@@ -427,7 +429,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 >
                   <div className="h-full w-full rounded-full overflow-hidden bg-primary/10 hover:bg-primary/20 transition-colors flex items-center justify-center">
                     <img 
-                      src={profile?.avatarUrl || user?.photoURL || ""} 
+                      src={profile?.avatarUrl || user?.user_metadata?.avatar_url || ""} 
                       alt="Avatar" 
                       className="h-full w-full object-cover" 
                       onError={(e) => {
@@ -443,9 +445,9 @@ export function AppLayout({ children }: AppLayoutProps) {
                     />
                     <span 
                       className="font-heading text-xs font-bold text-primary flex items-center justify-center h-full w-full"
-                      style={{ display: (profile?.avatarUrl || user?.photoURL) ? 'none' : 'flex' }}
+                      style={{ display: (profile?.avatarUrl || user?.user_metadata?.avatar_url) ? 'none' : 'flex' }}
                     >
-                      {profile?.initial || user?.displayName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || "?"}
+                      {profile?.initial || user?.user_metadata?.display_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || "?"}
                     </span>
                   </div>
                   <div className={cn(
