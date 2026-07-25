@@ -11,8 +11,7 @@ import { fetchCommentsByAuthor, updateComment, softDeleteComment } from "@/lib/c
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatTimeAgo } from "@/lib/utils";
 import { toast } from "sonner";
-import { set, ref } from "firebase/database";
-import { database } from "@/lib/firebase";
+import { supabase } from "@/lib/supabase";
 import { Switch } from "@/components/ui/switch";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
@@ -220,7 +219,11 @@ const Profile = () => {
     if (!profileUid) return;
     setIsSavingBio(true);
     try {
-      await set(ref(database, `users/${profileUid}/bio`), bioInput);
+      const { error } = await supabase
+        .from("profiles")
+        .update({ bio: bioInput })
+        .eq("uid", profileUid);
+      if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['profile', profileUid] });
       setIsEditingBio(false);
       toast.success("Bio updated");
@@ -281,7 +284,23 @@ const Profile = () => {
     Saved: String(savedPostsList.length)
   };
   
-  const isFollowing = currentUser && profile?.followersList?.[currentUser.uid] === true;
+  // Check if current user is following this profile via the follows table
+  const { data: followData } = useQuery({
+    queryKey: ['isFollowing', currentUser?.uid, profileUid],
+    queryFn: async () => {
+      if (!currentUser?.uid || !profileUid) return null;
+      const { data } = await supabase
+        .from("follows")
+        .select("followingId")
+        .eq("followerId", currentUser.uid)
+        .eq("followingId", profileUid)
+        .single();
+      return data;
+    },
+    enabled: !!currentUser?.uid && !!profileUid && currentUser?.uid !== profileUid,
+  });
+  const isFollowing = !!followData;
+
 
   // Dynamic achievements (mirrors Achievements.tsx computation)
   type AchievementDef = { id: string; name: string; description: string; icon: LucideIcon; unlocked: boolean };
@@ -303,9 +322,10 @@ const Profile = () => {
       if (!currentUser || !profileUid) throw new Error("Not logged in");
       return toggleFollow(currentUser.uid, profileUid);
     },
-    onSuccess: (isFollowing) => {
+    onSuccess: (nowFollowing) => {
       queryClient.invalidateQueries({ queryKey: ['profile', profileUid] });
-      toast.success(isFollowing ? `Followed b/${profile?.username}` : `Unfollowed b/${profile?.username}`);
+      queryClient.invalidateQueries({ queryKey: ['isFollowing', currentUser?.uid, profileUid] });
+      toast.success(nowFollowing ? `Followed @${profile?.username}` : `Unfollowed @${profile?.username}`);
     },
     onError: () => {
       toast.error("Failed to follow user");
