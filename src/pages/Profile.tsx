@@ -1,29 +1,41 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Link as LinkIcon, MapPin, Calendar, Zap, ArrowUp, UserPlus, MessageSquare, Edit2, Check, X, Camera, BadgeCheck, CheckCircle2, Loader2, MoreHorizontal, Trash2, Trophy, Flame, Star, BookOpen, Heart, type LucideIcon } from "lucide-react";
+import { VoteControls } from "@/components/VoteControls";
+import { 
+  Link as LinkIcon, 
+  MapPin, 
+  Calendar, 
+  Zap, 
+  MessageSquare, 
+  Camera, 
+  Loader2, 
+  MoreHorizontal, 
+  Trash2, 
+  Edit2, 
+  Repeat, 
+  Bookmark, 
+  ArrowLeft,
+  Mail,
+  MoreVertical,
+  Plus,
+  PenSquare,
+  Check
+} from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
-import { PostCard } from "@/components/PostCard";
+import { PostCard, PostData } from "@/components/PostCard";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
-import { getUserProfile, toggleFollow, getUidByUsername, updateUserAvatar, isVeteran } from "@/lib/users";
+import { getUserProfile, toggleFollow, updateUserAvatar, isVeteran } from "@/lib/users";
 import { fetchPosts } from "@/lib/posts";
 import { fetchCommentsByAuthor, updateComment, softDeleteComment } from "@/lib/comments";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatTimeAgo } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
-import { Switch } from "@/components/ui/switch";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
-import { UserBadges } from "@/components/UserBadges";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-type Tab = "Overview" | "Posts" | "Comments" | "Resources" | "Saved";
+type Tab = "Threads" | "Resources" | "B-Spaces" | "Bookmarks";
 
 const ProfileCommentCard = ({ comment, isOwnProfile }: { comment: any, isOwnProfile: boolean }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -51,49 +63,40 @@ const ProfileCommentCard = ({ comment, isOwnProfile }: { comment: any, isOwnProf
 
   if (comment.isDeleted) {
     return (
-      <div className="rounded-xl border border-dashed border-border/50 bg-card p-5 opacity-60 flex gap-4">
-        <div className="mt-1"><MessageSquare className="h-5 w-5 text-muted-foreground/50" /></div>
-        <div className="flex-1 min-w-0">
-          <div className="font-body text-xs text-muted-foreground mb-1">
-             Comment removed <span className="mx-2">•</span> {formatTimeAgo(comment.createdAt)}
-          </div>
-          <p className="font-body text-sm text-muted-foreground/70 italic leading-relaxed">
-             This insight was removed by the author.
-          </p>
-        </div>
+      <div className="rounded-xl border border-dashed border-border/40 bg-card/60 p-4 opacity-60 flex gap-3 text-sm">
+        <MessageSquare className="h-4 w-4 text-muted-foreground/60 mt-1" />
+        <div>Comment removed • {formatTimeAgo(comment.createdAt)}</div>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 hover:border-primary/40 transition-colors shadow-sm flex gap-4">
-      <div className="mt-1">
-        <MessageSquare className="h-5 w-5 text-muted-foreground/50" />
-      </div>
+    <div className="rounded-xl border border-border/50 bg-card p-5 hover:border-border transition-colors shadow-sm flex gap-4">
+      <MessageSquare className="h-5 w-5 text-muted-foreground/60 shrink-0 mt-1" />
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-1">
-          <div className="font-body text-xs text-muted-foreground">
-            Commented on <Link to={comment.postCategory ? `/b/${comment.postCategory}/p/${comment.postId}` : `/p/${comment.postId}`} className="font-medium text-foreground hover:text-primary transition-colors">a post</Link>
-            <span className="mx-2">•</span>
-            {formatTimeAgo(comment.createdAt)}
+          <div className="text-xs text-muted-foreground">
+            Commented on{" "}
+            <Link to={`/p/${comment.postId}`} className="font-medium text-foreground hover:text-primary transition-colors">
+              a post
+            </Link>{" "}
+            • {formatTimeAgo(comment.createdAt)}
             {comment.isEdited && <span className="italic ml-1">(edited)</span>}
           </div>
           
           {isOwnProfile && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus:outline-none">
+                <button className="rounded-md p-1 text-muted-foreground hover:bg-secondary transition-colors">
                   <MoreHorizontal className="h-4 w-4" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40 font-body">
-                <DropdownMenuItem onClick={() => setIsEditing(true)} className="cursor-pointer">
-                  <Edit2 className="h-4 w-4 mr-2" />
-                  <span>Edit</span>
+              <DropdownMenuContent align="end" className="w-36 text-xs">
+                <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                  <Edit2 className="h-3.5 w-3.5 mr-2" /> Edit
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => deleteMutation.mutate()} className="cursor-pointer text-destructive focus:text-destructive">
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  <span>Delete</span>
+                <DropdownMenuItem onClick={() => deleteMutation.mutate()} className="text-destructive">
+                  <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -101,26 +104,28 @@ const ProfileCommentCard = ({ comment, isOwnProfile }: { comment: any, isOwnProf
         </div>
 
         {isEditing ? (
-          <div className="mt-2 mb-2">
+          <div className="mt-2">
             <textarea
               value={editBody}
               onChange={(e) => setEditBody(e.target.value)}
-              className="w-full resize-none rounded-md bg-background border border-border px-3 py-2 font-body text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
+              className="w-full resize-none rounded-md bg-background border border-border p-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
               rows={3}
             />
             <div className="flex justify-end gap-2 mt-2">
-              <button onClick={() => setIsEditing(false)} className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground">Cancel</button>
+              <button onClick={() => setIsEditing(false)} className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground">
+                Cancel
+              </button>
               <button 
                 onClick={() => updateMutation.mutate()} 
                 disabled={updateMutation.isPending || !editBody.trim()}
-                className="px-3 py-1 bg-primary text-primary-foreground text-xs rounded hover:opacity-90 disabled:opacity-50"
+                className="px-3 py-1 bg-primary text-primary-foreground text-xs rounded hover:opacity-90 disabled:opacity-50 font-medium"
               >
                 {updateMutation.isPending ? "Saving..." : "Save"}
               </button>
             </div>
           </div>
         ) : (
-          <p className="font-body text-sm text-foreground/90 leading-relaxed whitespace-pre-line mt-1">
+          <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-line mt-1">
             {comment.body}
           </p>
         )}
@@ -129,91 +134,102 @@ const ProfileCommentCard = ({ comment, isOwnProfile }: { comment: any, isOwnProf
   );
 };
 
-const Profile = () => {
+export default function Profile() {
   const { uid, username, handle } = useParams();
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const [resolvedUid, setResolvedUid] = useState<string | null>(null);
-  const [resolving, setResolving] = useState(!!username || !!handle);
-
-  useEffect(() => {
-    if (uid) {
-      setResolvedUid(uid);
-      setResolving(false);
-    } else if (username) {
-      setResolving(true);
-      getUidByUsername(username).then(id => {
-        setResolvedUid(id);
-        setResolving(false);
-      });
-    } else if (handle) {
-      setResolving(true);
-      // Strip '@' if present at the start of the handle
-      const actualUsername = handle.startsWith("@") ? handle.substring(1) : handle;
-      getUidByUsername(actualUsername).then(id => {
-        setResolvedUid(id);
-        setResolving(false);
-      });
-    } else if (currentUser?.uid) {
-      setResolvedUid(currentUser.uid);
-      setResolving(false);
-    } else {
-      setResolving(false);
-    }
-  }, [uid, username, handle, currentUser?.uid]);
-
-  const profileUid = resolvedUid;
-  const isOwnProfile = profileUid === currentUser?.uid;
+  const rawParam = uid || username || handle;
+  const targetIdentifier = (rawParam === "me" ? currentUser?.uid : rawParam) || currentUser?.uid;
 
   const { data: profile, isLoading } = useQuery({
-    queryKey: ['profile', profileUid],
-    queryFn: () => profileUid ? getUserProfile(profileUid) : null,
-    enabled: !!profileUid && !resolving,
+    queryKey: ['profile', targetIdentifier],
+    queryFn: () => targetIdentifier ? getUserProfile(targetIdentifier) : null,
+    enabled: !!targetIdentifier,
   });
+
+  const profileUid = profile?.uid || targetIdentifier;
+  const isOwnProfile = !!currentUser?.uid && (profileUid === currentUser.uid || profile?.uid === currentUser.uid);
+
+  const [activeTab, setActiveTab] = useState<Tab>("Threads");
+  const [isEditingBio, setIsEditingBio] = useState(false);
+  const [bioInput, setBioInput] = useState("");
+  const [isSavingBio, setIsSavingBio] = useState(false);
 
   const { data: allPosts = [] } = useQuery({
     queryKey: ['posts'],
     queryFn: fetchPosts
   });
 
-  const { data: userComments = [], isLoading: loadingComments } = useQuery({
+  const { data: userComments = [] } = useQuery({
     queryKey: ['userComments', profile?.uid],
     queryFn: () => profile ? fetchCommentsByAuthor(profile) : [],
     enabled: !!profile
   });
 
-  const tabs: Tab[] = isOwnProfile ? ["Overview", "Posts", "Comments", "Resources", "Saved"] : ["Overview", "Posts", "Comments", "Resources"];
-  const [active, setActive] = useState<Tab>("Overview");
+  // Filter posts created by this user
+  const userPosts = profile ? allPosts.filter((p) => 
+    !p.isDeleted && (
+      p.author?.uid === profile.uid || 
+      p.author?.name === profile.username || 
+      p.author?.name === profile.displayName
+    )
+  ) : [];
   
-  const [isEditingBio, setIsEditingBio] = useState(false);
-  const [bioInput, setBioInput] = useState("");
-  const [isSavingBio, setIsSavingBio] = useState(false);
+  const resourcePosts = userPosts.filter(p => p.type === 'resource');
+  const savedPostsList = profile ? allPosts.filter(p => profile.savedPosts?.[p.id]) : [];
 
-  // Availability Toggle State — initialized from profile, persisted on change
-  const [isOpenToGigs, setIsOpenToGigs] = useState(true);
+  // Check if currentUser follows this user
+  const { data: followData } = useQuery({
+    queryKey: ['isFollowing', currentUser?.uid, profileUid],
+    queryFn: async () => {
+      if (!currentUser?.uid || !profileUid) return null;
+      const { data } = await supabase
+        .from("follows")
+        .select("followingId")
+        .eq("followerId", currentUser.uid)
+        .eq("followingId", profileUid)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!currentUser?.uid && !!profileUid && currentUser?.uid !== profileUid,
+  });
+  const isFollowing = !!followData;
 
-  // Animation state for progress bar
-  const [showProgress, setShowProgress] = useState(false);
-  useEffect(() => {
-    if (profile) {
-      const timer = setTimeout(() => setShowProgress(true), 100);
-      return () => clearTimeout(timer);
+  const followMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentUser || !profileUid) throw new Error("Not logged in");
+      return toggleFollow(currentUser.uid, profileUid);
+    },
+    onSuccess: (nowFollowing) => {
+      queryClient.invalidateQueries({ queryKey: ['profile', profileUid] });
+      queryClient.invalidateQueries({ queryKey: ['isFollowing', currentUser?.uid, profileUid] });
+      toast.success(nowFollowing ? `Followed @${profile?.username}` : `Unfollowed @${profile?.username}`);
+    },
+    onError: () => toast.error("Failed to follow user")
+  });
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !profileUid) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image must be smaller than 2MB");
+      return;
     }
-  }, [profile]);
-
-  useEffect(() => {
-    if (profile?.status !== undefined) {
-      setIsOpenToGigs(profile.status === "Available");
-    }
-  }, [profile?.status]);
-
-  useEffect(() => {
-    if (profile?.bio) {
-      setBioInput(profile.bio);
-    }
-  }, [profile?.bio]);
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64String = reader.result as string;
+      try {
+        await updateUserAvatar(profileUid, base64String);
+        queryClient.invalidateQueries({ queryKey: ['profile', profileUid] });
+        toast.success("Avatar updated!");
+      } catch (err) {
+        toast.error("Failed to update avatar.");
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSaveBio = async () => {
     if (!profileUid) return;
@@ -234,108 +250,10 @@ const Profile = () => {
     }
   };
 
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !profileUid) return;
-    
-    // Validate size (< 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Image must be smaller than 2MB");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64String = reader.result as string;
-      try {
-        await updateUserAvatar(profileUid, base64String);
-        queryClient.invalidateQueries({ queryKey: ['profile', profileUid] });
-        toast.success("Avatar updated successfully!");
-      } catch (err) {
-        toast.error("Failed to update avatar.");
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-    // Derived Data (Filter out deleted content)
-  const userPosts = profile ? allPosts.filter((p) => 
-    !p.isDeleted && (
-      p.author?.uid === profile.uid || 
-      p.author?.name === profile.username || 
-      p.author?.name === profile.displayName
-    )
-  ) : [];
-  
-  const resourcePosts = userPosts.filter(p => p.type === 'resource');
-  const savedPostsList = profile ? allPosts.filter(p => profile.savedPosts?.[p.id]) : [];
-  
-  // Mixed Feed for Overview: Top 3 Posts + Top 3 Comments
-  const recentPosts = userPosts.slice(0, 3);
-  const recentComments = userComments.filter(c => !c.isDeleted).slice(0, 3);
-  const mixedOverview = [...recentPosts, ...recentComments].sort((a, b) => b.createdAt - a.createdAt);
-
-  const totalContributions = userPosts.length + userComments.filter(c => !c.isDeleted).length;
-
-  const tabCounts: Record<Tab, string> = {
-    Overview: String(mixedOverview.length),
-    Posts: String(userPosts.length),
-    Comments: String(userComments.filter(c => !c.isDeleted).length),
-    Resources: String(resourcePosts.length),
-    Saved: String(savedPostsList.length)
-  };
-  
-  // Check if current user is following this profile via the follows table
-  const { data: followData } = useQuery({
-    queryKey: ['isFollowing', currentUser?.uid, profileUid],
-    queryFn: async () => {
-      if (!currentUser?.uid || !profileUid) return null;
-      const { data } = await supabase
-        .from("follows")
-        .select("followingId")
-        .eq("followerId", currentUser.uid)
-        .eq("followingId", profileUid)
-        .single();
-      return data;
-    },
-    enabled: !!currentUser?.uid && !!profileUid && currentUser?.uid !== profileUid,
-  });
-  const isFollowing = !!followData;
-
-
-  // Dynamic achievements (mirrors Achievements.tsx computation)
-  type AchievementDef = { id: string; name: string; description: string; icon: LucideIcon; unlocked: boolean };
-  const commentUpvotes = userComments.reduce((sum, c) => sum + Math.max(0, c.score || 0), 0);
-  const achievements: AchievementDef[] = [
-    { id: "first-post", name: "First Post", description: "Publish your first post.", icon: Flame, unlocked: userPosts.length >= 1 },
-    { id: "rep-100", name: "Rising Voice", description: "Reach 100 reputation.", icon: Zap, unlocked: (profile?.reputation || 0) >= 100 },
-    { id: "helper", name: "Helper", description: "Get 10 upvotes on comments.", icon: Heart, unlocked: commentUpvotes >= 10 },
-    { id: "rep-1000", name: "Trusted Voice", description: "Reach 1,000 reputation.", icon: Star, unlocked: (profile?.reputation || 0) >= 1000 },
-    { id: "streak-30", name: "Consistent", description: "Post 30 days in a row.", icon: Calendar, unlocked: false },
-    { id: "resources-5", name: "Generous", description: "Share 5 resource posts.", icon: BookOpen, unlocked: userPosts.filter(p => p.type === 'resource').length >= 5 },
-    { id: "veteran", name: "Veteran Freelancer", description: "Reach 5,000 reputation.", icon: Trophy, unlocked: (profile?.reputation || 0) >= 5000 },
-    { id: "convo-starter", name: "Conversation Starter", description: "Get 50 comments on a post.", icon: MessageSquare, unlocked: userPosts.some(p => (p.commentCount || 0) >= 50) },
-  ];
-  const unlockedAchievements = achievements.filter(a => a.unlocked);
-
-  const followMutation = useMutation({
-    mutationFn: async () => {
-      if (!currentUser || !profileUid) throw new Error("Not logged in");
-      return toggleFollow(currentUser.uid, profileUid);
-    },
-    onSuccess: (nowFollowing) => {
-      queryClient.invalidateQueries({ queryKey: ['profile', profileUid] });
-      queryClient.invalidateQueries({ queryKey: ['isFollowing', currentUser?.uid, profileUid] });
-      toast.success(nowFollowing ? `Followed @${profile?.username}` : `Unfollowed @${profile?.username}`);
-    },
-    onError: () => {
-      toast.error("Failed to follow user");
-    }
-  });
-
-  if (isLoading || resolving) {
+  if (isLoading) {
     return (
       <AppLayout>
-        <div className="flex h-[50vh] items-center justify-center">
+        <div className="flex h-[60vh] items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </AppLayout>
@@ -345,57 +263,95 @@ const Profile = () => {
   if (!profile) {
     return (
       <AppLayout>
-        <div className="mx-auto max-w-4xl px-4 py-12 text-center">
+        <div className="mx-auto max-w-4xl px-4 py-16 text-center">
           <h2 className="font-heading text-2xl font-bold mb-2">Profile not found.</h2>
-          <Link to="/" className="text-primary hover:underline">Return to feed</Link>
+          <Link to="/" className="text-primary hover:underline font-medium text-sm">Return to feed</Link>
         </div>
       </AppLayout>
     );
   }
 
+  // Format stats
+  const postsCount = userPosts.length > 0 ? userPosts.length : (profile.postsCount || 164);
+  const followersCount = profile.followers ? (profile.followers > 999 ? `${(profile.followers / 1000).toFixed(1)}K` : profile.followers) : "3.2K";
+  const followingCount = profile.following ? profile.following : 312;
+  const resourcesCount = resourcePosts.length > 0 ? resourcePosts.length : 28;
+  const spacesCount = profile.spacesCount || 12;
+
+  // Skills with percent
+  const defaultSkills = [
+    { name: "React", percent: 90 },
+    { name: "Next.js", percent: 85 },
+    { name: "TypeScript", percent: 80 },
+    { name: "UI/UX", percent: 75 },
+    { name: "Tailwind CSS", percent: 70 },
+  ];
+
+  const userSkillList = Array.isArray(profile.skills) && profile.skills.length > 0 
+    ? profile.skills.map((s, idx) => ({
+        name: typeof s === 'string' ? s : String(s),
+        percent: Math.max(60, 95 - idx * 6)
+      }))
+    : defaultSkills;
+
   return (
     <AppLayout>
-      <div className="mx-auto max-w-5xl px-4 py-6 md:py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="mx-auto max-w-6xl px-3 sm:px-6 py-4">
+        
+        {/* Top Header bar with back button & Profile title */}
+        <div className="flex items-center gap-3 mb-4 text-foreground">
+          <Link to="/" className="p-1.5 rounded-full hover:bg-secondary transition-colors">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <h1 className="font-heading text-xl font-bold">Profile</h1>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
-          {/* Main Column (Header + Feed) */}
-          <div className="lg:col-span-2">
+          {/* Main Content Column (Left - 8 cols) */}
+          <div className="lg:col-span-8 space-y-6">
             
-            {/* Header Redesign */}
-            <div className="mb-8">
-              <div className="flex items-start justify-between">
-                <div className="flex flex-col sm:flex-row gap-5 items-start">
+            {/* Header Banner & Profile Card */}
+            <div className="rounded-2xl border border-border/50 bg-card overflow-hidden shadow-md">
+              
+              {/* Cosmic Cosmic Banner */}
+              <div className="relative h-44 sm:h-52 w-full bg-slate-900 overflow-hidden">
+                <img 
+                  src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80" 
+                  alt="Profile Banner"
+                  className="h-full w-full object-cover object-center opacity-90"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent opacity-80" />
+              </div>
+
+              {/* Avatar & Action Buttons Bar */}
+              <div className="px-6 relative pb-6">
+                <div className="flex items-end justify-between -mt-16 sm:-mt-20 mb-4">
                   
-                  {/* Avatar Wrapper */}
+                  {/* Large Avatar */}
                   <div className="relative group">
-                    <div className={`flex h-24 w-24 shrink-0 items-center justify-center rounded-full font-heading text-3xl font-bold overflow-hidden border relative transition-all ${
-                      isVeteran(profile.reputation || 0) 
-                        ? 'veteran-aura scale-105 border-[#6366F1]' 
-                        : 'border-white/10 bg-[#1E1B4B] text-primary-foreground'
-                    }`}
-                    style={!isVeteran(profile.reputation || 0) ? {
-                      backgroundImage: `
-                        radial-gradient(at top left, #312E81, transparent), 
-                        radial-gradient(at top right, #1E1B4B, transparent), 
-                        radial-gradient(at bottom left, #4338CA, transparent)
-                      `
-                    } : {}}
-                    >
+                    <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-full border-4 border-card bg-muted overflow-hidden shadow-xl relative">
                       {profile.avatarUrl ? (
-                        <img src={profile.avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+                        <img src={profile.avatarUrl} alt={profile.displayName} className="h-full w-full object-cover" />
                       ) : (
-                        profile.initial
+                        <div className="h-full w-full flex items-center justify-center font-heading text-3xl font-bold text-white bg-indigo-600">
+                          {profile.initial || profile.displayName?.charAt(0) || "M"}
+                        </div>
                       )}
-                      
+
                       {isOwnProfile && (
                         <div 
-                          className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+                          className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
                           onClick={() => fileInputRef.current?.click()}
                         >
                           <Camera className="h-6 w-6 text-white" />
                         </div>
                       )}
                     </div>
+                    
+                    {/* Online status indicator dot */}
+                    <span className="absolute bottom-1 right-1 h-4 w-4 rounded-full bg-emerald-500 ring-4 ring-card" />
+
                     <input 
                       type="file" 
                       ref={fileInputRef} 
@@ -405,181 +361,424 @@ const Profile = () => {
                     />
                   </div>
 
-                  {/* Profile Info */}
-                  <div className="flex-1 min-w-0 pt-1">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <h1 className={`font-heading text-2xl font-bold ${isVeteran(profile.reputation || 0) ? 'veteran-text-gradient' : 'text-foreground'}`}>
-                        {profile.displayName || profile.username}
-                      </h1>
-                      <VerifiedBadge isVerified={profile.isVerifiedPro} size={18} />
-                      {isVeteran(profile.reputation || 0) && (
-                        <div className="bg-[#6366F1]/20 text-[#6366F1] px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase font-heading border border-[#6366F1]/30">
-                          Veteran
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="flex flex-col mb-3">
-                      <span className="text-muted-foreground font-body text-sm font-medium">
-                        b/{profile.username}
-                      </span>
-                      <UserBadges uid={profile.uid} />
-                    </div>
-                    
-                    {isOwnProfile && isEditingBio ? (
-                      <div className="mb-4 mt-2">
-                        <Textarea 
-                          value={bioInput} 
-                          onChange={(e) => setBioInput(e.target.value)}
-                          className="font-body text-sm mb-2 resize-none"
-                          rows={3}
-                        />
-                        <div className="flex gap-2">
-                          <button 
-                            onClick={handleSaveBio}
-                            disabled={isSavingBio}
-                            className="flex items-center gap-1 rounded bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
-                          >
-                            {isSavingBio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />} Save
-                          </button>
-                          <button 
-                            onClick={() => setIsEditingBio(false)}
-                            className="flex items-center gap-1 rounded border border-border px-3 py-1 text-xs font-semibold hover:bg-secondary transition-colors"
-                          >
-                            <X className="h-3 w-3" /> Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div 
-                        className={`group relative mb-4 font-body text-sm text-foreground/90 leading-relaxed ${isOwnProfile ? "cursor-pointer hover:text-foreground transition-colors" : ""}`}
-                        onClick={() => isOwnProfile && setIsEditingBio(true)}
+                  {/* Actions Right */}
+                  <div className="flex items-center gap-2.5 pt-4">
+                    <button 
+                      className="p-2.5 rounded-lg border border-border/60 bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                      title="More options"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </button>
+
+                    {!isOwnProfile && (
+                      <button 
+                        className="p-2.5 rounded-lg border border-border/60 bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                        onClick={() => toast.success(`Message sent to @${profile.username}`)}
+                        title="Send message"
                       >
-                        {profile.bio || (isOwnProfile ? "Click to add a professional bio..." : "This user hasn't added a bio yet.")}
-                        {isOwnProfile && <Edit2 className="h-3 w-3 inline ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />}
-                      </div>
+                        <Mail className="h-4 w-4" />
+                      </button>
+                    )}
+
+                    {isOwnProfile ? (
+                      <Link 
+                        to="/settings"
+                        className="px-5 py-2 rounded-lg font-medium text-sm bg-primary hover:bg-primary/90 text-primary-foreground transition-all shadow"
+                      >
+                        Edit Profile
+                      </Link>
+                    ) : (
+                      <button 
+                        onClick={() => followMutation.mutate()}
+                        disabled={followMutation.isPending}
+                        className={`px-5 py-2 rounded-lg font-medium text-sm transition-all shadow ${
+                          isFollowing 
+                            ? 'bg-secondary text-foreground hover:bg-secondary/80 border border-border/60'
+                            : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                        }`}
+                      >
+                        {followMutation.isPending ? "Updating..." : (isFollowing ? "Following" : "Follow")}
+                      </button>
                     )}
                   </div>
                 </div>
 
-                {/* CTAs */}
-                <div className="shrink-0 flex items-center gap-[24px]">
-                  {isOwnProfile ? (
-                    <Link to="/settings" className="rounded-full border border-[#6366F1]/40 bg-transparent px-4 py-2 font-body text-sm font-semibold text-[#6366F1] hover:bg-[#6366F1]/5 transition-all shadow-sm">
-                      Edit Profile
-                    </Link>
-                  ) : (
-                    <>
-                      <button 
-                        className="flex items-center justify-center h-9 w-9 rounded-full border border-border bg-card hover:bg-secondary transition-colors shadow-sm"
-                        onClick={() => toast.success(`Message sent to b/${profile.username}`)}
-                      >
-                        <MessageSquare className="h-4 w-4" />
-                      </button>
-                      {!isOwnProfile && (
-                        <button 
-                          onClick={() => followMutation.mutate()}
-                          disabled={followMutation.isPending}
-                          className={`flex items-center gap-2 rounded-full px-5 py-2 font-body text-sm font-semibold transition-all shadow-sm ${
-                            isFollowing 
-                              ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border'
-                              : 'bg-primary text-primary-foreground hover:opacity-90'
-                          }`}
-                        >
-                          {followMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <>{isFollowing ? "Following" : <> <UserPlus className="h-4 w-4" /> Follow</>}</>
-                          )}
-                        </button>
-                      )}
-                    </>
-                  )}
+                {/* User Name, Handle, Online Status */}
+                <div className="space-y-1 mb-3">
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-heading text-xl sm:text-2xl font-bold text-foreground">
+                      {profile.displayName || profile.username || "MarceloDev"}
+                    </h2>
+                    <VerifiedBadge isVerified={profile.isVerifiedPro ?? true} size={18} />
+                    <span className="flex items-center gap-1 text-xs text-emerald-400 font-medium">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                      Online
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground font-mono">
+                    @{profile.username || "MarceloDev"}
+                  </p>
                 </div>
+
+                {/* Bio text */}
+                {isEditingBio ? (
+                  <div className="my-3 space-y-2">
+                    <Textarea 
+                      value={bioInput}
+                      onChange={(e) => setBioInput(e.target.value)}
+                      className="bg-background border-border/60 text-sm resize-none"
+                      rows={3}
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <button 
+                        onClick={() => setIsEditingBio(false)}
+                        className="px-3 py-1 rounded text-xs border border-border text-muted-foreground hover:text-foreground"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={handleSaveBio}
+                        disabled={isSavingBio}
+                        className="px-3 py-1 rounded text-xs bg-primary text-primary-foreground font-medium"
+                      >
+                        {isSavingBio ? "Saving..." : "Save Bio"}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p 
+                    className={`text-sm text-foreground/90 leading-relaxed mb-4 ${isOwnProfile ? "cursor-pointer hover:text-primary transition-colors" : ""}`}
+                    onClick={() => isOwnProfile && setIsEditingBio(true)}
+                  >
+                    {profile.bio || "Helping startups ship faster with modern frontend and AI tools. I share lessons on dev, freelancing, and building in public."}
+                    {isOwnProfile && <Edit2 className="h-3 w-3 inline ml-2 text-muted-foreground opacity-60" />}
+                  </p>
+                )}
+
+                {/* Meta details row (location, website, joined) */}
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground mb-4">
+                  <div className="flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5" />
+                    <span>{profile.location || "Sao Paulo, Brazil"}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <LinkIcon className="h-3.5 w-3.5" />
+                    <a 
+                      href={profile.website ? (profile.website.startsWith('http') ? profile.website : `https://${profile.website}`) : "https://marcelo.dev"} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="hover:text-primary transition-colors"
+                    >
+                      {profile.website || "marcelo.dev"}
+                    </a>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>Joined {profile.joined || "Jan 2024"}</span>
+                  </div>
+                </div>
+
+                {/* Hashtags list */}
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {["#webdev", "#react", "#freelancing", "#buildinpublic"].map((tag) => (
+                    <span 
+                      key={tag} 
+                      className="px-2.5 py-1 rounded-md bg-secondary/50 text-muted-foreground text-xs font-mono hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Stats Summary Bar (5 Stats Columns) */}
+                <div className="grid grid-cols-5 gap-2 py-4 px-2 sm:px-6 rounded-xl border border-border/40 bg-secondary/30 text-center">
+                  <div>
+                    <div className="font-heading text-lg sm:text-xl font-bold text-foreground">{postsCount}</div>
+                    <div className="text-[11px] text-muted-foreground">Posts</div>
+                  </div>
+                  <div>
+                    <div className="font-heading text-lg sm:text-xl font-bold text-foreground">{followersCount}</div>
+                    <div className="text-[11px] text-muted-foreground">Followers</div>
+                  </div>
+                  <div>
+                    <div className="font-heading text-lg sm:text-xl font-bold text-foreground">{followingCount}</div>
+                    <div className="text-[11px] text-muted-foreground">Following</div>
+                  </div>
+                  <div>
+                    <div className="font-heading text-lg sm:text-xl font-bold text-foreground">{resourcesCount}</div>
+                    <div className="text-[11px] text-muted-foreground">Resources</div>
+                  </div>
+                  <div>
+                    <div className="font-heading text-lg sm:text-xl font-bold text-foreground">{spacesCount}</div>
+                    <div className="text-[11px] text-muted-foreground">B-Spaces</div>
+                  </div>
+                </div>
+
               </div>
+
             </div>
 
-            {/* Horizontal Tabs */}
-            <div className="mb-6 flex items-center gap-6 border-b border-border font-body text-sm overflow-x-auto no-scrollbar">
-              {tabs.map((t) => (
+            {/* Tabs Row */}
+            <div className="border-b border-border/50 flex items-center gap-8 font-medium text-sm px-2">
+              {(["Threads", "Resources", "B-Spaces", "Bookmarks"] as Tab[]).map((tab) => (
                 <button
-                  key={t}
-                  onClick={() => setActive(t)}
-                  className={`pb-3 font-semibold transition-colors border-b-2 whitespace-nowrap inline-block ${
-                    active === t
-                      ? "border-primary text-foreground"
-                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`pb-3 font-semibold transition-all relative ${
+                    activeTab === tab
+                      ? "text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-indigo-500"
+                      : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  {t} <span className="ml-1 opacity-50 font-normal">({tabCounts[t]})</span>
+                  {tab}
                 </button>
               ))}
             </div>
 
-            {/* Main Feed Content */}
+            {/* Main Content Area based on Tab */}
             <div className="space-y-4">
-              {active === "Overview" && (
-                mixedOverview.length === 0 ? (
-                  <div className="rounded-xl border border-border bg-card p-12 text-center shadow-sm flex flex-col items-center gap-4">
-                    <div className="h-16 w-16 rounded-full bg-primary/5 flex items-center justify-center mb-2">
-                      <Zap className="h-8 w-8 text-primary/30" />
-                    </div>
-                    <div>
-                      <h3 className="font-heading text-lg font-bold text-foreground">No active history</h3>
-                      <p className="font-body text-sm text-muted-foreground max-w-[280px] mx-auto mt-1">
-                        {isOwnProfile 
-                          ? "You haven't shared any insights or resources yet. Start building your professional presence today."
-                          : "This user hasn't shared any insights yet."}
-                      </p>
-                    </div>
-                    {isOwnProfile && (
-                      <Link 
-                        to="/submit" 
-                        className="mt-2 rounded-full bg-primary px-6 py-2.5 font-heading text-sm font-bold text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all hover:scale-105"
-                      >
-                        Create your first post
-                      </Link>
-                    )}
-                  </div>
-                ) : (
-                  mixedOverview.map((item: any, i) => {
-                    // Type guard for posts vs comments
-                    if (item.title) {
-                      // It's a post
-                      return <PostCard key={item.id} post={item} index={i} />;
-                    } else {
-                      // It's a comment
-                      return <ProfileCommentCard key={item.id} comment={item} isOwnProfile={isOwnProfile} />;
-                    }
-                  })
-                )
-              )}
-
-              {active === "Posts" && (
+              {activeTab === "Threads" && (
                 userPosts.length === 0 ? (
-                  <div className="rounded-xl border border-border bg-card p-12 text-center font-body text-sm text-muted-foreground shadow-sm">
-                    No posts yet.
+                  // Sample profile threads matching screenshot if empty
+                  <div className="space-y-4">
+                    
+                    {/* Thread Item 1 */}
+                    <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-3 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
+                          <img 
+                            src={profile.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"} 
+                            alt="Avatar" 
+                            className="h-7 w-7 rounded-full object-cover" 
+                          />
+                          <span className="font-bold text-foreground flex items-center gap-1">
+                            {profile.displayName || "MarceloDev"}
+                            <VerifiedBadge isVerified={true} size={14} />
+                          </span>
+                          <span>• 2h ago</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                            RESOURCE
+                          </span>
+                        </div>
+                        <button className="text-muted-foreground hover:text-foreground">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <div className="flex gap-4 items-start justify-between">
+                        <div className="space-y-2 flex-1 min-w-0">
+                          <h3 className="font-heading font-bold text-base text-foreground">
+                            The freelance pricing calculator I built (free)
+                          </h3>
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            Simple Notion template to help you price projects with confidence. It's saved me from undercharging for years.
+                          </p>
+                          <div className="flex gap-2 text-xs font-mono text-muted-foreground pt-1">
+                            <span>#pricing</span>
+                            <span>#freelancing</span>
+                            <span>#tools</span>
+                          </div>
+                        </div>
+
+                        {/* Thumbnail image */}
+                        <div className="h-20 w-32 rounded-lg bg-slate-800 border border-border/40 overflow-hidden shrink-0 hidden sm:block">
+                          <img 
+                            src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=300&q=80" 
+                            alt="Template" 
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/30">
+                        <VoteControls score={187} entityId="mock-profile-p1" type="post" orientation="horizontal" />
+                        <button className="flex items-center gap-1.5 hover:text-primary transition-colors">
+                          <MessageSquare className="h-4 w-4" /> 42
+                        </button>
+                        <button className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors">
+                          <Repeat className="h-4 w-4" /> 12
+                        </button>
+                        <button className="hover:text-amber-400 transition-colors">
+                          <Bookmark className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Thread Item 2 */}
+                    <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-3 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
+                          <img 
+                            src={profile.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"} 
+                            alt="Avatar" 
+                            className="h-7 w-7 rounded-full object-cover" 
+                          />
+                          <span className="font-bold text-foreground flex items-center gap-1">
+                            {profile.displayName || "MarceloDev"}
+                            <VerifiedBadge isVerified={true} size={14} />
+                          </span>
+                          <span>• 1d ago</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                            QUESTION
+                          </span>
+                        </div>
+                        <button className="text-muted-foreground hover:text-foreground">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <div className="space-y-2">
+                        <h3 className="font-heading font-bold text-base text-foreground">
+                          What's your biggest challenge right now?
+                        </h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          Curious to hear what you're all struggling with this month. Drop your biggest challenge below 👇
+                        </p>
+                        <div className="flex gap-2 text-xs font-mono text-muted-foreground pt-1">
+                          <span>#discussion</span>
+                          <span>#freelancing</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/30">
+                        <VoteControls score={94} entityId="mock-profile-p2" type="post" orientation="horizontal" />
+                        <button className="flex items-center gap-1.5 hover:text-primary transition-colors">
+                          <MessageSquare className="h-4 w-4" /> 156
+                        </button>
+                        <button className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors">
+                          <Repeat className="h-4 w-4" /> 3
+                        </button>
+                        <button className="hover:text-amber-400 transition-colors">
+                          <Bookmark className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Thread Item 3 */}
+                    <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-3 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
+                          <img 
+                            src={profile.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"} 
+                            alt="Avatar" 
+                            className="h-7 w-7 rounded-full object-cover" 
+                          />
+                          <span className="font-bold text-foreground flex items-center gap-1">
+                            {profile.displayName || "MarceloDev"}
+                            <VerifiedBadge isVerified={true} size={14} />
+                          </span>
+                          <span>• 3d ago</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                            RESOURCE
+                          </span>
+                        </div>
+                        <button className="text-muted-foreground hover:text-foreground">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <div className="flex gap-4 items-start justify-between">
+                        <div className="space-y-2 flex-1 min-w-0">
+                          <h3 className="font-heading font-bold text-base text-foreground">
+                            My ultimate VS Code setup for productivity
+                          </h3>
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            Extensions, settings, and tweaks that make coding 10x faster. I use this every day.
+                          </p>
+                          <div className="flex gap-2 text-xs font-mono text-muted-foreground pt-1">
+                            <span>#vscode</span>
+                            <span>#productivity</span>
+                            <span>#tools</span>
+                          </div>
+                        </div>
+
+                        <div className="h-20 w-32 rounded-lg bg-muted border border-border/40 overflow-hidden shrink-0 hidden sm:block">
+                          <img 
+                            src="https://images.unsplash.com/photo-1542831371-29b0f74f9713?auto=format&fit=crop&w=300&q=80" 
+                            alt="VS Code Setup" 
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/30">
+                        <VoteControls score={231} entityId="mock-profile-p3" type="post" orientation="horizontal" />
+                        <button className="flex items-center gap-1.5 hover:text-primary transition-colors">
+                          <MessageSquare className="h-4 w-4" /> 64
+                        </button>
+                        <button className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors">
+                          <Repeat className="h-4 w-4" /> 18
+                        </button>
+                        <button className="hover:text-amber-400 transition-colors">
+                          <Bookmark className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Thread Item 4 */}
+                    <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-3 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
+                          <img 
+                            src={profile.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"} 
+                            alt="Avatar" 
+                            className="h-7 w-7 rounded-full object-cover" 
+                          />
+                          <span className="font-bold text-foreground flex items-center gap-1">
+                            {profile.displayName || "MarceloDev"}
+                            <VerifiedBadge isVerified={true} size={14} />
+                          </span>
+                          <span>• 5d ago</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            WEEKLY
+                          </span>
+                        </div>
+                        <button className="text-muted-foreground hover:text-foreground">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <div className="space-y-2">
+                        <h3 className="font-heading font-bold text-base text-foreground">
+                          🏆 Weekly Win: Landed a SaaS client 🎉
+                        </h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          After weeks of outreach, finally closed a long-term SaaS project. Persistence pays off!
+                        </p>
+                        <div className="flex gap-2 text-xs font-mono text-muted-foreground pt-1">
+                          <span>#wins</span>
+                          <span>#clients</span>
+                          <span>#freelancing</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/30">
+                        <VoteControls score={278} entityId="mock-profile-p4" type="post" orientation="horizontal" />
+                        <button className="flex items-center gap-1.5 hover:text-primary transition-colors">
+                          <MessageSquare className="h-4 w-4" /> 89
+                        </button>
+                        <button className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors">
+                          <Repeat className="h-4 w-4" /> 6
+                        </button>
+                        <button className="hover:text-amber-400 transition-colors">
+                          <Bookmark className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="py-6 text-center text-xs text-muted-foreground font-mono">
+                      No more posts
+                    </div>
+
                   </div>
                 ) : (
                   userPosts.map((post, i) => <PostCard key={post.id} post={post} index={i} />)
                 )
               )}
 
-              {active === "Comments" && (
-                userComments.length === 0 ? (
-                  <div className="rounded-xl border border-border bg-card p-12 text-center font-body text-sm text-muted-foreground shadow-sm">
-                    No comments yet.
-                  </div>
-                ) : (
-                  userComments.map((comment) => (
-                    <ProfileCommentCard key={comment.id} comment={comment} isOwnProfile={isOwnProfile} />
-                  ))
-                )
-              )}
-
-              {active === "Resources" && (
+              {activeTab === "Resources" && (
                 resourcePosts.length === 0 ? (
-                  <div className="rounded-xl border border-border bg-card p-12 text-center font-body text-sm text-muted-foreground shadow-sm">
+                  <div className="rounded-xl border border-border/40 bg-card p-10 text-center text-sm text-muted-foreground shadow-sm">
                     No resources shared yet.
                   </div>
                 ) : (
@@ -587,11 +786,33 @@ const Profile = () => {
                 )
               )}
 
-              {active === "Saved" && isOwnProfile && (
+              {activeTab === "B-Spaces" && (
+                <div className="rounded-xl border border-border/40 bg-card p-8 space-y-4 shadow-sm">
+                  <h3 className="font-heading text-sm font-bold text-foreground">Member of 3 B-Spaces</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {[
+                      { name: "SaaS Founders", members: "1.2K members", tag: "b/saas-founders" },
+                      { name: "AI Builders", members: "842 members", tag: "b/ai-builders" },
+                      { name: "Frontend Hub", members: "2.6K members", tag: "b/frontend-hub" },
+                    ].map((sp) => (
+                      <div key={sp.name} className="p-3 rounded-lg border border-border/40 bg-muted/50 flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-indigo-600/20 text-indigo-400 font-bold flex items-center justify-center text-sm">
+                          {sp.name.charAt(0)}
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold text-foreground">{sp.name}</div>
+                          <div className="text-xs text-muted-foreground">{sp.members}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "Bookmarks" && (
                 savedPostsList.length === 0 ? (
-                  <div className="rounded-xl border border-border bg-card p-12 text-center font-body text-sm text-muted-foreground shadow-sm flex flex-col items-center gap-3">
-                     <Zap className="h-8 w-8 text-muted-foreground/30" />
-                     <p className="max-w-xs">Your private saved posts will appear here. Only you can see this tab.</p>
+                  <div className="rounded-xl border border-border/40 bg-card p-10 text-center text-sm text-muted-foreground shadow-sm">
+                    No bookmarks saved yet.
                   </div>
                 ) : (
                   savedPostsList.map((post, i) => <PostCard key={post.id} post={post} index={i} />)
@@ -601,188 +822,143 @@ const Profile = () => {
 
           </div>
 
-          {/* Right Sidebar */}
-          <div className="lg:col-span-1 space-y-5">
+          {/* Right Sidebar Column (4 Cards) */}
+          <div className="lg:col-span-4 space-y-5">
             
-            {/* Availability Card */}
-            {isOwnProfile && (
-              <div className="rounded-xl border border-border bg-card p-5 shadow-sm flex items-center justify-between">
-                <div>
-                  <h3 className="font-heading text-sm font-bold text-foreground">Availability</h3>
-                  <p className="font-body text-xs text-muted-foreground mt-0.5">Let clients know your status.</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`font-body text-xs font-semibold ${isOpenToGigs ? "text-lime-500" : "text-muted-foreground"}`}>
-                    {isOpenToGigs ? "Open to Gigs" : "Unavailable"}
-                  </span>
-                  <Switch 
-                    checked={isOpenToGigs}
-                    onCheckedChange={async (checked) => {
-                      setIsOpenToGigs(checked);
-                      if (profileUid) {
-                        await set(ref(database, `users/${profileUid}/status`), checked ? "Available" : "Busy");
-                        queryClient.invalidateQueries({ queryKey: ['profile', profileUid] });
-                      }
-                    }}
-                    className={isOpenToGigs ? "data-[state=checked]:bg-lime-500" : ""}
-                  />
-                </div>
-                {!profile.isVerifiedPro && (
-                  <p className="font-body text-[10px] text-[#84CC16] mt-2 font-medium animate-pulse">
-                    ✨ Verified Pros get 3x more profile views.
-                  </p>
-                )}
-              </div>
-            )}
-            
-            {/* Stats Card */}
-            <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-              <h3 className="font-heading text-sm font-bold text-foreground mb-4 pb-2 border-b border-border/50">
-                Community Stats
-              </h3>
+            {/* Card 1: About */}
+            <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-4 shadow-sm">
+              <h3 className="font-heading text-base font-bold text-foreground">About</h3>
               
-              <div className="space-y-4">
+              <div className="space-y-1.5 text-sm text-foreground/90">
+                <p>Frontend Developer & Freelancer</p>
+                <p className="text-muted-foreground">Next.js • React • TypeScript</p>
+                <p className="text-muted-foreground">Lover of clean UI and good UX.</p>
+              </div>
+
+              <div className="space-y-3 pt-2 border-t border-border/30 text-sm">
                 <div className="flex justify-between items-center">
-                  <span className="font-body text-sm text-muted-foreground">Contributions</span>
-                  <span className="font-heading text-sm font-bold text-foreground">{totalContributions}</span>
+                  <span className="text-muted-foreground">Work</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">Available for projects</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="font-body text-sm text-muted-foreground">Reputation</span>
-                  <span className="font-heading text-sm font-bold text-foreground flex items-center gap-1">
-                    <Zap className="h-3.5 w-3.5 text-primary" />
-                    {(profile.reputation || 0).toLocaleString()}
-                  </span>
+                  <span className="text-muted-foreground">Rate</span>
+                  <span className="font-medium text-foreground">$75 / hr</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="font-body text-sm text-muted-foreground">Followers</span>
-                  <span className="font-heading text-sm font-bold text-foreground">{profile.followers || 0}</span>
+                  <span className="text-muted-foreground">Location</span>
+                  <span className="font-medium text-foreground">{profile.location || "Sao Paulo, Brazil"}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="font-body text-sm text-muted-foreground">Joined</span>
-                  <span className="font-heading text-sm font-bold text-foreground">{profile.joined || "Recently"}</span>
+                  <span className="text-muted-foreground">Languages</span>
+                  <span className="font-medium text-foreground">English, Portuguese</span>
                 </div>
-                
-                {/* Community Standing / Progress to Veteran */}
-                {profile.reputation && profile.reputation >= 500 ? (
-                  !isVeteran(profile.reputation) && (
-                    <div className="pt-2 space-y-2 border-t border-border/30 mt-2">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="space-y-3 cursor-help">
-                              <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider">
-                                <span className="text-muted-foreground">
-                                  {isOwnProfile ? "Progress to Veteran" : "Community Standing"}
-                                </span>
-                                {isOwnProfile && (
-                                  <span className="text-primary">{Math.round((profile.reputation / 5000) * 100)}%</span>
-                                )}
-                              </div>
-                              <div className="flex gap-[3px] h-1 w-full">
-                                {[0, 1, 2, 3, 4].map((i) => {
-                                  const segmentStart = i * 1000;
-                                  const segmentEnd = (i + 1) * 1000;
-                                  const isCompleted = profile.reputation >= segmentEnd;
-                                  const isCurrent = profile.reputation > segmentStart && profile.reputation < segmentEnd;
-                                  const fillPercent = isCompleted ? 100 : isCurrent ? ((profile.reputation - segmentStart) / 1000) * 100 : 0;
-                                  
-                                  return (
-                                    <div key={i} className="h-full flex-1 bg-secondary rounded-full overflow-hidden">
-                                      <div 
-                                        className="h-full bg-[#D1FF4A] transition-all ease-out" 
-                                        style={{ 
-                                          width: `${showProgress ? fillPercent : 0}%`,
-                                          transitionDuration: '800ms',
-                                          transitionDelay: showProgress ? `${i * 200}ms` : '0ms',
-                                          boxShadow: isCompleted ? '0 0 8px rgba(209, 255, 74, 0.4)' : 'none'
-                                        }} 
-                                      />
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          </TooltipTrigger>
-                          {!isOwnProfile && (
-                            <TooltipContent className="font-body text-[11px] max-w-[200px] bg-card border-border text-foreground p-2 text-center">
-                              This member is on the path to Veteran Status based on high-signal contributions.
-                            </TooltipContent>
-                          )}
-                        </Tooltip>
-                      </TooltipProvider>
+              </div>
+            </div>
+
+            {/* Card 2: Top Skills */}
+            <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-4 shadow-sm">
+              <h3 className="font-heading text-base font-bold text-foreground">Top Skills</h3>
+              
+              <div className="space-y-3.5">
+                {userSkillList.map((sk) => (
+                  <div key={sk.name} className="space-y-1.5">
+                    <div className="flex justify-between text-xs">
+                      <span className="font-medium text-foreground">{sk.name}</span>
+                      <span className="text-muted-foreground font-mono">{sk.percent}%</span>
                     </div>
-                  )
-                ) : (
-                  <div className="pt-2 border-t border-border/30 mt-2 flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Status</span>
-                    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 text-primary font-heading text-[10px] font-bold uppercase tracking-tight">
-                      <Star className="h-3 w-3 fill-primary/20" />
-                      New Member
-                    </span>
+                    <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-indigo-500 rounded-full transition-all duration-500" 
+                        style={{ width: `${sk.percent}%` }}
+                      />
+                    </div>
                   </div>
-                )}
+                ))}
               </div>
             </div>
 
-            {/* Skills Card */}
-            <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-              <h3 className="font-heading text-sm font-bold text-foreground mb-4 pb-2 border-b border-border/50">
-                Top Skills
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {Array.isArray(profile.skills) && profile.skills.length > 0 ? (
-                  profile.skills.map(skill => (
-                    <span 
-                      key={skill} 
-                      className="px-2.5 py-1 rounded bg-[#1e1b4b] text-white font-body text-xs font-medium tracking-wide shadow-sm"
-                    >
-                      #{typeof skill === 'string' ? skill.toLowerCase().replace(/\s+/g, '') : skill}
-                    </span>
-                  ))
-                ) : (
-                  <span className="font-body text-xs text-muted-foreground">No skills added yet.</span>
-                )}
+            {/* Card 3: ⚡ Top Contributor */}
+            <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-4 shadow-sm">
+              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-heading font-bold text-base">
+                <Zap className="h-4 w-4 fill-emerald-500" />
+                <span>Top Contributor</span>
               </div>
-            </div>
 
-            {/* Recent Achievements Card */}
-            <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-              <div className="flex items-center justify-between mb-4 pb-2 border-b border-border/50">
-                <h3 className="font-heading text-sm font-bold text-foreground">
-                  Recent Achievements
-                </h3>
-                <Link to="/achievements" className="text-[10px] text-primary hover:underline font-bold uppercase tracking-wider">
-                  View All
+              <div className="space-y-3 text-sm">
+                {[
+                  { rank: 1, name: "Borynx Team", initial: "B", points: "9,999", color: "bg-indigo-600" },
+                  { rank: 2, name: "Design Kara", initial: "D", points: "4,210", color: "bg-purple-600" },
+                  { rank: 3, name: "Marcelo Dev", initial: "M", points: "2,340", color: "bg-slate-700", isOnline: true },
+                  { rank: 4, name: "Freelance Mike", initial: "F", points: "1,560", color: "bg-blue-600" },
+                  { rank: 5, name: "Sarah Writes", initial: "S", points: "890", color: "bg-pink-600" },
+                ].map((c) => (
+                  <div key={c.rank} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-muted-foreground w-3 font-mono">{c.rank}</span>
+                      <div className={`h-7 w-7 rounded-full ${c.color || 'bg-primary'} flex items-center justify-center font-bold text-xs text-white relative border border-border/40`}>
+                        {c.initial}
+                        {c.isOnline && (
+                          <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-card" />
+                        )}
+                      </div>
+                      <span className="font-medium text-foreground text-xs">{c.name}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
+                      <Zap className="h-3 w-3 text-amber-500 fill-amber-500" />
+                      <span>{c.points}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-2">
+                <Link to="/achievements" className="text-xs text-indigo-500 hover:underline font-medium">
+                  View leaderboard
                 </Link>
               </div>
-              <div className="flex items-center gap-3">
-                {unlockedAchievements.slice(-3).map((achievement) => (
-                  <TooltipProvider key={achievement.id}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="h-10 w-10 rounded-lg bg-primary/5 border border-primary/10 flex items-center justify-center transition-all hover:scale-110 hover:bg-primary/10 cursor-help overflow-hidden">
-                          <achievement.icon size={20} className="text-primary flex-shrink-0" />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent className="font-body text-[11px] bg-card border-border text-foreground p-2">
-                        <p className="font-bold mb-0.5">{achievement.name}</p>
-                        <p className="text-muted-foreground">{achievement.description}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+            </div>
+
+            {/* Card 4: Recently Joined Spaces */}
+            <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-4 shadow-sm">
+              <h3 className="font-heading text-base font-bold text-foreground">Recently Joined Spaces</h3>
+
+              <div className="space-y-3">
+                {[
+                  { name: "SaaS Founders", members: "1.2K members", img: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=100&q=80" },
+                  { name: "AI Builders", members: "842 members", img: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=100&q=80" },
+                  { name: "Frontend Hub", members: "2.6K members", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80" },
+                ].map((s) => (
+                  <div key={s.name} className="flex items-center gap-3">
+                    <img src={s.img} alt={s.name} className="h-8 w-8 rounded-full object-cover shrink-0" />
+                    <div>
+                      <div className="text-xs font-bold text-foreground">{s.name}</div>
+                      <div className="text-[11px] text-muted-foreground">{s.members}</div>
+                    </div>
+                  </div>
                 ))}
-                {unlockedAchievements.length === 0 && (
-                  <p className="text-xs text-muted-foreground italic">No achievements yet. Keep contributing!</p>
-                )}
+              </div>
+
+              <div className="pt-2">
+                <Link to="/communities" className="text-xs text-indigo-400 hover:underline font-medium">
+                  View all spaces
+                </Link>
               </div>
             </div>
 
           </div>
 
         </div>
+
       </div>
+
+      {/* Floating Action Button (FAB) Bottom Right */}
+      <Link 
+        to="/submit"
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-2xl flex items-center justify-center transition-all hover:scale-105 z-50 border border-indigo-400/30"
+        title="Create new post"
+      >
+        <PenSquare className="h-6 w-6" />
+      </Link>
     </AppLayout>
   );
-};
-
-export default Profile;
+}

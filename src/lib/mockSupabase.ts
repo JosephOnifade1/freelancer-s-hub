@@ -339,6 +339,7 @@ class MockQueryBuilder {
   private orderAscending?: boolean;
   private limitCount?: number;
   private isSingle: boolean = false;
+  private isMaybeSingle: boolean = false;
   private operation: "select" | "insert" | "update" | "delete" | "upsert" = "select";
   private payload: any = null;
 
@@ -380,6 +381,13 @@ class MockQueryBuilder {
 
   single() {
     this.isSingle = true;
+    this.isMaybeSingle = false;
+    return this;
+  }
+
+  maybeSingle() {
+    this.isSingle = true;
+    this.isMaybeSingle = true;
     return this;
   }
 
@@ -450,13 +458,22 @@ class MockQueryBuilder {
         filtered.sort((a, b) => {
           let valA = a[this.orderField!];
           let valB = b[this.orderField!];
+
+          if (valA === valB) return 0;
+          if (valA === undefined || valA === null) return 1;
+          if (valB === undefined || valB === null) return -1;
+
           if (typeof valA === "string" && typeof valB === "string") {
-            return this.orderAscending ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            const cmp = valA.localeCompare(valB);
+            return this.orderAscending ? cmp : -cmp;
           }
+
           if (valA instanceof Date || (typeof valA === "string" && !isNaN(Date.parse(valA)))) {
-            valA = new Date(valA).getTime();
-            valB = new Date(valB).getTime();
+            const timeA = new Date(valA).getTime();
+            const timeB = new Date(valB).getTime();
+            return this.orderAscending ? (timeA > timeB ? 1 : -1) : (timeA < timeB ? 1 : -1);
           }
+
           return this.orderAscending ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
         });
       }
@@ -468,7 +485,7 @@ class MockQueryBuilder {
       const mapped = filtered.map(row => {
         const newRow = { ...row };
         
-        if (this.selectFields.includes("profiles!")) {
+        if (this.selectFields.includes("profiles")) {
           const profilesTable = JSON.parse(localStorage.getItem("mock_supabase_profiles") || "[]");
           const authorUid = row.authorUid || row.postedByUid;
           const profile = profilesTable.find((p: any) => p.uid === authorUid);
@@ -483,7 +500,10 @@ class MockQueryBuilder {
       }
 
       if (this.isSingle) {
-        return { data: mapped[0] || null, error: mapped[0] ? null : { code: "PGRST116", message: "JSON object requested, multiple (or no) rows returned" } };
+        return {
+          data: mapped[0] || null,
+          error: mapped[0] ? null : (this.isMaybeSingle ? null : { code: "PGRST116", message: "JSON object requested, multiple (or no) rows returned" })
+        };
       }
 
       return { data: mapped, error: null };

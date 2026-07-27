@@ -2,18 +2,44 @@ import { supabase } from "./supabase";
 import { PostData } from "@/components/PostCard";
 
 export const fetchPosts = async (): Promise<PostData[]> => {
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("posts")
     .select(`
       id, title, body, category, tags, type, score, ups, downs, views,
       commentCount, isDeleted, isEdited, createdAt, communitySlug, authorUid,
-      profiles!posts_authorUid_fkey (username, displayName, avatarUrl, reputation, isVerifiedPro)
+      profiles (username, displayName, avatarUrl, reputation, isVerifiedPro)
     `)
     .eq("isDeleted", false)
     .order("createdAt", { ascending: false });
 
   if (error) {
-    console.error("Error fetching posts:", error);
+    const retry = await supabase
+      .from("posts")
+      .select(`
+        id, title, body, category, tags, type, score, ups, downs, views,
+        commentCount, isDeleted, isEdited, createdAt, communitySlug, authorUid,
+        profiles!posts_authorUid_fkey (username, displayName, avatarUrl, reputation, isVerifiedPro)
+      `)
+      .eq("isDeleted", false)
+      .order("createdAt", { ascending: false });
+
+    data = retry.data;
+    error = retry.error;
+  }
+
+  if (error) {
+    const fallback = await supabase
+      .from("posts")
+      .select("*")
+      .eq("isDeleted", false)
+      .order("createdAt", { ascending: false });
+
+    data = fallback.data;
+    error = fallback.error;
+  }
+
+  if (error || !data) {
+    console.warn("Could not fetch posts from Supabase backend:", error?.message || error);
     return [];
   }
 

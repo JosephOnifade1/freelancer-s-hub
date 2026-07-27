@@ -1,0 +1,8 @@
+{
+  "name": "Borynx - Freelancer Community",
+  "description": "A community platform for freelancers powered by Supabase with discussions, job leads, communities, and reputation tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

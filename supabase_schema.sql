@@ -1,7 +1,15 @@
+-- ==========================================
+-- BORYNX SUPABASE DATABASE SCHEMA & CONFIG
+-- Complete Schema, RLS Policies, Triggers,
+-- Helper RPC Functions & Initial Seed Data
+-- ==========================================
+
 -- Enable UUID extension
 create extension if not exists "uuid-ossp";
 
--- Create tables
+-- 1. TABLES DEFINITION
+
+-- User Profiles
 create table if not exists public.profiles (
   "uid" uuid primary key references auth.users(id) on delete cascade,
   "username" text unique not null,
@@ -19,25 +27,30 @@ create table if not exists public.profiles (
   "avatarUrl" text,
   "isVerifiedPro" boolean default false,
   "hasSeenVeteranCelebration" boolean default false,
+  "communitiesList" jsonb default '{}'::jsonb,
   "createdAt" timestamptz default now()
 );
 
+-- Username Registry
 create table if not exists public.usernames (
   "username" text primary key,
   "uid" uuid references public.profiles("uid") on delete cascade
 );
 
+-- Communities
 create table if not exists public.communities (
   "slug" text primary key,
   "name" text not null,
   "description" text not null,
   "icon" text,
+  "category" text default 'Other',
   "topics" text[] default '{}',
   "ownerId" text default 'system',
   "memberCount" integer default 0,
   "createdAt" timestamptz default now()
 );
 
+-- Posts
 create table if not exists public.posts (
   "id" uuid primary key default gen_random_uuid(),
   "title" text not null,
@@ -54,9 +67,11 @@ create table if not exists public.posts (
   "isEdited" boolean default false,
   "createdAt" timestamptz default now(),
   "authorUid" uuid references public.profiles("uid") on delete cascade,
-  "communitySlug" text references public.communities("slug") on delete cascade
+  "communitySlug" text references public.communities("slug") on delete cascade,
+  constraint posts_authorUid_fkey foreign key ("authorUid") references public.profiles("uid") on delete cascade
 );
 
+-- Comments
 create table if not exists public.comments (
   "id" uuid primary key default gen_random_uuid(),
   "postId" uuid not null references public.posts("id") on delete cascade,
@@ -68,9 +83,11 @@ create table if not exists public.comments (
   "downs" integer default 0,
   "isDeleted" boolean default false,
   "isEdited" boolean default false,
-  "createdAt" timestamptz default now()
+  "createdAt" timestamptz default now(),
+  constraint comments_authorUid_fkey foreign key ("authorUid") references public.profiles("uid") on delete cascade
 );
 
+-- Job Leads
 create table if not exists public.leads (
   "id" uuid primary key default gen_random_uuid(),
   "title" text not null,
@@ -84,27 +101,32 @@ create table if not exists public.leads (
   "isVerified" boolean default false,
   "postedByUid" uuid not null references public.profiles("uid") on delete cascade,
   "postedAt" timestamptz default now(),
-  "applicantsCount" integer default 0
+  "applicantsCount" integer default 0,
+  constraint leads_postedByUid_fkey foreign key ("postedByUid") references public.profiles("uid") on delete cascade
 );
 
+-- Community Memberships
 create table if not exists public.community_members (
   "userId" uuid references public.profiles("uid") on delete cascade,
   "communitySlug" text references public.communities("slug") on delete cascade,
   primary key ("userId", "communitySlug")
 );
 
+-- Saved Posts / Bookmarks
 create table if not exists public.saved_posts (
   "userId" uuid references public.profiles("uid") on delete cascade,
   "postId" uuid references public.posts("id") on delete cascade,
   primary key ("userId", "postId")
 );
 
+-- User Follows
 create table if not exists public.follows (
   "followerId" uuid references public.profiles("uid") on delete cascade,
   "followingId" uuid references public.profiles("uid") on delete cascade,
   primary key ("followerId", "followingId")
 );
 
+-- Upvotes / Downvotes
 create table if not exists public.votes (
   "id" uuid primary key default gen_random_uuid(),
   "userId" uuid not null references public.profiles("uid") on delete cascade,
@@ -114,7 +136,18 @@ create table if not exists public.votes (
   unique ("userId", "entityType", "entityId")
 );
 
--- Enable RLS on all tables
+-- 2. INDEXES FOR PERFORMANCE
+
+create index if not exists idx_posts_createdAt on public.posts ("createdAt" desc);
+create index if not exists idx_posts_authorUid on public.posts ("authorUid");
+create index if not exists idx_posts_communitySlug on public.posts ("communitySlug");
+create index if not exists idx_comments_postId on public.comments ("postId");
+create index if not exists idx_comments_authorUid on public.comments ("authorUid");
+create index if not exists idx_leads_postedAt on public.leads ("postedAt" desc);
+create index if not exists idx_votes_entity on public.votes ("entityType", "entityId", "userId");
+
+-- 3. ROW LEVEL SECURITY (RLS) POLICIES
+
 alter table public.profiles enable row level security;
 alter table public.usernames enable row level security;
 alter table public.communities enable row level security;
@@ -126,55 +159,197 @@ alter table public.saved_posts enable row level security;
 alter table public.follows enable row level security;
 alter table public.votes enable row level security;
 
--- Setup RLS Policies
-
--- profiles
+-- profiles RLS
+drop policy if exists "Public read profiles" on public.profiles;
 create policy "Public read profiles" on public.profiles for select using (true);
+
+drop policy if exists "Users can update their own profile" on public.profiles;
 create policy "Users can update their own profile" on public.profiles for update using (auth.uid() = "uid");
 
--- usernames
+drop policy if exists "Users can insert profile" on public.profiles;
+create policy "Users can insert profile" on public.profiles for insert with check (auth.uid() = "uid");
+
+-- usernames RLS
+drop policy if exists "Public read usernames" on public.usernames;
 create policy "Public read usernames" on public.usernames for select using (true);
+
+drop policy if exists "Profiles can insert/update their username" on public.usernames;
 create policy "Profiles can insert/update their username" on public.usernames for all using (auth.uid() = "uid");
 
--- communities
+-- communities RLS
+drop policy if exists "Public read communities" on public.communities;
 create policy "Public read communities" on public.communities for select using (true);
+
+drop policy if exists "Auth users can insert/update communities" on public.communities;
 create policy "Auth users can insert/update communities" on public.communities for all using (auth.role() = 'authenticated');
 
--- posts
+-- posts RLS
+drop policy if exists "Public read posts" on public.posts;
 create policy "Public read posts" on public.posts for select using (true);
+
+drop policy if exists "Auth users can create posts" on public.posts;
 create policy "Auth users can create posts" on public.posts for insert with check (auth.uid() = "authorUid");
+
+drop policy if exists "Authors can update/delete their posts" on public.posts;
 create policy "Authors can update/delete their posts" on public.posts for update using (auth.uid() = "authorUid");
+
+drop policy if exists "Anyone can update post views, score, and commentCount" on public.posts;
 create policy "Anyone can update post views, score, and commentCount" on public.posts for update using (true);
 
--- comments
+-- comments RLS
+drop policy if exists "Public read comments" on public.comments;
 create policy "Public read comments" on public.comments for select using (true);
+
+drop policy if exists "Auth users can create comments" on public.comments;
 create policy "Auth users can create comments" on public.comments for insert with check (auth.uid() = "authorUid");
+
+drop policy if exists "Authors can update/delete their comments" on public.comments;
 create policy "Authors can update/delete their comments" on public.comments for update using (auth.uid() = "authorUid");
+
+drop policy if exists "Anyone can update comment score" on public.comments;
 create policy "Anyone can update comment score" on public.comments for update using (true);
 
--- leads
+-- leads RLS
+drop policy if exists "Public read leads" on public.leads;
 create policy "Public read leads" on public.leads for select using (true);
+
+drop policy if exists "Auth users can create leads" on public.leads;
 create policy "Auth users can create leads" on public.leads for insert with check (auth.uid() = "postedByUid");
+
+drop policy if exists "Creators can update their leads" on public.leads;
 create policy "Creators can update their leads" on public.leads for update using (auth.uid() = "postedByUid");
 
--- community_members
+-- community_members RLS
+drop policy if exists "Public read memberships" on public.community_members;
 create policy "Public read memberships" on public.community_members for select using (true);
+
+drop policy if exists "Users can manage their memberships" on public.community_members;
 create policy "Users can manage their memberships" on public.community_members for all using (auth.uid() = "userId");
 
--- saved_posts
+-- saved_posts RLS
+drop policy if exists "Users can read their own bookmarks" on public.saved_posts;
 create policy "Users can read their own bookmarks" on public.saved_posts for select using (auth.uid() = "userId");
+
+drop policy if exists "Users can manage their own bookmarks" on public.saved_posts;
 create policy "Users can manage their own bookmarks" on public.saved_posts for all using (auth.uid() = "userId");
 
--- follows
+-- follows RLS
+drop policy if exists "Public read follows" on public.follows;
 create policy "Public read follows" on public.follows for select using (true);
+
+drop policy if exists "Users can manage their own follows" on public.follows;
 create policy "Users can manage their own follows" on public.follows for all using (auth.uid() = "followerId");
 
--- votes
+-- votes RLS
+drop policy if exists "Public read votes" on public.votes;
 create policy "Public read votes" on public.votes for select using (true);
+
+drop policy if exists "Users can manage their own votes" on public.votes;
 create policy "Users can manage their own votes" on public.votes for all using (auth.uid() = "userId");
 
 
--- Setup function and trigger for user creation in Supabase auth
+-- 4. RPC FUNCTIONS FOR APPLICATION STATE INCREMENT/DECREMENT
+
+-- Increment Post Views
+create or replace function public.increment_post_views(post_id uuid)
+returns void as $$
+begin
+  update public.posts
+  set views = coalesce(views, 0) + 1
+  where id = post_id;
+end;
+$$ language plpgsql security definer;
+
+-- Increment Comment Count
+create or replace function public.increment_comment_count(post_id uuid)
+returns void as $$
+begin
+  update public.posts
+  set "commentCount" = coalesce("commentCount", 0) + 1
+  where id = post_id;
+end;
+$$ language plpgsql security definer;
+
+-- Increment Followers
+create or replace function public.increment_followers(target_uid uuid)
+returns void as $$
+begin
+  update public.profiles
+  set followers = coalesce(followers, 0) + 1
+  where uid = target_uid;
+end;
+$$ language plpgsql security definer;
+
+-- Decrement Followers
+create or replace function public.decrement_followers(target_uid uuid)
+returns void as $$
+begin
+  update public.profiles
+  set followers = greatest(0, coalesce(followers, 0) - 1)
+  where uid = target_uid;
+end;
+$$ language plpgsql security definer;
+
+-- Increment Following
+create or replace function public.increment_following(target_uid uuid)
+returns void as $$
+begin
+  update public.profiles
+  set following = coalesce(following, 0) + 1
+  where uid = target_uid;
+end;
+$$ language plpgsql security definer;
+
+-- Decrement Following
+create or replace function public.decrement_following(target_uid uuid)
+returns void as $$
+begin
+  update public.profiles
+  set following = greatest(0, coalesce(following, 0) - 1)
+  where uid = target_uid;
+end;
+$$ language plpgsql security definer;
+
+-- Increment Community Members
+create or replace function public.increment_community_members(community_slug text)
+returns void as $$
+begin
+  update public.communities
+  set "memberCount" = coalesce("memberCount", 0) + 1
+  where slug = community_slug;
+end;
+$$ language plpgsql security definer;
+
+-- Decrement Community Members
+create or replace function public.decrement_community_members(community_slug text)
+returns void as $$
+begin
+  update public.communities
+  set "memberCount" = greatest(0, coalesce("memberCount", 0) - 1)
+  where slug = community_slug;
+end;
+$$ language plpgsql security definer;
+
+-- Helper to update community JSONB list in profile
+create or replace function public.jsonb_set_community(uid uuid, slug text, value boolean)
+returns jsonb as $$
+declare
+  curr_list jsonb;
+begin
+  select coalesce("communitiesList", '{}'::jsonb) into curr_list
+  from public.profiles where "uid" = jsonb_set_community.uid;
+
+  if curr_list is null then
+    curr_list := '{}'::jsonb;
+  end if;
+
+  return jsonb_set(curr_list, array[slug], to_jsonb(value));
+end;
+$$ language plpgsql security definer;
+
+
+-- 5. AUTH USER CREATION TRIGGER
+
 create or replace function public.handle_new_user()
 returns trigger as $$
 declare
@@ -182,7 +357,7 @@ declare
   username_exists boolean;
   display_name text;
 begin
-  -- Loop until we find a unique username
+  -- Generate unique handle
   loop
     new_username := 'user_' || substring(md5(random()::text) from 1 for 6);
     select exists(select 1 from public.profiles where username = new_username) into username_exists;
@@ -193,7 +368,23 @@ begin
 
   display_name := coalesce(new.raw_user_meta_data ->> 'display_name', split_part(new.email, '@', 1));
 
-  insert into public.profiles (uid, username, "displayName", initial, bio, location, website, joined, status, reputation, followers, following, "isVerifiedPro", "hasSeenVeteranCelebration", "createdAt")
+  insert into public.profiles (
+    uid,
+    username,
+    "displayName",
+    initial,
+    bio,
+    location,
+    website,
+    joined,
+    status,
+    reputation,
+    followers,
+    following,
+    "isVerifiedPro",
+    "hasSeenVeteranCelebration",
+    "createdAt"
+  )
   values (
     new.id,
     new_username,
@@ -204,7 +395,7 @@ begin
     '',
     to_char(now(), 'YYYY'),
     'Available',
-    0,
+    10,
     0,
     0,
     false,
@@ -219,18 +410,22 @@ begin
 end;
 $$ language plpgsql security definer;
 
--- Trigger to execute the function on auth.users insert
-create or replace trigger on_auth_user_created
+-- Trigger execution
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
--- Seed Default Communities
-insert into public.communities (slug, name, description, icon, topics, "ownerId", "memberCount", "createdAt")
+
+-- 6. INITIAL SEED DATA
+
+-- Communities Seed
+insert into public.communities (slug, name, description, icon, category, topics, "ownerId", "memberCount", "createdAt")
 values 
-  ('design', 'Design', 'UI, UX, branding, illustration.', 'Palette', array['ui', 'ux', 'branding'], 'system', 0, now()),
-  ('dev', 'Freelance Dev', 'Web, mobile, full-stack devs going solo.', 'Code2', array['web', 'mobile', 'backend'], 'system', 0, now()),
-  ('writing', 'Writing', 'Copywriters, content writers, ghostwriters.', 'PenTool', array['copy', 'content', 'ghostwriting'], 'system', 0, now()),
-  ('marketing', 'Marketing', 'Growth, SEO, paid ads, email.', 'Megaphone', array['seo', 'growth', 'ads'], 'system', 0, now()),
-  ('video', 'Video & Motion', 'Editors, motion designers, animators.', 'Video', array['video', 'motion', 'animation'], 'system', 0, now()),
-  ('consulting', 'Consulting', 'Strategy, ops, advisory work.', 'Briefcase', array['strategy', 'ops', 'advisory'], 'system', 0, now())
+  ('design', 'Design', 'UI, UX, branding, illustration.', 'Palette', 'Design', array['ui', 'ux', 'branding'], 'system', 120, now()),
+  ('dev', 'Freelance Dev', 'Web, mobile, full-stack devs going solo.', 'Code2', 'Development', array['web', 'mobile', 'backend'], 'system', 340, now()),
+  ('writing', 'Writing', 'Copywriters, content writers, ghostwriters.', 'PenTool', 'Other', array['copy', 'content', 'ghostwriting'], 'system', 85, now()),
+  ('marketing', 'Marketing', 'Growth, SEO, paid ads, email.', 'Megaphone', 'Marketing', array['seo', 'growth', 'ads'], 'system', 95, now()),
+  ('video', 'Video & Motion', 'Editors, motion designers, animators.', 'Video', 'Other', array['video', 'motion', 'animation'], 'system', 50, now()),
+  ('consulting', 'Consulting', 'Strategy, ops, advisory work.', 'Briefcase', 'Business', array['strategy', 'ops', 'advisory'], 'system', 150, now())
 on conflict (slug) do nothing;

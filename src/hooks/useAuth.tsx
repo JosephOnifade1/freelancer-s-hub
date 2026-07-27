@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { User } from "@supabase/supabase-js";
+import { ensureUserProfile } from "../lib/users";
 
 // Extend User to expose `uid` as an alias for `id`, and add Firebase-compatible fields,
 // so all existing code that references user.uid, user.displayName, user.photoURL, and user.email
@@ -39,13 +40,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     // 1. Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(toAppUser(session?.user ?? null));
+      const appUser = toAppUser(session?.user ?? null);
+      if (appUser) {
+        ensureUserProfile(appUser).catch((e) => console.error(e));
+      }
+      setUser(appUser);
       setLoading(false);
     });
 
     // 2. Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(toAppUser(session?.user ?? null));
+      const appUser = toAppUser(session?.user ?? null);
+      if (appUser) {
+        ensureUserProfile(appUser).catch((e) => console.error(e));
+      }
+      setUser(appUser);
       setLoading(false);
     });
 

@@ -24,8 +24,8 @@ export const fetchComments = async (postId: string): Promise<CommentData[]> => {
     .eq("postId", postId)
     .order("createdAt", { ascending: true });
 
-  if (error) {
-    console.error("Error fetching comments:", error);
+  if (error || !data) {
+    console.warn("Could not fetch comments from Supabase backend:", error?.message || error);
     return [];
   }
 

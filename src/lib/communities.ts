@@ -1,4 +1,13 @@
 import { supabase } from "./supabase";
+import {
+  Code2,
+  Palette,
+  Briefcase,
+  Megaphone,
+  Leaf,
+  Globe,
+  type LucideIcon,
+} from "lucide-react";
 
 export interface CommunityData {
   id?: string;
@@ -6,27 +15,114 @@ export interface CommunityData {
   slug: string;
   description: string;
   icon?: string;
+  category: "Development" | "Design" | "Business" | "Marketing" | "Lifestyle" | "Other";
   topics: string[];
-  createdAt: any;
+  createdAt: string;
   ownerId: string;
   memberCount: number;
+  // Cosmetic fields below are NOT stored in the database — they're derived
+  // client-side from category/slug via getCommunityStyle(). Keeping them off
+  // the DB means nobody has to hand-maintain "online count" or "trending"
+  // badges as fake data; the visuals just follow the category.
+  onlineCount?: number;
+  badge?: "Trending" | "Most Active" | "New" | string;
+  isVerified?: boolean;
+  bgGradient?: string;
+  accentColor?: string;
 }
 
-export const seedDefaultCommunities = async () => {
-  // Default communities are already seeded by supabase_schema.sql.
-  // This function is a no-op kept for compatibility.
+// ─── Visual styling lookup (category → look) ───────────────────────────────
+// This is intentionally NOT in the database. It's presentation logic: given
+// a category, what icon/gradient/accent should the card use. Add a new
+// category style here if you add a new category — no DB migration needed.
+const CATEGORY_STYLE: Record<
+  string,
+  { icon: LucideIcon; bgGradient: string; accentColor: string; iconBg: string }
+> = {
+  Development: {
+    icon: Code2,
+    bgGradient: "from-purple-900/40 via-indigo-900/30 to-background",
+    accentColor: "bg-purple-600",
+    iconBg: "bg-purple-600/20 text-purple-400 border-purple-500/30",
+  },
+  Design: {
+    icon: Palette,
+    bgGradient: "from-cyan-900/40 via-blue-950/30 to-background",
+    accentColor: "bg-cyan-600",
+    iconBg: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
+  },
+  Business: {
+    icon: Briefcase,
+    bgGradient: "from-emerald-900/40 via-teal-950/30 to-background",
+    accentColor: "bg-emerald-600",
+    iconBg: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+  },
+  Marketing: {
+    icon: Megaphone,
+    bgGradient: "from-orange-900/40 via-amber-950/30 to-background",
+    accentColor: "bg-orange-600",
+    iconBg: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+  },
+  Lifestyle: {
+    icon: Leaf,
+    bgGradient: "from-pink-900/40 via-rose-950/30 to-background",
+    accentColor: "bg-pink-600",
+    iconBg: "bg-pink-500/20 text-pink-400 border-pink-500/30",
+  },
+  Other: {
+    icon: Globe,
+    bgGradient: "from-teal-900/40 via-emerald-950/30 to-background",
+    accentColor: "bg-teal-600",
+    iconBg: "bg-teal-500/20 text-teal-400 border-teal-500/30",
+  },
 };
 
-export const createCommunity = async (
-  slug: string,
-  data: Omit<CommunityData, "createdAt" | "memberCount" | "id" | "slug">
-) => {
-  const { error } = await supabase
-    .from("communities")
-    .insert({ ...data, slug, memberCount: 1 });
+export const getCommunityStyle = (category: string) =>
+  CATEGORY_STYLE[category] || CATEGORY_STYLE.Other;
 
-  if (error) throw new Error(error.message);
-  return slug;
+// Maps the create-community-modal's topic checkboxes to a DB category.
+const TOPIC_TO_CATEGORY: Record<string, CommunityData["category"]> = {
+  development: "Development",
+  design: "Design",
+  business: "Business",
+  marketing: "Marketing",
+  logistics: "Other",
+  workflow: "Other",
+};
+
+const dbRowToCommunity = (row: any): CommunityData => ({
+  id: row.slug,
+  name: row.name,
+  slug: row.slug,
+  description: row.description,
+  icon: row.icon,
+  category: row.category || "Other",
+  topics: row.topics || [],
+  createdAt: row.createdAt,
+  ownerId: row.ownerId,
+  memberCount: row.memberCount || 0,
+  isVerified: true,
+});
+
+export const fetchAllCommunities = async (): Promise<CommunityData[]> => {
+  const { data, error } = await supabase
+    .from("communities")
+    .select("*")
+    .order("memberCount", { ascending: false });
+
+  if (error || !data) {
+    console.warn("Could not fetch communities:", error?.message || error);
+    return [];
+  }
+
+  const communities = data.map(dbRowToCommunity);
+
+  // Badge the top 3 by member count as "Trending" so the UI has something
+  // to show without anyone hand-flagging communities.
+  return communities.map((c, idx) => ({
+    ...c,
+    badge: idx === 0 ? "Trending" : idx === 1 ? "Most Active" : undefined,
+  }));
 };
 
 export const fetchCommunity = async (slug: string): Promise<CommunityData | null> => {
@@ -37,17 +133,31 @@ export const fetchCommunity = async (slug: string): Promise<CommunityData | null
     .single();
 
   if (error || !data) return null;
-  return data as CommunityData;
+  return dbRowToCommunity(data);
 };
 
-export const fetchAllCommunities = async (): Promise<CommunityData[]> => {
-  const { data, error } = await supabase
-    .from("communities")
-    .select("*")
-    .order("name");
+export const createCommunity = async (
+  slug: string,
+  data: { name: string; description: string; topics: string[]; ownerId: string }
+) => {
+  const category = TOPIC_TO_CATEGORY[data.topics[0]] || "Other";
 
-  if (error) return [];
-  return (data || []) as CommunityData[];
+  const { error } = await supabase.from("communities").insert({
+    slug: slug.toLowerCase(),
+    name: data.name,
+    description: data.description,
+    category,
+    topics: data.topics,
+    ownerId: data.ownerId,
+    memberCount: 1,
+  });
+
+  if (error) throw new Error(error.message);
+
+  // Creator auto-joins their own community
+  await joinCommunity(data.ownerId, slug.toLowerCase());
+
+  return slug.toLowerCase();
 };
 
 export const joinCommunity = async (uid: string, slug: string) => {
@@ -55,37 +165,31 @@ export const joinCommunity = async (uid: string, slug: string) => {
     .from("community_members")
     .insert({ userId: uid, communitySlug: slug });
 
-  if (error && error.code !== "23505") throw new Error(error.message); // Ignore duplicate
+  if (error) throw new Error(error.message);
 
   await supabase.rpc("increment_community_members", { community_slug: slug });
-
-  await supabase
-    .from("profiles")
-    .update({
-      communitiesList: supabase.rpc("jsonb_set_community", {
-        uid,
-        slug,
-        value: true,
-      }) as any,
-    })
-    .eq("uid", uid);
 };
 
 export const leaveCommunity = async (uid: string, slug: string) => {
-  await supabase
+  const { error } = await supabase
     .from("community_members")
     .delete()
     .eq("userId", uid)
     .eq("communitySlug", slug);
 
+  if (error) throw new Error(error.message);
+
   await supabase.rpc("decrement_community_members", { community_slug: slug });
 };
 
+// Returns the list of community slugs the user has actually joined,
+// straight from the community_members join table.
 export const getUserCommunities = async (uid: string): Promise<string[]> => {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("community_members")
     .select("communitySlug")
     .eq("userId", uid);
 
-  return (data || []).map((row: any) => row.communitySlug);
+  if (error || !data) return [];
+  return data.map((row: any) => row.communitySlug);
 };

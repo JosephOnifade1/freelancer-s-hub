@@ -19,40 +19,20 @@ interface UserHoverCardProps {
 }
 
 export function UserHoverCard({ handle, children }: UserHoverCardProps) {
-  const [uid, setUid] = useState<string | null>(null);
-
-  // First get the UID from the handle
-  const { data: foundUid, isLoading: isUidLoading } = useQuery({
-    queryKey: ['uid-by-username', handle],
-    queryFn: () => getUidByUsername(handle),
+  const { data: profile, isLoading } = useQuery({
+    queryKey: ['profile', handle],
+    queryFn: () => handle ? getUserProfile(handle) : null,
     enabled: !!handle,
   });
 
-  // Then fetch the full profile
-  const { data: profile, isLoading: isProfileLoading } = useQuery({
-    queryKey: ['profile', foundUid || handle],
-    queryFn: async () => {
-      // If we found a UID via username search, use it
-      if (foundUid) return getUserProfile(foundUid);
-      
-      // If no UID found via username, try treating the handle itself as a UID
-      // (This handles cases where the link already points to a UID)
-      const directProfile = await getUserProfile(handle);
-      if (directProfile) return directProfile;
-
-      return null;
-    },
-    enabled: !!(foundUid || handle),
-  });
-
-  const loading = isUidLoading || isProfileLoading;
+  const loading = isLoading;
   const veteranStatus = profile ? isVeteran(profile.reputation || 0) : false;
 
   return (
     <HoverCard openDelay={300}>
       <HoverCardTrigger asChild>
         <Link 
-          to={foundUid ? `/f/${foundUid}` : `/f/${handle}`} 
+          to={profile?.uid ? `/f/${profile.uid}` : `/f/${handle}`} 
           className="text-primary hover:underline font-medium decoration-primary/30 underline-offset-2"
         >
           {children}

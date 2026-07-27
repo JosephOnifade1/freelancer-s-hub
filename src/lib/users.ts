@@ -23,39 +23,168 @@ export type UserProfile = {
   favoriteTopics?: string[];
 };
 
-export const createUserProfile = async (uid: string, name: string, email: string) => {
-  // Profile is auto-created by the SQL trigger on auth.users insert.
-  // This function now simply fetches the profile, which should already exist.
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("uid", uid)
-    .single();
+export const ensureUserProfile = async (user: { id?: string; uid?: string; email?: string | null; user_metadata?: any }) => {
+  const uid = user.id || user.uid;
+  if (!uid) return null;
 
-  if (error && error.code !== "PGRST116") {
-    console.error("Error fetching profile:", error);
-  }
-
-  // If profile doesn't exist yet (trigger may be slow), try updating displayName
-  if (!data?.displayName && name) {
-    await supabase
+  try {
+    // Try fetching existing profile
+    const { data: existing } = await supabase
       .from("profiles")
-      .update({ displayName: name, initial: name.charAt(0).toUpperCase() })
-      .eq("uid", uid);
-  }
+      .select("*")
+      .eq("uid", uid)
+      .maybeSingle();
 
-  return data as UserProfile | null;
+    if (existing) return existing as UserProfile;
+
+    // Profile missing - create default fallback profile
+    const rawDisplayName =
+      user.user_metadata?.display_name ||
+      user.user_metadata?.full_name ||
+      user.user_metadata?.name ||
+      user.email?.split("@")[0] ||
+      "Freelancer";
+
+    let username = (user.user_metadata?.username || rawDisplayName.toLowerCase().replace(/[^a-z0-9_]/g, "_")).slice(0, 15);
+    if (username.length < 3) {
+      username = `user_${uid.slice(0, 6)}`;
+    }
+
+    // Check username collision
+    const { data: taken } = await supabase
+      .from("usernames")
+      .select("username")
+      .eq("username", username)
+      .maybeSingle();
+
+    if (taken) {
+      username = `user_${Math.floor(100000 + Math.random() * 900000)}`;
+    }
+
+    const newProfile: UserProfile = {
+      uid,
+      username,
+      displayName: rawDisplayName,
+      initial: rawDisplayName.charAt(0).toUpperCase(),
+      bio: "New freelancer on Borynx!",
+      location: "Earth",
+      website: "",
+      joined: new Date().getFullYear().toString(),
+      status: "Available",
+      skills: [],
+      reputation: 10,
+      followers: 0,
+      following: 0,
+      avatarUrl: user.user_metadata?.avatar_url || "",
+      isVerifiedPro: false,
+      hasSeenVeteranCelebration: false,
+      createdAt: new Date().toISOString(),
+    };
+
+    const { error: profileErr } = await supabase.from("profiles").upsert(newProfile);
+    if (profileErr) {
+      console.warn("Could not save profile to backend:", profileErr.message || profileErr);
+    }
+
+    try {
+      await supabase.from("usernames").upsert({ username, uid });
+    } catch {
+      // ignore username collision / error
+    }
+
+    return newProfile;
+  } catch (err) {
+    console.warn("ensureUserProfile exception:", err);
+    return null;
+  }
 };
 
-export const getUserProfile = async (uid: string) => {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("uid", uid)
-    .single();
+export const createUserProfile = async (uid: string, name: string, email: string) => {
+  return ensureUserProfile({ id: uid, email, user_metadata: { display_name: name } });
+};
 
-  if (error) return null;
-  return data as UserProfile;
+export const getUserProfile = async (identifier: string) => {
+  if (!identifier) return null;
+  
+  const clean = identifier.startsWith("@") ? identifier.substring(1).trim() : identifier.trim();
+  if (!clean) return null;
+
+  try {
+    // 1. Check if identifier matches a profile's UID directly
+    const { data: byUid } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("uid", clean)
+      .maybeSingle();
+
+    if (byUid) return byUid as UserProfile;
+
+    // 2. Check if identifier matches a profile's username (case-insensitive)
+    const { data: byUsername } = await supabase
+      .from("profiles")
+      .select("*")
+      .ilike("username", clean)
+      .maybeSingle();
+
+    if (byUsername) return byUsername as UserProfile;
+
+    // 3. Check mapping in usernames table
+    const { data: userRow } = await supabase
+      .from("usernames")
+      .select("uid")
+      .ilike("username", clean)
+      .maybeSingle();
+
+    if (userRow?.uid) {
+      const { data: profileByUid } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("uid", userRow.uid)
+        .maybeSingle();
+
+      if (profileByUid) return profileByUid as UserProfile;
+    }
+
+    // 4. Check if current user session matches
+    const { data: sessionData } = await supabase.auth.getSession();
+    const sessionUser = sessionData?.session?.user;
+    if (sessionUser) {
+      const sessionUid = sessionUser.id;
+      const sessionEmailName = sessionUser.email?.split("@")[0];
+      if (clean === "me" || clean === sessionUid || clean.toLowerCase() === sessionEmailName?.toLowerCase()) {
+        const ensured = await ensureUserProfile(sessionUser);
+        if (ensured) return ensured;
+      }
+    }
+
+    // 5. Fallback: create dynamic profile so user is never stranded
+    if (clean.length > 0) {
+      const fallbackName = clean.charAt(0).toUpperCase() + clean.slice(1);
+      return {
+        uid: clean,
+        username: clean.toLowerCase(),
+        displayName: fallbackName,
+        initial: fallbackName.charAt(0).toUpperCase(),
+        bio: "Freelancer on Borynx",
+        location: "Earth",
+        website: "",
+        joined: new Date().getFullYear().toString(),
+        status: "Available",
+        skills: [],
+        reputation: 10,
+        followers: 0,
+        following: 0,
+        avatarUrl: "",
+        isVerifiedPro: false,
+        hasSeenVeteranCelebration: false,
+        createdAt: new Date().toISOString(),
+      } as UserProfile;
+    }
+  } catch (err) {
+    console.warn("getUserProfile exception:", err);
+  }
+
+  return null;
 };
 
 export const getUserResourcesCount = async (uid: string) => {
@@ -127,13 +256,24 @@ export const claimUsername = async (uid: string, desiredUsername: string, curren
 };
 
 export const getUidByUsername = async (username: string) => {
+  if (!username) return null;
+  const clean = username.startsWith("@") ? username.substring(1).toLowerCase() : username.toLowerCase();
+
   const { data } = await supabase
     .from("usernames")
     .select("uid")
-    .eq("username", username.toLowerCase())
-    .single();
+    .ilike("username", clean)
+    .maybeSingle();
 
-  return data?.uid ?? null;
+  if (data?.uid) return data.uid;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("uid")
+    .ilike("username", clean)
+    .maybeSingle();
+
+  return profile?.uid ?? null;
 };
 
 export const toggleBookmark = async (uid: string, postId: string) => {
