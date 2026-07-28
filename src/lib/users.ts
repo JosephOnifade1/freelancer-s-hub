@@ -356,3 +356,15 @@ export const getTopContributors = async (count = 5) => {
 
   return (data || []) as UserProfile[];
 };
+
+// Real list of user IDs this user follows, from the `follows` join table —
+// replaces the old (nonexistent) profile.followingList field.
+export const getFollowingIds = async (uid: string): Promise<string[]> => {
+  const { data, error } = await supabase
+    .from("follows")
+    .select("followingId")
+    .eq("followerId", uid);
+
+  if (error || !data) return [];
+  return data.map((row: any) => row.followingId);
+};

@@ -30,7 +30,9 @@ export interface PostData {
   author: {
     uid?: string;
     name: string;
+    username?: string;
     avatar?: string;
+    avatarUrl?: string;
     reputation: number;
     isVerifiedPro?: boolean;
   };
@@ -39,13 +41,14 @@ export interface PostData {
   downs?: number;
   commentCount: number;
   tags: string[];
-  timeAgo: string;
+  timeAgo?: string;
   createdAt?: number;
   views?: number;
   isEdited?: boolean;
   isDeleted?: boolean;
   externalLink?: string;
   category?: string;
+  communitySlug?: string;
 }
 
 interface PostCardProps {
@@ -200,8 +203,8 @@ export function PostCard({ post, index }: PostCardProps) {
         <div className="flex items-center gap-1.5 flex-wrap">
           <Link to={post.author?.uid ? `/f/${post.author.uid}` : "#"} className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
             <div className="flex h-5 w-5 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-primary/20 text-primary">
-              {post.author?.avatar ? (
-                <img src={post.author.avatar} alt={post.author.name} className="h-full w-full object-cover" />
+              {(post.author?.avatar || post.author?.avatarUrl) ? (
+                <img src={post.author.avatar || post.author.avatarUrl} alt={post.author.name} className="h-full w-full object-cover" />
               ) : (
                 <span>{post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'}</span>
               )}

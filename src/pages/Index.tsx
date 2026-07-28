@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { formatDistanceToNowStrict } from "date-fns";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
@@ -36,128 +37,58 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CreateSpacePostModal } from "@/components/modals/CreateSpacePostModal";
 
-// Initial Home Feed Posts matching Image 2 screenshot
-const INITIAL_HOME_POSTS = [
-  {
-    id: "p1",
-    authorName: "MarceloDev",
-    authorAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80",
-    isVerified: true,
-    timeAgo: "2h ago",
-    badge: "RESOURCE",
-    badgeColor: "bg-purple-900/60 text-purple-300 border-purple-700/50",
-    type: "resource",
-    title: "I tripled my freelance rate in 6 months — here's exactly how",
-    body: "Last year I was charging $40/hr for React development. After repositioning myself as a specialist in fintech dashboards, I'm now at $120/hr.",
-    tags: ["#pricing", "#growth", "#dev"],
-    likes: 187,
-    comments: 42,
-    shares: 28,
-    isLiked: false,
-    isBookmarked: false,
-    visualType: "chart",
-  },
-  {
-    id: "p2",
-    authorName: "DesignKara",
-    authorAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80",
-    isVerified: true,
-    timeAgo: "1d ago",
-    badge: "RESOURCE",
-    badgeColor: "bg-purple-900/60 text-purple-300 border-purple-700/50",
-    type: "resource",
-    title: "The proposal template that landed me 8 clients this quarter",
-    body: "I've spent two years refining my proposal process. This Notion template includes sections for scope, timeline, pricing tiers, and a 'why me' section that converts.",
-    tags: ["#proposals", "#templates", "#design"],
-    likes: 312,
-    comments: 67,
-    shares: 18,
-    isLiked: false,
-    isBookmarked: false,
-    visualType: "doc",
-  },
-  {
-    id: "p3",
-    authorName: "SarahWrites",
-    authorAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80",
-    isVerified: true,
-    timeAgo: "1d ago",
-    badge: "QUESTION",
-    badgeColor: "bg-indigo-900/60 text-indigo-300 border-indigo-700/50",
-    type: "question",
-    title: "How do you handle clients who ghost after the discovery call?",
-    body: "Had 4 discovery calls this month. All went great, everyone seemed excited. Then... silence. No follow-up emails answered. Is this normal? What's your process?",
-    tags: ["#clients", "#sales"],
-    likes: 94,
-    comments: 31,
-    shares: 5,
-    isLiked: false,
-    isBookmarked: false,
-  },
-  {
-    id: "p4",
-    authorName: "NomadAnna",
-    authorAvatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=100&q=80",
-    isVerified: true,
-    timeAgo: "1d ago",
-    badge: "QUESTION",
-    badgeColor: "bg-indigo-900/60 text-indigo-300 border-indigo-700/50",
-    type: "question",
-    title: "Best invoicing tools for international freelancers?",
-    body: "I work with clients in 4 different countries. Currency conversion, tax compliance, and payment tracking are a nightmare. What tools are you using? Looking for recommendations.",
-    tags: ["#tools", "#finance", "#international"],
-    likes: 45,
-    comments: 23,
-    shares: 7,
-    isLiked: false,
-    isBookmarked: false,
-  },
-  {
-    id: "p5",
-    authorName: "FreelanceMike",
-    authorAvatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=100&q=80",
-    isVerified: true,
-    timeAgo: "1d ago",
-    badge: "RESOURCE",
-    badgeColor: "bg-purple-900/60 text-purple-300 border-purple-700/50",
-    type: "resource",
-    title: "Stop undercharging: A framework for value-based pricing",
-    body: "If you're still pricing by the hour, you're leaving money on the table. Here's a simple framework I use: identify the business outcome, estimate its value, then price based on that — not time.",
-    tags: ["#pricing", "#strategy"],
-    likes: 73,
-    comments: 19,
-    shares: 11,
-    isLiked: false,
-    isBookmarked: false,
-    visualType: "value",
-  },
-  {
-    id: "p6",
-    authorName: "Borynx Team",
-    authorAvatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=100&q=80",
-    isVerified: true,
-    timeAgo: "1d ago",
-    badge: "WEEKLY",
-    badgeColor: "bg-purple-950/80 text-purple-300 border-purple-800/60",
-    type: "weekly",
-    title: "🏆 Weekly Thread: Share your biggest win this week",
-    body: "Every Friday we celebrate. Big or small — landed a new client, shipped a project, finally sent that invoice, took a day off. Drop your win below. Let's cheer each other on!",
-    tags: ["#wins", "#community"],
-    likes: 156,
-    comments: 89,
-    shares: 12,
-    isLiked: false,
-    isBookmarked: false,
-  },
-];
-
 const Index = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"For You" | "Following">("For You");
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [modalType, setModalType] = useState<"post" | "question" | "resource" | "poll">("post");
-  const [postsList, setPostsList] = useState(INITIAL_HOME_POSTS);
+  const [postsList, setPostsList] = useState<any[]>([]);
+  const [hasLoadedRealPosts, setHasLoadedRealPosts] = useState(false);
+
+  const { data: realPosts = [] } = useQuery({
+    queryKey: ["posts"],
+    queryFn: fetchPosts,
+  });
+
+  // Adapt real PostData (nested author object) into the flat shape this
+  // page's markup already expects (authorName, authorAvatar, likes, etc.)
+  // so none of the rendering JSX below needs to change.
+  const mappedRealPosts = useMemo(() => {
+    return realPosts.map((p) => ({
+      id: p.id,
+      authorName: p.author?.name || "Unknown",
+      authorAvatar: p.author?.avatar || p.author?.avatarUrl,
+      isVerified: p.author?.isVerifiedPro || false,
+      timeAgo: p.createdAt ? formatDistanceToNowStrict(new Date(p.createdAt), { addSuffix: true }) : "recently",
+      badge: (p.type || "discussion").toUpperCase(),
+      badgeColor: "bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] border-[var(--brand-primary)]/30",
+      type: p.type,
+      title: p.title,
+      body: p.body,
+      tags: p.tags || [],
+      likes: p.score || 0,
+      comments: p.commentCount || 0,
+      shares: 0,
+      isLiked: false,
+      isBookmarked: false,
+      visualType: undefined,
+    }));
+  }, [realPosts]);
+
+  // Load real posts into local state once — after that, local state owns
+  // optimistic updates (new posts, likes, bookmarks) without getting
+  // stomped by background refetches.
+  useEffect(() => {
+    if (!hasLoadedRealPosts && mappedRealPosts.length > 0) {
+      setPostsList(mappedRealPosts);
+      setHasLoadedRealPosts(true);
+    } else if (!hasLoadedRealPosts && realPosts.length === 0 && mappedRealPosts.length === 0) {
+      // Query resolved with genuinely zero posts (new/empty database) —
+      // stop waiting and show the real empty state instead of nothing.
+      setHasLoadedRealPosts(true);
+    }
+  }, [mappedRealPosts, hasLoadedRealPosts, realPosts]);
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.uid],
@@ -183,11 +114,11 @@ const Index = () => {
       {
         id: newPost.id || `home-p-${Date.now()}`,
         authorName: newPost.authorName || profile?.displayName || user?.displayName || "You",
-        authorAvatar: newPost.authorAvatar || user?.photoURL || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80",
-        isVerified: true,
+        authorAvatar: newPost.authorAvatar || user?.photoURL || undefined,
+        isVerified: profile?.isVerifiedPro ?? false,
         timeAgo: "Just now",
         badge: (newPost.type || "post").toUpperCase(),
-        badgeColor: "bg-purple-900/60 text-purple-300 border-purple-700/50",
+        badgeColor: "bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] border-[var(--brand-primary)]/30",
         type: newPost.type || "post",
         title: newPost.title || "Untitled Post",
         body: newPost.body || "",
@@ -277,8 +208,8 @@ const Index = () => {
                 <img
                   src={
                     user?.photoURL ||
-                    profile?.avatar ||
-                    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"
+                    profile?.avatarUrl ||
+                    "https://api.dicebear.com/7.x/identicon/svg?seed=" + (user?.uid || "guest")
                   }
                   alt="User"
                   className="h-9 w-9 rounded-xl object-cover ring-1 ring-border/40 shrink-0"

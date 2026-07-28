@@ -28,6 +28,7 @@ create table if not exists public.profiles (
   "isVerifiedPro" boolean default false,
   "hasSeenVeteranCelebration" boolean default false,
   "communitiesList" jsonb default '{}'::jsonb,
+  "role" text default 'member' check ("role" in ('admin', 'moderator', 'member')),
   "createdAt" timestamptz default now()
 );
 

@@ -1,8 +1,10 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { formatDistanceToNowStrict } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchCommunity, joinCommunity, leaveCommunity } from "@/lib/communities";
+import { fetchCommunity, joinCommunity, leaveCommunity, getUserCommunities } from "@/lib/communities";
+import { fetchPostsByCommunity } from "@/lib/posts";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { getUserProfile } from "@/lib/users";
@@ -40,107 +42,8 @@ import { CreateSpacePostModal } from "@/components/modals/CreateSpacePostModal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-// Mock posts for Frontend Hub matching Image 1
-const FRONTEND_HUB_POSTS = [
-  {
-    id: "fh-p1",
-    authorName: "MarceloDev",
-    authorAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80",
-    isVerified: true,
-    timeAgo: "2h ago",
-    badge: "RESOURCE",
-    badgeColor: "bg-purple-900/60 text-purple-300 border-purple-700/50",
-    type: "resource",
-    title: "A complete guide to building a sticky navigation with React",
-    body: "Here's a production-ready approach I use in most of my projects. Includes performance tips and accessibility considerations.",
-    hasCodePreview: true,
-    tags: ["#react", "#frontend", "#tutorial"],
-    likes: 156,
-    comments: 32,
-    shares: 18,
-    isLiked: false,
-    isBookmarked: false,
-  },
-  {
-    id: "fh-p2",
-    authorName: "SarahWrites",
-    authorAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80",
-    isVerified: true,
-    timeAgo: "4h ago",
-    badge: "QUESTION",
-    badgeColor: "bg-indigo-900/60 text-indigo-300 border-indigo-700/50",
-    type: "question",
-    title: "How do you structure your CSS in large projects?",
-    body: "I'm working on a large dashboard and the CSS is getting hard to maintain. How do you keep things scalable?",
-    tags: ["#css", "#architecture", "#frontend"],
-    likes: 89,
-    comments: 47,
-    shares: 5,
-    isLiked: false,
-    isBookmarked: false,
-  },
-  {
-    id: "fh-p3",
-    authorName: "TechStart Inc.",
-    authorAvatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=100&q=80",
-    isVerified: true,
-    timeAgo: "6h ago",
-    badge: "DISCUSSION",
-    badgeColor: "bg-amber-900/60 text-amber-300 border-amber-700/50",
-    type: "discussion",
-    title: "What's your go-to state management in 2024?",
-    body: "Curious what the community is using these days. Context API, Zustand, Redux Toolkit, or something else?",
-    tags: ["#state", "#react", "#discussion"],
-    likes: 64,
-    comments: 103,
-    shares: 7,
-    isLiked: false,
-    isBookmarked: false,
-  },
-  {
-    id: "fh-p4",
-    authorName: "BrightKey",
-    authorAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80",
-    isVerified: true,
-    timeAgo: "8h ago",
-    badge: "RESOURCE",
-    badgeColor: "bg-purple-900/60 text-purple-300 border-purple-700/50",
-    type: "resource",
-    title: "12 beautiful animations with Framer Motion",
-    body: "Open-source components and micro-interactions you can copy into your projects.",
-    hasVideoPreview: true,
-    tags: ["#framer", "#animation", "#uiux"],
-    likes: 201,
-    comments: 45,
-    shares: 22,
-    isLiked: false,
-    isBookmarked: false,
-  },
-  {
-    id: "fh-p5",
-    authorName: "Waverly",
-    authorAvatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=100&q=80",
-    isVerified: true,
-    timeAgo: "1d ago",
-    badge: "POLL",
-    badgeColor: "bg-emerald-900/60 text-emerald-300 border-emerald-700/50",
-    type: "poll",
-    title: "Which CSS framework do you prefer?",
-    pollOptions: [
-      { id: "opt1", label: "Tailwind CSS", percent: 68, votes: 164 },
-      { id: "opt2", label: "CSS Modules", percent: 12, votes: 29 },
-      { id: "opt3", label: "Styled Components", percent: 12, votes: 29 },
-      { id: "opt4", label: "Other (Comment below)", percent: 8, votes: 20 },
-    ],
-    totalVotes: 242,
-    endsIn: "2d",
-    likes: 42,
-    comments: 19,
-    shares: 3,
-    isLiked: false,
-    isBookmarked: false,
-  },
-];
+// Real posts for this community are loaded inside the component via
+// fetchPostsByCommunity(slug) — see the useQuery below.
 
 const CommunityDetail = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -152,7 +55,8 @@ const CommunityDetail = () => {
   const [activeTab, setActiveTab] = useState<"Feed" | "Discussions" | "Resources" | "Members" | "Events" | "About">("Feed");
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [modalType, setModalType] = useState<"post" | "question" | "resource" | "poll">("post");
-  const [localPosts, setLocalPosts] = useState(FRONTEND_HUB_POSTS);
+  const [localPosts, setLocalPosts] = useState<any[]>([]);
+  const [hasLoadedRealPosts, setHasLoadedRealPosts] = useState(false);
   const [votedPolls, setVotedPolls] = useState<Record<string, string>>({});
 
   // Query space data
@@ -168,27 +72,86 @@ const CommunityDetail = () => {
     enabled: !!user?.uid,
   });
 
+  const { data: realPosts = [] } = useQuery({
+    queryKey: ["communityPosts", slug],
+    queryFn: () => (slug ? fetchPostsByCommunity(slug) : []),
+    enabled: !!slug,
+  });
+
+  // Same flat-shape adapter used on Index.tsx, so none of this page's
+  // rendering markup below needs to change.
+  const mappedRealPosts = useMemo(() => {
+    return realPosts.map((p) => ({
+      id: p.id,
+      authorName: p.author?.name || "Unknown",
+      authorAvatar: p.author?.avatar || p.author?.avatarUrl,
+      isVerified: p.author?.isVerifiedPro || false,
+      timeAgo: p.createdAt ? formatDistanceToNowStrict(new Date(p.createdAt), { addSuffix: true }) : "recently",
+      badge: (p.type || "discussion").toUpperCase(),
+      badgeColor: "bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] border-[var(--brand-primary)]/30",
+      type: p.type,
+      title: p.title,
+      body: p.body,
+      hasCodePreview: false,
+      tags: p.tags || [],
+      likes: p.score || 0,
+      comments: p.commentCount || 0,
+      shares: 0,
+      isLiked: false,
+      isBookmarked: false,
+    }));
+  }, [realPosts]);
+
+  useEffect(() => {
+    setHasLoadedRealPosts(false);
+  }, [slug]);
+
+  useEffect(() => {
+    if (!hasLoadedRealPosts) {
+      setLocalPosts(mappedRealPosts);
+      if (mappedRealPosts.length > 0 || realPosts.length === 0) {
+        setHasLoadedRealPosts(true);
+      }
+    }
+  }, [mappedRealPosts, hasLoadedRealPosts, realPosts]);
+
+  const { data: joinedSlugs = [] } = useQuery({
+    queryKey: ["userCommunities", user?.uid],
+    queryFn: () => (user?.uid ? getUserCommunities(user.uid) : []),
+    enabled: !!user?.uid,
+  });
+
   const isJoined = useMemo(() => {
-    if (!profile?.communitiesList || !slug) return true;
-    return !!profile.communitiesList[slug];
-  }, [profile, slug]);
+    if (!slug) return false;
+    return joinedSlugs.includes(slug);
+  }, [joinedSlugs, slug]);
 
   const joinMutation = useMutation({
-    mutationFn: () => joinCommunity(user?.uid || "u1", slug || "frontend-hub"),
+    mutationFn: () => {
+      if (!user?.uid) throw new Error("Please sign in to join a space");
+      if (!slug) throw new Error("Unknown space");
+      return joinCommunity(user.uid, slug);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["profile", user?.uid] });
+      queryClient.invalidateQueries({ queryKey: ["userCommunities", user?.uid] });
       queryClient.invalidateQueries({ queryKey: ["community", slug] });
       toast.success(`Joined b/${slug}`);
     },
+    onError: (err: any) => toast.error(err.message || "Failed to join space"),
   });
 
   const leaveMutation = useMutation({
-    mutationFn: () => leaveCommunity(user?.uid || "u1", slug || "frontend-hub"),
+    mutationFn: () => {
+      if (!user?.uid) throw new Error("Please sign in first");
+      if (!slug) throw new Error("Unknown space");
+      return leaveCommunity(user.uid, slug);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["profile", user?.uid] });
+      queryClient.invalidateQueries({ queryKey: ["userCommunities", user?.uid] });
       queryClient.invalidateQueries({ queryKey: ["community", slug] });
       toast.success(`Left b/${slug}`);
     },
+    onError: (err: any) => toast.error(err.message || "Failed to leave space"),
   });
 
   const handleOpenComposer = (type: "post" | "question" | "resource" | "poll") => {
@@ -202,10 +165,10 @@ const CommunityDetail = () => {
         id: newPost.id || `post-${Date.now()}`,
         authorName: newPost.authorName || "User",
         authorAvatar: newPost.authorAvatar || "",
-        isVerified: true,
+        isVerified: profile?.isVerifiedPro ?? false,
         timeAgo: "Just now",
         badge: (newPost.type || "post").toUpperCase(),
-        badgeColor: "bg-purple-900/60 text-purple-300 border-purple-700/50",
+        badgeColor: "bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] border-[var(--brand-primary)]/30",
         type: newPost.type || "post",
         title: newPost.title || "Untitled Post",
         body: newPost.body || "",
@@ -877,7 +840,7 @@ const CommunityDetail = () => {
         <CreateSpacePostModal
           open={createModalOpen}
           onOpenChange={setCreateModalOpen}
-          spaceSlug={slug || "frontend-hub"}
+          spaceSlug={slug || ""}
           spaceName={spaceName}
           initialType={modalType}
           onPostCreated={handleNewPostCreated}

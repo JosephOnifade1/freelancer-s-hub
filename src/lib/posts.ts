@@ -63,6 +63,101 @@ export const fetchPosts = async (): Promise<PostData[]> => {
       uid: p.authorUid,
       name: p.profiles?.displayName || p.profiles?.username || "Unknown",
       username: p.profiles?.username,
+      avatar: p.profiles?.avatarUrl,
+      avatarUrl: p.profiles?.avatarUrl,
+      reputation: p.profiles?.reputation || 0,
+      isVerifiedPro: p.profiles?.isVerifiedPro || false,
+    },
+  }));
+};
+
+// Posts scoped to a single community — used by CommunityDetail.tsx instead
+// of hardcoded fake posts.
+export const fetchPostsByCommunity = async (slug: string): Promise<PostData[]> => {
+  const { data, error } = await supabase
+    .from("posts")
+    .select(`
+      id, title, body, category, tags, type, score, ups, downs, views,
+      commentCount, isDeleted, isEdited, createdAt, communitySlug, authorUid,
+      profiles!posts_authorUid_fkey (username, displayName, avatarUrl, reputation, isVerifiedPro)
+    `)
+    .eq("isDeleted", false)
+    .eq("communitySlug", slug)
+    .order("createdAt", { ascending: false });
+
+  if (error || !data) {
+    console.warn("Could not fetch community posts:", error?.message || error);
+    return [];
+  }
+
+  return data.map((p: any) => ({
+    id: p.id,
+    title: p.title,
+    body: p.body,
+    category: p.category,
+    tags: p.tags || [],
+    type: p.type,
+    score: p.score,
+    ups: p.ups,
+    downs: p.downs,
+    views: p.views,
+    commentCount: p.commentCount,
+    isDeleted: p.isDeleted,
+    isEdited: p.isEdited,
+    createdAt: new Date(p.createdAt).getTime(),
+    communitySlug: p.communitySlug,
+    author: {
+      uid: p.authorUid,
+      name: p.profiles?.displayName || p.profiles?.username || "Unknown",
+      username: p.profiles?.username,
+      avatar: p.profiles?.avatarUrl,
+      avatarUrl: p.profiles?.avatarUrl,
+      reputation: p.profiles?.reputation || 0,
+      isVerifiedPro: p.profiles?.isVerifiedPro || false,
+    },
+  }));
+};
+
+// Posts authored by a single user — used by Profile.tsx instead of
+// hardcoded fake posts.
+export const fetchPostsByAuthor = async (uid: string): Promise<PostData[]> => {
+  const { data, error } = await supabase
+    .from("posts")
+    .select(`
+      id, title, body, category, tags, type, score, ups, downs, views,
+      commentCount, isDeleted, isEdited, createdAt, communitySlug, authorUid,
+      profiles!posts_authorUid_fkey (username, displayName, avatarUrl, reputation, isVerifiedPro)
+    `)
+    .eq("isDeleted", false)
+    .eq("authorUid", uid)
+    .order("createdAt", { ascending: false });
+
+  if (error || !data) {
+    console.warn("Could not fetch author posts:", error?.message || error);
+    return [];
+  }
+
+  return data.map((p: any) => ({
+    id: p.id,
+    title: p.title,
+    body: p.body,
+    category: p.category,
+    tags: p.tags || [],
+    type: p.type,
+    score: p.score,
+    ups: p.ups,
+    downs: p.downs,
+    views: p.views,
+    commentCount: p.commentCount,
+    isDeleted: p.isDeleted,
+    isEdited: p.isEdited,
+    createdAt: new Date(p.createdAt).getTime(),
+    communitySlug: p.communitySlug,
+    author: {
+      uid: p.authorUid,
+      name: p.profiles?.displayName || p.profiles?.username || "Unknown",
+      username: p.profiles?.username,
+      avatar: p.profiles?.avatarUrl,
       avatarUrl: p.profiles?.avatarUrl,
       reputation: p.profiles?.reputation || 0,
       isVerifiedPro: p.profiles?.isVerifiedPro || false,
@@ -129,6 +224,7 @@ export const fetchPostById = async (id: string): Promise<PostData | null> => {
       uid: data.authorUid,
       name: (data as any).profiles?.displayName || (data as any).profiles?.username || "Unknown",
       username: (data as any).profiles?.username,
+      avatar: (data as any).profiles?.avatarUrl,
       avatarUrl: (data as any).profiles?.avatarUrl,
       reputation: (data as any).profiles?.reputation || 0,
       isVerifiedPro: (data as any).profiles?.isVerifiedPro || false,

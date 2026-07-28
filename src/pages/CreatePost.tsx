@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Feather, 
@@ -43,6 +43,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getUserProfile } from "@/lib/users";
 import { createPost } from "@/lib/posts";
+import { fetchAllCommunities, getCommunityStyle } from "@/lib/communities";
 import { ResourceBodyEditor } from "@/components/editor/ResourceBodyEditor";
 import { ResourceMarkdownHelp } from "@/components/editor/ResourceMarkdownHelp";
 
@@ -62,53 +63,48 @@ interface BSpaceOption {
   popularTags: string[];
 }
 
-const B_SPACES: BSpaceOption[] = [
-  { 
-    id: "sp-1", 
-    name: "Frontend Hub", 
-    slug: "frontend-hub", 
-    icon: Code2, 
-    color: "text-purple-400 bg-purple-500/15",
-    popularTags: ["react", "nextjs", "typescript", "tailwindcss", "performance", "uiux", "state-management", "frontend", "javascript", "testing"]
-  },
-  { 
-    id: "sp-2", 
-    name: "Indie Builders", 
-    slug: "indie-builders", 
-    icon: Rocket, 
-    color: "text-amber-400 bg-amber-500/15",
-    popularTags: ["saas", "indie", "revenue", "bootstrap", "marketing", "launch", "pricing", "growth"]
-  },
-  { 
-    id: "sp-3", 
-    name: "Growth Operators", 
-    slug: "growth-operators", 
-    icon: TrendingUp, 
-    color: "text-indigo-400 bg-indigo-500/15",
-    popularTags: ["analytics", "seo", "conversion", "b2b", "funnels", "retention", "ads"]
-  },
-  { 
-    id: "sp-4", 
-    name: "AI Builders", 
-    slug: "ai-builders", 
-    icon: Cpu, 
-    color: "text-emerald-400 bg-emerald-500/15",
-    popularTags: ["llm", "rag", "gemini", "openai", "agents", "python", "fine-tuning", "prompting"]
-  },
-  { 
-    id: "sp-5", 
-    name: "Design & UI/UX", 
-    slug: "design-craft", 
-    icon: Layout, 
-    color: "text-pink-400 bg-pink-500/15",
-    popularTags: ["figma", "design-systems", "typography", "animation", "user-research", "css"]
-  },
-];
+// Real spaces are loaded from the database inside the component (see
+// realSpaces useQuery below) — this used to be a hardcoded fake list
+// (frontend-hub, indie-builders, etc.) with slugs that don't exist in the
+// real `communities` table, which is what was causing every post submit
+// to fail with a foreign key violation (23503).
 
 const CreatePost = () => {
   const navigate = useNavigate();
   const bodyImageInputRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Real spaces (communities) from the database — replaces the old
+  // hardcoded fake list. slug: "" is a loading placeholder that the
+  // submit button below refuses to post with, so there's no race
+  // condition where a post could go out before real data has loaded.
+  const LOADING_SPACE: BSpaceOption = {
+    id: "loading",
+    name: "Loading spaces…",
+    slug: "",
+    icon: Globe,
+    color: "text-muted-foreground bg-muted",
+    popularTags: [],
+  };
+
+  const { data: realSpaces = [] } = useQuery({
+    queryKey: ["communities"],
+    queryFn: fetchAllCommunities,
+  });
+
+  const B_SPACES: BSpaceOption[] = useMemo(() => {
+    return realSpaces.map((c) => {
+      const style = getCommunityStyle(c.category);
+      return {
+        id: c.slug,
+        name: c.name,
+        slug: c.slug,
+        icon: style.icon,
+        color: style.iconBg,
+        popularTags: c.topics?.length ? c.topics : ["general"],
+      };
+    });
+  }, [realSpaces]);
 
   // Form State
   const [postType, setPostType] = useState<PostType>("discussion");
@@ -116,7 +112,14 @@ const CreatePost = () => {
   const [body, setBody] = useState("");
   const [externalLink, setExternalLink] = useState("");
   const [pollOptions, setPollOptions] = useState<string[]>(["Option 1", "Option 2"]);
-  const [selectedSpace, setSelectedSpace] = useState<BSpaceOption>(B_SPACES[0]);
+  const [selectedSpace, setSelectedSpace] = useState<BSpaceOption>(LOADING_SPACE);
+
+  useEffect(() => {
+    if (B_SPACES.length > 0 && selectedSpace.slug === "") {
+      setSelectedSpace(B_SPACES[0]);
+    }
+  }, [B_SPACES]);
+
   const [tags, setTags] = useState<string[]>(["react", "frontend", "performance"]);
   const [tagInput, setTagInput] = useState("");
   const [isAddingTag, setIsAddingTag] = useState(false);
@@ -249,7 +252,17 @@ const CreatePost = () => {
       toast({ title: "Missing fields", description: "Please enter a title and post description.", variant: "destructive" });
       return;
     }
-    
+
+    if (!user?.uid) {
+      toast({ title: "Not signed in", description: "Please sign in before posting.", variant: "destructive" });
+      return;
+    }
+
+    if (!selectedSpace.slug) {
+      toast({ title: "Spaces still loading", description: "Give it a second and try again.", variant: "destructive" });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const postPayload = {
@@ -259,11 +272,11 @@ const CreatePost = () => {
         tags,
         communitySlug: selectedSpace.slug,
         author: { 
-          uid: user?.uid,
-          name: profile?.username || "MarceloDev", 
-          reputation: profile?.reputation || 2340,
-          avatar: profile?.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80",
-          isVerifiedPro: profile?.isVerifiedPro ?? true,
+          uid: user.uid,
+          name: profile?.displayName || profile?.username || "Anonymous",
+          reputation: profile?.reputation ?? 0,
+          avatar: profile?.avatarUrl,
+          isVerifiedPro: profile?.isVerifiedPro ?? false,
         },
         score: 0,
         commentCount: 0,
@@ -972,7 +985,7 @@ const CreatePost = () => {
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5 font-heading text-sm font-bold text-foreground">
-                    <span>{profile?.username || "MarceloDev"}</span>
+                    <span>{profile?.username || "you"}</span>
                     <CheckCircle2 className="h-4 w-4 text-purple-400 fill-purple-400/20" />
                   </div>
                   <p className="text-xs text-muted-foreground font-mono">

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { PenTool, HelpCircle, FileText, BarChart2, Hash, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { createPost } from "@/lib/posts";
 
 interface CreateSpacePostModalProps {
   open: boolean;
@@ -52,7 +53,7 @@ export const CreateSpacePostModal: React.FC<CreateSpacePostModalProps> = ({
     setPollOptions(next);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
       toast.error("Please enter a title");
@@ -60,6 +61,10 @@ export const CreateSpacePostModal: React.FC<CreateSpacePostModalProps> = ({
     }
     if (!content.trim() && type !== "poll") {
       toast.error("Please add content to your post");
+      return;
+    }
+    if (!user?.uid) {
+      toast.error("Please sign in before posting");
       return;
     }
 
@@ -70,44 +75,49 @@ export const CreateSpacePostModal: React.FC<CreateSpacePostModalProps> = ({
       .map((t) => t.replace("#", "").trim())
       .filter(Boolean);
 
-    const createdPost = {
-      id: `post-${Date.now()}`,
-      title: title.trim(),
-      body: content.trim(),
-      type: type === "post" ? "discussion" : type,
-      authorUid: user?.uid || "u1",
-      authorName: user?.displayName || "You",
-      authorAvatar: user?.photoURL || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80",
-      score: 1,
-      commentCount: 0,
-      shareCount: 0,
-      tags: tags.length ? tags : [spaceSlug],
-      communitySlug: spaceSlug,
-      createdAt: new Date().toISOString(),
-      isVerified: true,
-      ...(type === "poll"
-        ? {
-            pollData: {
-              options: pollOptions
-                .filter((o) => o.trim())
-                .map((label) => ({ label, votes: 1, percentage: 0 })),
-              totalVotes: 1,
-              endsIn: "2 days",
-            },
-          }
-        : {}),
-    };
+    // "home" is the generic home-feed composer, not a real community —
+    // post it as a general (community-less) post instead of faking a slug.
+    const communitySlug = spaceSlug && spaceSlug !== "home" ? spaceSlug : undefined;
 
-    setTimeout(() => {
-      setSubmitting(false);
+    try {
+      const newId = await createPost({
+        title: title.trim(),
+        body: content.trim(),
+        type: type === "post" || type === "poll" ? "discussion" : type,
+        tags: tags.length ? tags : [spaceSlug],
+        communitySlug,
+        author: {
+          uid: user.uid,
+          name: user.displayName || "You",
+          reputation: 0,
+        },
+        score: 0,
+        commentCount: 0,
+        timeAgo: "Just now",
+      } as any);
+
       toast.success("Post created successfully!");
-      if (onPostCreated) onPostCreated(createdPost);
+      if (onPostCreated) {
+        onPostCreated({
+          id: newId,
+          authorName: user.displayName || "You",
+          authorAvatar: user.photoURL,
+          type: type === "post" || type === "poll" ? "discussion" : type,
+          title: title.trim(),
+          body: content.trim(),
+          tags: tags.length ? tags : [spaceSlug],
+        });
+      }
       onOpenChange(false);
       setTitle("");
       setContent("");
       setTagsInput("");
       setPollOptions(["", ""]);
-    }, 400);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to publish post");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

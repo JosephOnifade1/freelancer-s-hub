@@ -27,6 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { getUserProfile, toggleFollow, updateUserAvatar, isVeteran } from "@/lib/users";
 import { fetchPosts } from "@/lib/posts";
+import { getUserCommunities } from "@/lib/communities";
 import { fetchCommentsByAuthor, updateComment, softDeleteComment } from "@/lib/comments";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatTimeAgo } from "@/lib/utils";
@@ -168,6 +169,12 @@ export default function Profile() {
     enabled: !!profile
   });
 
+  const { data: joinedCommunities = [] } = useQuery({
+    queryKey: ["userCommunities", profile?.uid],
+    queryFn: () => (profile?.uid ? getUserCommunities(profile.uid) : []),
+    enabled: !!profile?.uid,
+  });
+
   // Filter posts created by this user
   const userPosts = profile ? allPosts.filter((p) => 
     !p.isDeleted && (
@@ -272,11 +279,11 @@ export default function Profile() {
   }
 
   // Format stats
-  const postsCount = userPosts.length > 0 ? userPosts.length : (profile.postsCount || 164);
-  const followersCount = profile.followers ? (profile.followers > 999 ? `${(profile.followers / 1000).toFixed(1)}K` : profile.followers) : "3.2K";
-  const followingCount = profile.following ? profile.following : 312;
-  const resourcesCount = resourcePosts.length > 0 ? resourcePosts.length : 28;
-  const spacesCount = profile.spacesCount || 12;
+  const postsCount = userPosts.length;
+  const followersCount = profile.followers ? (profile.followers > 999 ? `${(profile.followers / 1000).toFixed(1)}K` : profile.followers) : 0;
+  const followingCount = profile.following || 0;
+  const resourcesCount = resourcePosts.length;
+  const spacesCount = joinedCommunities.length;
 
   // Skills with percent
   const defaultSkills = [
@@ -407,16 +414,16 @@ export default function Profile() {
                 <div className="space-y-1 mb-3">
                   <div className="flex items-center gap-2">
                     <h2 className="font-heading text-xl sm:text-2xl font-bold text-foreground">
-                      {profile.displayName || profile.username || "MarceloDev"}
+                      {profile.displayName || profile.username || "User"}
                     </h2>
-                    <VerifiedBadge isVerified={profile.isVerifiedPro ?? true} size={18} />
+                    <VerifiedBadge isVerified={profile.isVerifiedPro ?? false} size={18} />
                     <span className="flex items-center gap-1 text-xs text-emerald-400 font-medium">
                       <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                       Online
                     </span>
                   </div>
                   <p className="text-sm text-muted-foreground font-mono">
-                    @{profile.username || "MarceloDev"}
+                    @{profile.username || "unknown"}
                   </p>
                 </div>
 
@@ -539,237 +546,11 @@ export default function Profile() {
             <div className="space-y-4">
               {activeTab === "Threads" && (
                 userPosts.length === 0 ? (
-                  // Sample profile threads matching screenshot if empty
-                  <div className="space-y-4">
-                    
-                    {/* Thread Item 1 */}
-                    <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-3 shadow-sm">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
-                          <img 
-                            src={profile.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"} 
-                            alt="Avatar" 
-                            className="h-7 w-7 rounded-full object-cover" 
-                          />
-                          <span className="font-bold text-foreground flex items-center gap-1">
-                            {profile.displayName || "MarceloDev"}
-                            <VerifiedBadge isVerified={true} size={14} />
-                          </span>
-                          <span>• 2h ago</span>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                            RESOURCE
-                          </span>
-                        </div>
-                        <button className="text-muted-foreground hover:text-foreground">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </button>
-                      </div>
-
-                      <div className="flex gap-4 items-start justify-between">
-                        <div className="space-y-2 flex-1 min-w-0">
-                          <h3 className="font-heading font-bold text-base text-foreground">
-                            The freelance pricing calculator I built (free)
-                          </h3>
-                          <p className="text-sm text-muted-foreground leading-relaxed">
-                            Simple Notion template to help you price projects with confidence. It's saved me from undercharging for years.
-                          </p>
-                          <div className="flex gap-2 text-xs font-mono text-muted-foreground pt-1">
-                            <span>#pricing</span>
-                            <span>#freelancing</span>
-                            <span>#tools</span>
-                          </div>
-                        </div>
-
-                        {/* Thumbnail image */}
-                        <div className="h-20 w-32 rounded-lg bg-slate-800 border border-border/40 overflow-hidden shrink-0 hidden sm:block">
-                          <img 
-                            src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=300&q=80" 
-                            alt="Template" 
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/30">
-                        <VoteControls score={187} entityId="mock-profile-p1" type="post" orientation="horizontal" />
-                        <button className="flex items-center gap-1.5 hover:text-primary transition-colors">
-                          <MessageSquare className="h-4 w-4" /> 42
-                        </button>
-                        <button className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors">
-                          <Repeat className="h-4 w-4" /> 12
-                        </button>
-                        <button className="hover:text-amber-400 transition-colors">
-                          <Bookmark className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Thread Item 2 */}
-                    <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-3 shadow-sm">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
-                          <img 
-                            src={profile.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"} 
-                            alt="Avatar" 
-                            className="h-7 w-7 rounded-full object-cover" 
-                          />
-                          <span className="font-bold text-foreground flex items-center gap-1">
-                            {profile.displayName || "MarceloDev"}
-                            <VerifiedBadge isVerified={true} size={14} />
-                          </span>
-                          <span>• 1d ago</span>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                            QUESTION
-                          </span>
-                        </div>
-                        <button className="text-muted-foreground hover:text-foreground">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </button>
-                      </div>
-
-                      <div className="space-y-2">
-                        <h3 className="font-heading font-bold text-base text-foreground">
-                          What's your biggest challenge right now?
-                        </h3>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
-                          Curious to hear what you're all struggling with this month. Drop your biggest challenge below 👇
-                        </p>
-                        <div className="flex gap-2 text-xs font-mono text-muted-foreground pt-1">
-                          <span>#discussion</span>
-                          <span>#freelancing</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/30">
-                        <VoteControls score={94} entityId="mock-profile-p2" type="post" orientation="horizontal" />
-                        <button className="flex items-center gap-1.5 hover:text-primary transition-colors">
-                          <MessageSquare className="h-4 w-4" /> 156
-                        </button>
-                        <button className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors">
-                          <Repeat className="h-4 w-4" /> 3
-                        </button>
-                        <button className="hover:text-amber-400 transition-colors">
-                          <Bookmark className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Thread Item 3 */}
-                    <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-3 shadow-sm">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
-                          <img 
-                            src={profile.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"} 
-                            alt="Avatar" 
-                            className="h-7 w-7 rounded-full object-cover" 
-                          />
-                          <span className="font-bold text-foreground flex items-center gap-1">
-                            {profile.displayName || "MarceloDev"}
-                            <VerifiedBadge isVerified={true} size={14} />
-                          </span>
-                          <span>• 3d ago</span>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                            RESOURCE
-                          </span>
-                        </div>
-                        <button className="text-muted-foreground hover:text-foreground">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </button>
-                      </div>
-
-                      <div className="flex gap-4 items-start justify-between">
-                        <div className="space-y-2 flex-1 min-w-0">
-                          <h3 className="font-heading font-bold text-base text-foreground">
-                            My ultimate VS Code setup for productivity
-                          </h3>
-                          <p className="text-sm text-muted-foreground leading-relaxed">
-                            Extensions, settings, and tweaks that make coding 10x faster. I use this every day.
-                          </p>
-                          <div className="flex gap-2 text-xs font-mono text-muted-foreground pt-1">
-                            <span>#vscode</span>
-                            <span>#productivity</span>
-                            <span>#tools</span>
-                          </div>
-                        </div>
-
-                        <div className="h-20 w-32 rounded-lg bg-muted border border-border/40 overflow-hidden shrink-0 hidden sm:block">
-                          <img 
-                            src="https://images.unsplash.com/photo-1542831371-29b0f74f9713?auto=format&fit=crop&w=300&q=80" 
-                            alt="VS Code Setup" 
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/30">
-                        <VoteControls score={231} entityId="mock-profile-p3" type="post" orientation="horizontal" />
-                        <button className="flex items-center gap-1.5 hover:text-primary transition-colors">
-                          <MessageSquare className="h-4 w-4" /> 64
-                        </button>
-                        <button className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors">
-                          <Repeat className="h-4 w-4" /> 18
-                        </button>
-                        <button className="hover:text-amber-400 transition-colors">
-                          <Bookmark className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Thread Item 4 */}
-                    <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-3 shadow-sm">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
-                          <img 
-                            src={profile.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"} 
-                            alt="Avatar" 
-                            className="h-7 w-7 rounded-full object-cover" 
-                          />
-                          <span className="font-bold text-foreground flex items-center gap-1">
-                            {profile.displayName || "MarceloDev"}
-                            <VerifiedBadge isVerified={true} size={14} />
-                          </span>
-                          <span>• 5d ago</span>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            WEEKLY
-                          </span>
-                        </div>
-                        <button className="text-muted-foreground hover:text-foreground">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </button>
-                      </div>
-
-                      <div className="space-y-2">
-                        <h3 className="font-heading font-bold text-base text-foreground">
-                          🏆 Weekly Win: Landed a SaaS client 🎉
-                        </h3>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
-                          After weeks of outreach, finally closed a long-term SaaS project. Persistence pays off!
-                        </p>
-                        <div className="flex gap-2 text-xs font-mono text-muted-foreground pt-1">
-                          <span>#wins</span>
-                          <span>#clients</span>
-                          <span>#freelancing</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/30">
-                        <VoteControls score={278} entityId="mock-profile-p4" type="post" orientation="horizontal" />
-                        <button className="flex items-center gap-1.5 hover:text-primary transition-colors">
-                          <MessageSquare className="h-4 w-4" /> 89
-                        </button>
-                        <button className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors">
-                          <Repeat className="h-4 w-4" /> 6
-                        </button>
-                        <button className="hover:text-amber-400 transition-colors">
-                          <Bookmark className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="py-6 text-center text-xs text-muted-foreground font-mono">
-                      No more posts
-                    </div>
-
+                  <div className="rounded-2xl border border-border/40 bg-card p-10 text-center space-y-2">
+                    <p className="font-heading font-bold text-foreground uppercase tracking-wide">No posts yet</p>
+                    <p className="text-sm text-muted-foreground">
+                      Posts this user publishes will show up here.
+                    </p>
                   </div>
                 ) : (
                   userPosts.map((post, i) => <PostCard key={post.id} post={post} index={i} />)

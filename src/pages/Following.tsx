@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { useQuery } from "@tanstack/react-query";
 import { fetchPosts } from "@/lib/posts";
-import { getUserProfile } from "@/lib/users";
+import { getUserProfile, getFollowingIds } from "@/lib/users";
 import { useAuth } from "@/hooks/useAuth";
 
 const Following = () => {
@@ -23,8 +23,13 @@ const Following = () => {
     queryFn: fetchPosts
   });
 
-  const followingList = profile?.followingList || {};
-  const followingPosts = posts.filter(post => post.author?.uid && followingList[post.author.uid]);
+  const { data: followingIds = [] } = useQuery({
+    queryKey: ['followingIds', user?.uid],
+    queryFn: () => (user?.uid ? getFollowingIds(user.uid) : []),
+    enabled: !!user?.uid,
+  });
+
+  const followingPosts = posts.filter(post => post.author?.uid && followingIds.includes(post.author.uid));
   const sorted = [...followingPosts].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
   return (
