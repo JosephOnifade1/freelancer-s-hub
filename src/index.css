@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Geist+Mono:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -7,147 +7,172 @@
 @layer base {
   :root {
     --font-heading: 'Syne', sans-serif;
-    --font-body: 'Plus Jakarta Sans', sans-serif;
+    --font-body: 'Geist Mono', monospace;
 
-    /* Base Dark Colors (Default) */
-    --background: 230 30% 4%;
-    --foreground: 220 20% 92%;
-    --card: 230 28% 7%;
-    --card-foreground: 220 20% 92%;
-    --popover: 230 28% 7%;
-    --popover-foreground: 220 20% 92%;
-    --primary: 239 84% 67%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 230 25% 12%;
-    --secondary-foreground: 220 20% 85%;
-    --muted: 230 20% 14%;
-    --muted-foreground: 220 10% 55%;
-    --accent: 239 84% 67%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 72% 51%;
+    /* ============================================================
+       DARK TERMINAL (default) — Neo-Brutalist Cyber-Industrial
+       Pitch-black backdrop, acid-green accent, zero radius.
+       ============================================================ */
+    --background: 0 0% 4%;
+    --foreground: 80 15% 92%;
+    --card: 0 0% 6%;
+    --card-foreground: 80 15% 92%;
+    --popover: 0 0% 6%;
+    --popover-foreground: 80 15% 92%;
+    --primary: 75 100% 65%;
+    --primary-foreground: 0 0% 5%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 80 10% 85%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 52%;
+    --accent: 75 100% 65%;
+    --accent-foreground: 0 0% 5%;
+    --destructive: 4 90% 58%;
     --destructive-foreground: 0 0% 100%;
-    --border: 230 20% 15%;
-    --input: 230 20% 15%;
-    --ring: 239 84% 67%;
-    --radius: 0.75rem;
+    --warning: 42 100% 56%;
+    --warning-foreground: 0 0% 5%;
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 75 100% 65%;
+    --radius: 0px;
 
-    --sidebar-background: 230 30% 5%;
-    --sidebar-foreground: 220 15% 70%;
-    --sidebar-primary: 239 84% 67%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 230 25% 10%;
-    --sidebar-accent-foreground: 220 20% 90%;
-    --sidebar-border: 230 20% 12%;
-    --sidebar-ring: 239 84% 67%;
+    --sidebar-background: 0 0% 3%;
+    --sidebar-foreground: 0 0% 65%;
+    --sidebar-primary: 75 100% 65%;
+    --sidebar-primary-foreground: 0 0% 5%;
+    --sidebar-accent: 0 0% 9%;
+    --sidebar-accent-foreground: 80 15% 92%;
+    --sidebar-border: 0 0% 14%;
+    --sidebar-ring: 75 100% 65%;
 
-    /* Custom tokens */
-    --bg-app: #09090B;
-    --bg-surface: #0D0D11;
-    --bg-sidebar: #070709;
-    --text-primary: #ECECEE;
-    --text-muted: #94A3B8;
-    --brand-primary: #6366F1;
+    /* Custom tokens (still referenced directly via var() in some components) */
+    --bg-app: #0A0A0A;
+    --bg-surface: #0F0F0F;
+    --bg-sidebar: #070707;
+    --text-primary: #ECECEC;
+    --text-muted: #8A8A8A;
+    --brand-primary: #D1FF4A;
     --brand-accent: #D1FF4A;
     --brand-danger: #EF4444;
-    --border-main: rgba(255, 255, 255, 0.1);
-    --border-strong: rgba(255, 255, 255, 0.2);
-    --glow-primary: 239 84% 67%;
+    --brand-warning: #FFB020;
+    --brand-info: #4AE8FF;
+    --border-main: rgba(209, 255, 74, 0.14);
+    --border-strong: rgba(209, 255, 74, 0.32);
+    --glow-primary: 75 100% 65%;
+
+    /* Proper translucent tints — computed once here so components never
+       have to rely on Tailwind's /NN opacity modifier against a hex-string
+       custom property (that combination silently fails and renders solid). */
+    --brand-primary-soft: rgba(209, 255, 74, 0.12);
+    --brand-info-soft: rgba(74, 232, 255, 0.12);
+    --brand-warning-soft: rgba(255, 176, 32, 0.12);
+    --brand-danger-soft: rgba(239, 68, 68, 0.12);
+
+    /* Blueprint dot-matrix grid */
+    --grid-dot-color: rgba(209, 255, 74, 0.16);
+    --grid-line-color: rgba(255, 255, 255, 0.035);
   }
-}
 
-/* Global Theme Classes (Outside layer for max priority) */
-.theme-dark {
-  --background: 230 30% 4%;
-  --foreground: 220 20% 92%;
-  --card: 230 28% 7%;
-  --bg-app: #09090B;
-  --bg-surface: #0D0D11;
-  --bg-sidebar: #070709;
-  --text-primary: #ECECEE;
-  --text-muted: #94A3B8;
-  --brand-primary: #6366F1;
-  --brand-accent: #D1FF4A;
-  --border-main: rgba(255, 255, 255, 0.1);
-  --border-strong: rgba(255, 255, 255, 0.2);
-}
+  .theme-dark {
+    --background: 0 0% 4%;
+    --foreground: 80 15% 92%;
+    --card: 0 0% 6%;
+    --bg-app: #0A0A0A;
+    --bg-surface: #0F0F0F;
+    --bg-sidebar: #070707;
+    --text-primary: #ECECEC;
+    --text-muted: #8A8A8A;
+    --brand-primary: #D1FF4A;
+    --brand-accent: #D1FF4A;
+    --border-main: rgba(209, 255, 74, 0.14);
+    --border-strong: rgba(209, 255, 74, 0.32);
+    --grid-dot-color: rgba(209, 255, 74, 0.16);
+    --grid-line-color: rgba(255, 255, 255, 0.035);
+  }
 
-.theme-light {
-  /* Soft-Light Palette (Reddit Fidelity) */
-  --background: 210 20% 96%; /* #F0F2F5 approx */
-  --foreground: 220 10% 10%;
-  --card: 0 0% 100%;
-  --card-foreground: 220 10% 10%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 220 10% 10%;
-  --primary: 235 86% 65%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 210 20% 98%;
-  --secondary-foreground: 220 10% 10%;
-  --muted: 210 20% 96%;
-  --muted-foreground: 212 10% 38%;
-  --accent: 99 44% 48%;
-  --accent-foreground: 0 0% 100%;
-  --border: 210 20% 90%;
-  --input: 210 20% 90%;
-  --ring: 235 86% 65%;
-  --sidebar-background: 200 15% 97%;
-  --sidebar-foreground: 212 10% 38%;
-  --sidebar-border: 210 20% 92%;
-  --sidebar-accent: 210 20% 90%;
-  --sidebar-accent-foreground: 220 10% 10%;
+  /* ============================================================
+     LIGHT BLUEPRINT — same system, inverted onto white "paper"
+     with black ink and a darker green for legible text/links.
+     ============================================================ */
+  .theme-light {
+    --background: 60 20% 97%;
+    --foreground: 0 0% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 8%;
+    --primary: 82 88% 30%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 60 15% 94%;
+    --secondary-foreground: 0 0% 8%;
+    --muted: 60 15% 93%;
+    --muted-foreground: 0 0% 38%;
+    --accent: 82 88% 30%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 4 80% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --warning: 38 95% 42%;
+    --warning-foreground: 0 0% 100%;
+    --border: 0 0% 10%;
+    --input: 0 0% 10%;
+    --ring: 82 88% 30%;
 
-  --bg-app: #F0F2F5;
-  --bg-surface: #FFFFFF;
-  --bg-sidebar: #F7F9FA;
-  --text-primary: #1A1A1B;
-  --text-muted: #57606A;
-  --brand-primary: #5865F2;
-  --brand-accent: #6AB344;
-  --brand-danger: #D97706;
-  --border-main: #EDEFF1;
-  --border-strong: #D1D5DB;
-  --soft-shadow: 0 2px 4px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
-}
+    --sidebar-background: 60 20% 98%;
+    --sidebar-foreground: 0 0% 25%;
+    --sidebar-primary: 82 88% 30%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 60 15% 93%;
+    --sidebar-accent-foreground: 0 0% 8%;
+    --sidebar-border: 0 0% 10%;
+    --sidebar-ring: 82 88% 30%;
 
-.theme-light .card,
-.theme-light [class*=\"Card\"],
-.theme-light [class*=\"rounded-xl\"] {
-  box-shadow: var(--soft-shadow) !important;
-  border-color: var(--border-main) !important;
-}
+    --bg-app: #FAFAF5;
+    --bg-surface: #FFFFFF;
+    --bg-sidebar: #F7F7F0;
+    --text-primary: #141414;
+    --text-muted: #5C5C54;
+    --brand-primary: #4C7A0F;
+    --brand-accent: #D1FF4A;
+    --brand-danger: #C0362C;
+    --brand-warning: #B8790A;
+    --brand-info: #0E7490;
+    --border-main: rgba(0, 0, 0, 0.14);
+    --border-strong: rgba(0, 0, 0, 0.4);
+    --soft-shadow: none;
+
+    --brand-primary-soft: rgba(76, 122, 15, 0.10);
+    --brand-info-soft: rgba(14, 116, 144, 0.10);
+    --brand-warning-soft: rgba(184, 121, 10, 0.10);
+    --brand-danger-soft: rgba(192, 54, 44, 0.10);
+
+    --grid-dot-color: rgba(0, 0, 0, 0.1);
+    --grid-line-color: rgba(0, 0, 0, 0.05);
+  }
 
   .landing-theme {
-    --font-heading: 'Inter', sans-serif;
-    --font-body: 'Inter', sans-serif;
+    --font-heading: 'Syne', sans-serif;
+    --font-body: 'Geist Mono', monospace;
 
-    /* Crisp White */
-    --background: 0 0% 100%;
-    /* Deep Charcoal */
-    --foreground: 220 20% 12%; 
-
-    --card: 0 0% 98%;
-    --card-foreground: 220 20% 12%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 12%;
-
-    /* Vibrant Violet for CTA */
-    --primary: 239 84% 67%;
-    --primary-foreground: 0 0% 100%;
-    
-    /* Lime Green */
+    --background: 0 0% 4%;
+    --foreground: 80 15% 92%;
+    --card: 0 0% 6%;
+    --card-foreground: 80 15% 92%;
+    --popover: 0 0% 6%;
+    --popover-foreground: 80 15% 92%;
+    --primary: 75 100% 65%;
+    --primary-foreground: 0 0% 5%;
     --accent: 75 100% 65%;
-    --accent-foreground: 220 20% 12%;
-
-    --secondary: 220 10% 95%;
-    --secondary-foreground: 220 20% 12%;
-    --muted: 220 10% 96%;
-    --muted-foreground: 220 10% 45%;
-
-    --border: 220 10% 90%;
-    --input: 220 10% 90%;
-    --ring: 239 84% 67%;
-    --glow-primary: 239 84% 67%;
+    --accent-foreground: 0 0% 5%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 80 15% 92%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 55%;
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 75 100% 65%;
+    --glow-primary: 75 100% 65%;
   }
+}
 
 @layer base {
   * {
@@ -157,11 +182,29 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-body);
-    transition: all 0.25s ease;
+    transition: background-color 0.25s ease, color 0.25s ease;
+    background-image:
+      radial-gradient(var(--grid-dot-color) 1px, transparent 1px),
+      linear-gradient(var(--grid-line-color) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line-color) 1px, transparent 1px);
+    background-size: 22px 22px, 88px 88px, 88px 88px;
+    background-attachment: fixed;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-heading {
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  /* Zero-radius, industrial-edge override. Targets every Tailwind
+     rounded-* utility in the app (cards, buttons, avatars, modals,
+     inputs) without needing to hand-edit each component. */
+  [class*="rounded"] {
+    border-radius: 0 !important;
   }
 }
 
@@ -171,13 +214,71 @@
   }
 
   .glow-primary {
-    box-shadow: 0 0 20px -5px hsl(var(--glow-primary) / 0.4);
+    box-shadow: 0 0 24px -4px hsl(var(--glow-primary) / 0.55);
   }
 
   .text-gradient-primary {
-    background: linear-gradient(135deg, hsl(var(--primary)), hsl(280 70% 65%));
+    background: linear-gradient(135deg, hsl(var(--primary)), var(--brand-info));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
+
+  .font-mono-tag {
+    font-family: var(--font-body);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+}
+
+/* ============================================================
+   COLOR SAFETY NET
+   Several pages still have Tailwind decorative color utilities
+   hardcoded (purple-500, indigo-600, etc.) left over from the old
+   theme. Rather than hunting every className string by hand, this
+   remaps the whole "cool decorative" family into the terminal's
+   two functional accents at the CSS layer, so nothing is left
+   showing the old palette. "Warm" (amber/orange) and "success"
+   (emerald/green/teal) families are left alone since they already
+   read correctly as warning/positive status colors in this theme.
+   ============================================================ */
+:is([class*="text-purple-"], [class*="text-indigo-"], [class*="text-violet-"],
+    [class*="text-fuchsia-"], [class*="text-pink-"], [class*="text-rose-"],
+    [class*="text-blue-"], [class*="text-sky-"], [class*="text-cyan-"]) {
+  color: var(--brand-info) !important;
+}
+:is([class*="bg-purple-"], [class*="bg-indigo-"], [class*="bg-violet-"],
+    [class*="bg-fuchsia-"], [class*="bg-pink-"], [class*="bg-rose-"],
+    [class*="bg-blue-"], [class*="bg-sky-"], [class*="bg-cyan-"]) {
+  /* Always a translucent wash — never solid. A solid override here is what
+     caused text to render invisible (text + background resolving to the
+     exact same color) and stomped existing /10, /20 opacity tints into
+     opaque blocks. color-mix keeps it a subtle tint regardless of what
+     opacity suffix (if any) the original class had. */
+  background-color: color-mix(in srgb, var(--brand-info) 24%, transparent) !important;
+}
+:is([class*="border-purple-"], [class*="border-indigo-"], [class*="border-violet-"],
+    [class*="border-fuchsia-"], [class*="border-pink-"], [class*="border-rose-"],
+    [class*="border-blue-"], [class*="border-sky-"], [class*="border-cyan-"]) {
+  border-color: var(--brand-info) !important;
+}
+:is([class*="ring-purple-"], [class*="ring-indigo-"], [class*="ring-violet-"],
+    [class*="ring-blue-"], [class*="ring-cyan-"]) {
+  --tw-ring-color: var(--brand-info) !important;
+}
+:is([class*="fill-purple-"], [class*="fill-indigo-"], [class*="fill-blue-"],
+    [class*="fill-cyan-"]) {
+  fill: var(--brand-info) !important;
+}
+:is([class*="from-purple-"], [class*="from-indigo-"], [class*="from-violet-"],
+    [class*="from-blue-"], [class*="from-cyan-"]) {
+  --tw-gradient-from: var(--brand-info) var(--tw-gradient-from-position) !important;
+}
+:is([class*="via-purple-"], [class*="via-indigo-"], [class*="via-violet-"],
+    [class*="via-blue-"], [class*="via-cyan-"]) {
+  --tw-gradient-via: var(--brand-info) var(--tw-gradient-via-position) !important;
+}
+:is([class*="to-purple-"], [class*="to-indigo-"], [class*="to-violet-"],
+    [class*="to-blue-"], [class*="to-cyan-"]) {
+  --tw-gradient-to: var(--brand-info) var(--tw-gradient-to-position) !important;
 }

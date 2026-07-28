@@ -33,47 +33,49 @@ export interface CommunityData {
 
 // ─── Visual styling lookup (category → look) ───────────────────────────────
 // This is intentionally NOT in the database. It's presentation logic: given
-// a category, what icon/gradient/accent should the card use. Add a new
-// category style here if you add a new category — no DB migration needed.
+// a category, what icon/accent should the card use. Add a new category style
+// here if you add a new category — no DB migration needed.
+// Kept to the terminal's functional palette (acid green / cyan / amber) —
+// no decorative rainbow, categories differentiate by icon + label, not hue.
 const CATEGORY_STYLE: Record<
   string,
   { icon: LucideIcon; bgGradient: string; accentColor: string; iconBg: string }
 > = {
   Development: {
     icon: Code2,
-    bgGradient: "from-purple-900/40 via-indigo-900/30 to-background",
-    accentColor: "bg-purple-600",
-    iconBg: "bg-purple-600/20 text-purple-400 border-purple-500/30",
+    bgGradient: "from-[var(--brand-primary)]/20 via-black/40 to-background",
+    accentColor: "bg-[var(--brand-primary)]",
+    iconBg: "bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] border-[var(--brand-primary)]/30",
   },
   Design: {
     icon: Palette,
-    bgGradient: "from-cyan-900/40 via-blue-950/30 to-background",
-    accentColor: "bg-cyan-600",
-    iconBg: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
+    bgGradient: "from-[var(--brand-info)]/20 via-black/40 to-background",
+    accentColor: "bg-[var(--brand-info)]",
+    iconBg: "bg-[var(--brand-info-soft)] text-[var(--brand-info)] border-[var(--brand-info)]/30",
   },
   Business: {
     icon: Briefcase,
-    bgGradient: "from-emerald-900/40 via-teal-950/30 to-background",
-    accentColor: "bg-emerald-600",
-    iconBg: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+    bgGradient: "from-[var(--brand-primary)]/20 via-black/40 to-background",
+    accentColor: "bg-[var(--brand-primary)]",
+    iconBg: "bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] border-[var(--brand-primary)]/30",
   },
   Marketing: {
     icon: Megaphone,
-    bgGradient: "from-orange-900/40 via-amber-950/30 to-background",
-    accentColor: "bg-orange-600",
-    iconBg: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+    bgGradient: "from-[var(--brand-warning)]/20 via-black/40 to-background",
+    accentColor: "bg-[var(--brand-warning)]",
+    iconBg: "bg-[var(--brand-warning-soft)] text-[var(--brand-warning)] border-[var(--brand-warning)]/30",
   },
   Lifestyle: {
     icon: Leaf,
-    bgGradient: "from-pink-900/40 via-rose-950/30 to-background",
-    accentColor: "bg-pink-600",
-    iconBg: "bg-pink-500/20 text-pink-400 border-pink-500/30",
+    bgGradient: "from-[var(--brand-info)]/20 via-black/40 to-background",
+    accentColor: "bg-[var(--brand-info)]",
+    iconBg: "bg-[var(--brand-info-soft)] text-[var(--brand-info)] border-[var(--brand-info)]/30",
   },
   Other: {
     icon: Globe,
-    bgGradient: "from-teal-900/40 via-emerald-950/30 to-background",
-    accentColor: "bg-teal-600",
-    iconBg: "bg-teal-500/20 text-teal-400 border-teal-500/30",
+    bgGradient: "from-[var(--brand-primary)]/10 via-black/40 to-background",
+    accentColor: "bg-[var(--brand-primary)]",
+    iconBg: "bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] border-[var(--brand-primary)]/30",
   },
 };
 

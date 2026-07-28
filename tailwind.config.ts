@@ -15,7 +15,8 @@ export default {
     extend: {
       fontFamily: {
         heading: ["Syne", "sans-serif"],
-        body: ["Plus Jakarta Sans", "sans-serif"],
+        body: ["Geist Mono", "monospace"],
+        mono: ["Geist Mono", "monospace"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -34,6 +35,10 @@ export default {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",

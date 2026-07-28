@@ -4,24 +4,24 @@ import { BookOpen, MessageSquare, CircleHelp, Sparkles } from "lucide-react";
 type PostType = "discussion" | "question" | "resource" | "weekly";
 
 const typeConfig: Record<PostType, { label: string; className: string; icon?: React.ReactNode }> = {
-  discussion: { 
-    label: "Discussion", 
-    className: "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] border-[var(--brand-primary)]/20", 
-    icon: <MessageSquare className="h-3.5 w-3.5" /> 
+  discussion: {
+    label: "Discussion",
+    className: "bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] border-[var(--brand-primary)]/30",
+    icon: <MessageSquare className="h-3.5 w-3.5" />
   },
-  question: { 
-    label: "Question", 
-    className: "bg-[#6366F1]/10 text-[#6366F1] border-[#6366F1]/20", 
-    icon: <CircleHelp className="h-3.5 w-3.5" /> 
+  question: {
+    label: "Question",
+    className: "bg-[var(--brand-info-soft)] text-[var(--brand-info)] border-[var(--brand-info)]/30",
+    icon: <CircleHelp className="h-3.5 w-3.5" />
   },
-  resource: { 
-    label: "Resource", 
-    className: "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] border-[var(--brand-primary)]/20", 
-    icon: <Sparkles className="h-3.5 w-3.5" /> 
+  resource: {
+    label: "Resource",
+    className: "bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] border-[var(--brand-primary)]/30",
+    icon: <Sparkles className="h-3.5 w-3.5" />
   },
-  weekly: { 
-    label: "Weekly", 
-    className: "bg-purple-500/10 text-purple-500 border-purple-500/20" 
+  weekly: {
+    label: "Weekly",
+    className: "bg-[var(--brand-warning-soft)] text-[var(--brand-warning)] border-[var(--brand-warning)]/30"
   },
 };
 

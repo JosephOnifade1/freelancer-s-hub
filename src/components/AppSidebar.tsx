@@ -28,19 +28,19 @@ import {
 import { CreateCommunityModal } from "@/components/modals/CreateCommunityModal";
 
 const mainNav = [
-  { title: "Home", url: "/", icon: Home },
-  { title: "Following", url: "/following", icon: UserCheck },
+  { title: "FEED", url: "/", icon: Home },
+  { title: "FOLLOWING", url: "/following", icon: UserCheck },
 ];
 
 const discover = [
-  { title: "Borynx Spaces", url: "/communities", icon: Compass },
-  { title: "Leads Board", url: "/l", icon: Briefcase },
-  { title: "Bookmarks", url: "/bookmarks", icon: Bookmark },
-  { title: "Achievements", url: "/achievements", icon: Trophy },
+  { title: "NODE_SPACES", url: "/communities", icon: Compass },
+  { title: "LEADS", url: "/l", icon: Briefcase },
+  { title: "SAVED", url: "/bookmarks", icon: Bookmark },
+  { title: "ACHV", url: "/achievements", icon: Trophy },
 ];
 
 const personal = [
-  { title: "Settings", url: "/settings", icon: Settings },
+  { title: "CONFIG", url: "/settings", icon: Settings },
 ];
 
 export function AppSidebar() {
@@ -57,7 +57,7 @@ export function AppSidebar() {
       <SidebarContent className="pt-6">
         <SidebarGroup className="px-0">
           <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 px-8 h-10 transition-all duration-300 ease-in-out opacity-100">
-            Feed
+            SYS::FEED
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -71,7 +71,7 @@ export function AppSidebar() {
                         : "text-[var(--text-muted)] hover:bg-accent/50 hover:text-[var(--text-primary)]"
                     )}>
                       <item.icon className="h-[17px] w-[17px] shrink-0" strokeWidth={isActive(item.url) ? 2.5 : 1.5} />
-                      <span className="text-[14px] whitespace-nowrap transition-all duration-300 opacity-100">
+                      <span className="text-[13px] tracking-wide whitespace-nowrap transition-all duration-300 opacity-100">
                         {item.title}
                       </span>
                     </NavLink>
@@ -84,7 +84,7 @@ export function AppSidebar() {
 
         <SidebarGroup className="px-0">
           <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 px-8 h-10 transition-all duration-300 ease-in-out opacity-100">
-            Spaces
+            SYS::SPACES
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -99,13 +99,13 @@ export function AppSidebar() {
                           : "text-[var(--text-muted)] hover:bg-accent/50 hover:text-[var(--text-primary)]"
                       )}>
                         <item.icon className="h-[17px] w-[17px] shrink-0" strokeWidth={isActive(item.url) ? 2.5 : 1.5} />
-                        <span className="text-[14px] whitespace-nowrap transition-all duration-300 opacity-100">
+                        <span className="text-[13px] tracking-wide whitespace-nowrap transition-all duration-300 opacity-100">
                           {item.title}
                         </span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  {item.title === "Borynx Spaces" && (
+                  {item.title === "NODE_SPACES" && (
                     <SidebarMenuItem className="px-8 mt-1 mb-1">
                       <CreateCommunityModal>
                         <SidebarMenuButton variant="ghost" className="p-0 h-auto hover:bg-transparent overflow-hidden">
@@ -114,8 +114,8 @@ export function AppSidebar() {
                             "text-[var(--text-muted)] hover:bg-accent/50 hover:text-[var(--text-primary)] cursor-pointer"
                           )}>
                             <Plus className="h-[17px] w-[17px] shrink-0" strokeWidth={1.5} />
-                            <span className="text-[14px] whitespace-nowrap transition-all duration-300 opacity-100">
-                              Start a B-Space
+                            <span className="text-[13px] tracking-wide whitespace-nowrap transition-all duration-300 opacity-100">
+                              + NEW_SPACE
                             </span>
                           </div>
                         </SidebarMenuButton>
@@ -130,7 +130,7 @@ export function AppSidebar() {
 
         <SidebarGroup className="px-0">
           <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 px-8 h-10 transition-all duration-300 ease-in-out opacity-100">
-            You
+            SYS::USER
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -144,7 +144,7 @@ export function AppSidebar() {
                         : "text-[var(--text-muted)] hover:bg-accent/50 hover:text-[var(--text-primary)]"
                     )}>
                       <item.icon className="h-[17px] w-[17px] shrink-0" strokeWidth={isActive(item.url) ? 2.5 : 1.5} />
-                      <span className="text-[14px] whitespace-nowrap transition-all duration-300 opacity-100">
+                      <span className="text-[13px] tracking-wide whitespace-nowrap transition-all duration-300 opacity-100">
                         {item.title}
                       </span>
                     </NavLink>
@@ -160,7 +160,7 @@ export function AppSidebar() {
         <div className="flex flex-col gap-2">
           <div className="rounded-lg border border-[var(--border-main)] bg-[var(--bg-surface)]/50 p-3 text-center">
             <p className="font-body text-xs text-muted-foreground">
-              Built for freelancers, by freelancers.
+              // BUILT_FOR_FREELANCERS_BY_FREELANCERS
             </p>
           </div>
         </div>
