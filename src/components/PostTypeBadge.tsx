@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, MessageSquare, CircleHelp, Sparkles } from "lucide-react";
+import { BookOpen, MessageSquare, CircleHelp, Sparkles, BarChart2 } from "lucide-react";
 
-type PostType = "discussion" | "question" | "resource" | "weekly";
+type PostType = "discussion" | "question" | "resource" | "weekly" | "poll";
 
 const typeConfig: Record<PostType, { label: string; className: string; icon?: React.ReactNode }> = {
   discussion: {
@@ -22,6 +22,11 @@ const typeConfig: Record<PostType, { label: string; className: string; icon?: Re
   weekly: {
     label: "Weekly",
     className: "bg-[var(--brand-warning-soft)] text-[var(--brand-warning)] border-[var(--brand-warning)]/30"
+  },
+  poll: {
+    label: "Poll",
+    className: "bg-[var(--brand-info-soft)] text-[var(--brand-info)] border-[var(--brand-info)]/30",
+    icon: <BarChart2 className="h-3.5 w-3.5" />
   },
 };
 

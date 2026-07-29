@@ -38,7 +38,6 @@ import {
   ChevronRight,
   TrendingUp,
 } from "lucide-react";
-import { CreateSpacePostModal } from "@/components/modals/CreateSpacePostModal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -53,8 +52,6 @@ const CommunityDetail = () => {
 
   // State
   const [activeTab, setActiveTab] = useState<"Feed" | "Discussions" | "Resources" | "Members" | "Events" | "About">("Feed");
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [modalType, setModalType] = useState<"post" | "question" | "resource" | "poll">("post");
   const [localPosts, setLocalPosts] = useState<any[]>([]);
   const [hasLoadedRealPosts, setHasLoadedRealPosts] = useState(false);
   const [votedPolls, setVotedPolls] = useState<Record<string, string>>({});
@@ -155,44 +152,8 @@ const CommunityDetail = () => {
   });
 
   const handleOpenComposer = (type: "post" | "question" | "resource" | "poll") => {
-    setModalType(type);
-    setCreateModalOpen(true);
-  };
-
-  const handleNewPostCreated = (newPost: any) => {
-    setLocalPosts([
-      {
-        id: newPost.id || `post-${Date.now()}`,
-        authorName: newPost.authorName || "User",
-        authorAvatar: newPost.authorAvatar || "",
-        isVerified: profile?.isVerifiedPro ?? false,
-        timeAgo: "Just now",
-        badge: (newPost.type || "post").toUpperCase(),
-        badgeColor: "bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] border-[var(--brand-primary)]/30",
-        type: newPost.type || "post",
-        title: newPost.title || "Untitled Post",
-        body: newPost.body || "",
-        tags: Array.isArray(newPost.tags)
-          ? newPost.tags.map((t: string) => (t.startsWith("#") ? t : `#${t}`))
-          : [],
-        likes: 1,
-        comments: 0,
-        shares: 0,
-        isLiked: true,
-        isBookmarked: false,
-        pollOptions: Array.isArray(newPost.pollData?.options)
-          ? newPost.pollData.options.map((o: any) => ({
-              id: o.label,
-              label: o.label,
-              percent: 100,
-              votes: 1,
-            }))
-          : undefined,
-        totalVotes: newPost.pollData ? 1 : undefined,
-        endsIn: newPost.pollData?.endsIn,
-      },
-      ...localPosts,
-    ]);
+    const mappedType = type === "post" ? "discussion" : type;
+    navigate(`/submit?type=${mappedType}&space=${slug}`);
   };
 
   const handleToggleLike = (postId: string) => {
@@ -835,16 +796,6 @@ const CommunityDetail = () => {
         >
           <PenTool className="h-5 w-5" />
         </button>
-
-        {/* Create Space Post Modal */}
-        <CreateSpacePostModal
-          open={createModalOpen}
-          onOpenChange={setCreateModalOpen}
-          spaceSlug={slug || ""}
-          spaceName={spaceName}
-          initialType={modalType}
-          onPostCreated={handleNewPostCreated}
-        />
       </div>
     </AppLayout>
   );

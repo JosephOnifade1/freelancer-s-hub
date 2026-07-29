@@ -165,7 +165,9 @@ export const fetchPostsByAuthor = async (uid: string): Promise<PostData[]> => {
   }));
 };
 
-export const createPost = async (postData: Omit<PostData, "id">) => {
+export const createPost = async (
+  postData: Omit<PostData, "id"> & { pollOptions?: string[] }
+) => {
   const { data, error } = await supabase
     .from("posts")
     .insert({
@@ -183,12 +185,35 @@ export const createPost = async (postData: Omit<PostData, "id">) => {
       isEdited: false,
       authorUid: postData.author?.uid,
       communitySlug: postData.communitySlug || null,
+      visibility: postData.visibility || "public",
+      allowComments: postData.allowComments ?? true,
+      isPinned: postData.isPinned ?? false,
+      externalLink: postData.externalLink || null,
     })
     .select("id")
     .single();
 
   if (error) throw new Error(error.message);
-  return data?.id as string;
+  const postId = data?.id as string;
+
+  // Real poll: create the poll row + its options so voting has something
+  // to attach to. Silently skipped if no options were actually provided.
+  const cleanOptions = (postData.pollOptions || []).map((o) => o.trim()).filter(Boolean);
+  if (postData.type === "poll" && cleanOptions.length >= 2) {
+    const { data: poll, error: pollError } = await supabase
+      .from("polls")
+      .insert({ postId })
+      .select("id")
+      .single();
+
+    if (!pollError && poll?.id) {
+      await supabase.from("poll_options").insert(
+        cleanOptions.map((label, i) => ({ pollId: poll.id, label, position: i }))
+      );
+    }
+  }
+
+  return postId;
 };
 
 export const fetchPostById = async (id: string): Promise<PostData | null> => {

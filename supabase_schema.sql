@@ -69,7 +69,34 @@ create table if not exists public.posts (
   "createdAt" timestamptz default now(),
   "authorUid" uuid references public.profiles("uid") on delete cascade,
   "communitySlug" text references public.communities("slug") on delete cascade,
+  "visibility" text default 'public' check ("visibility" in ('public', 'members', 'admins')),
+  "allowComments" boolean default true,
+  "isPinned" boolean default false,
+  "externalLink" text,
   constraint posts_authorUid_fkey foreign key ("authorUid") references public.profiles("uid") on delete cascade
+);
+
+-- Polls (one-to-one with a post when post.type = 'poll')
+create table if not exists public.polls (
+  "id" uuid primary key default gen_random_uuid(),
+  "postId" uuid not null references public.posts("id") on delete cascade,
+  "createdAt" timestamptz default now()
+);
+
+create table if not exists public.poll_options (
+  "id" uuid primary key default gen_random_uuid(),
+  "pollId" uuid not null references public.polls("id") on delete cascade,
+  "label" text not null,
+  "position" integer default 0
+);
+
+create table if not exists public.poll_votes (
+  "id" uuid primary key default gen_random_uuid(),
+  "pollId" uuid not null references public.polls("id") on delete cascade,
+  "pollOptionId" uuid not null references public.poll_options("id") on delete cascade,
+  "userId" uuid not null references public.profiles("uid") on delete cascade,
+  "createdAt" timestamptz default now(),
+  unique ("pollId", "userId")
 );
 
 -- Comments
@@ -196,6 +223,34 @@ create policy "Authors can update/delete their posts" on public.posts for update
 
 drop policy if exists "Anyone can update post views, score, and commentCount" on public.posts;
 create policy "Anyone can update post views, score, and commentCount" on public.posts for update using (true);
+
+-- polls RLS
+alter table public.polls enable row level security;
+alter table public.poll_options enable row level security;
+alter table public.poll_votes enable row level security;
+
+drop policy if exists "Public read polls" on public.polls;
+create policy "Public read polls" on public.polls for select using (true);
+drop policy if exists "Post author can create poll" on public.polls;
+create policy "Post author can create poll" on public.polls for insert with check (
+  exists (select 1 from public.posts where posts."id" = "postId" and posts."authorUid" = auth.uid())
+);
+
+drop policy if exists "Public read poll options" on public.poll_options;
+create policy "Public read poll options" on public.poll_options for select using (true);
+drop policy if exists "Post author can create poll options" on public.poll_options;
+create policy "Post author can create poll options" on public.poll_options for insert with check (
+  exists (
+    select 1 from public.polls
+    join public.posts on posts."id" = polls."postId"
+    where polls."id" = "pollId" and posts."authorUid" = auth.uid()
+  )
+);
+
+drop policy if exists "Public read poll votes" on public.poll_votes;
+create policy "Public read poll votes" on public.poll_votes for select using (true);
+drop policy if exists "Auth users can vote once per poll" on public.poll_votes;
+create policy "Auth users can vote once per poll" on public.poll_votes for insert with check (auth.uid() = "userId");
 
 -- comments RLS
 drop policy if exists "Public read comments" on public.comments;

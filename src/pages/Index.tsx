@@ -35,14 +35,11 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CreateSpacePostModal } from "@/components/modals/CreateSpacePostModal";
 
 const Index = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"For You" | "Following">("For You");
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [modalType, setModalType] = useState<"post" | "question" | "resource" | "poll">("post");
   const [postsList, setPostsList] = useState<any[]>([]);
   const [hasLoadedRealPosts, setHasLoadedRealPosts] = useState(false);
 
@@ -97,43 +94,9 @@ const Index = () => {
   });
 
   const handleOpenComposer = (type: "post" | "question" | "resource" | "poll") => {
-    setModalType(type);
-    setCreateModalOpen(true);
+    navigate(`/submit?type=${type === "post" ? "discussion" : type}`);
   };
 
-  const handleNewPostCreated = (newPost: {
-    id?: string;
-    authorName?: string;
-    authorAvatar?: string;
-    type?: string;
-    title?: string;
-    body?: string;
-    tags?: string[];
-  }) => {
-    setPostsList([
-      {
-        id: newPost.id || `home-p-${Date.now()}`,
-        authorName: newPost.authorName || profile?.displayName || user?.displayName || "You",
-        authorAvatar: newPost.authorAvatar || user?.photoURL || undefined,
-        isVerified: profile?.isVerifiedPro ?? false,
-        timeAgo: "Just now",
-        badge: (newPost.type || "post").toUpperCase(),
-        badgeColor: "bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] border-[var(--brand-primary)]/30",
-        type: newPost.type || "post",
-        title: newPost.title || "Untitled Post",
-        body: newPost.body || "",
-        tags: Array.isArray(newPost.tags)
-          ? newPost.tags.map((t: string) => (t.startsWith("#") ? t : `#${t}`))
-          : ["#general"],
-        likes: 1,
-        comments: 0,
-        shares: 0,
-        isLiked: true,
-        isBookmarked: false,
-      },
-      ...postsList,
-    ]);
-  };
 
   const handleToggleLike = (postId: string) => {
     setPostsList((prev) =>
@@ -199,7 +162,7 @@ const Index = () => {
               })}
             </div>
 
-            {/* Composer Bar: "What's on your mind?" */}
+            {/* Composer Bar */}
             <div className="rounded-2xl border border-border/60 bg-card p-4 space-y-3 shadow-sm">
               <div
                 onClick={() => handleOpenComposer("post")}
@@ -214,8 +177,8 @@ const Index = () => {
                   alt="User"
                   className="h-9 w-9 rounded-xl object-cover ring-1 ring-border/40 shrink-0"
                 />
-                <div className="flex-1 bg-muted/50 hover:bg-muted border border-border/40 rounded-xl px-4 py-2.5 text-xs text-muted-foreground transition-colors">
-                  What's on your mind?
+                <div className="flex-1 bg-muted/50 hover:bg-muted border border-border/40 rounded-xl px-4 py-2.5 text-xs text-muted-foreground transition-colors font-mono tracking-wide">
+                  &gt; new_transmission...
                 </div>
               </div>
 
@@ -602,16 +565,6 @@ const Index = () => {
         >
           <PenTool className="h-5 w-5" />
         </button>
-
-        {/* Create Post Modal */}
-        <CreateSpacePostModal
-          open={createModalOpen}
-          onOpenChange={setCreateModalOpen}
-          spaceSlug="home"
-          spaceName="Borynx Feed"
-          initialType={modalType}
-          onPostCreated={handleNewPostCreated}
-        />
       </div>
     </AppLayout>
   );

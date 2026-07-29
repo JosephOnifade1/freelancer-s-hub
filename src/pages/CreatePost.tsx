@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { 
   Feather, 
   X, 
@@ -71,6 +71,7 @@ interface BSpaceOption {
 
 const CreatePost = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const bodyImageInputRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -107,7 +108,11 @@ const CreatePost = () => {
   }, [realSpaces]);
 
   // Form State
-  const [postType, setPostType] = useState<PostType>("discussion");
+  const VALID_TYPES: PostType[] = ["discussion", "question", "resource", "poll"];
+  const typeParam = searchParams.get("type") as PostType | null;
+  const [postType, setPostType] = useState<PostType>(
+    typeParam && VALID_TYPES.includes(typeParam) ? typeParam : "discussion"
+  );
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [externalLink, setExternalLink] = useState("");
@@ -116,11 +121,13 @@ const CreatePost = () => {
 
   useEffect(() => {
     if (B_SPACES.length > 0 && selectedSpace.slug === "") {
-      setSelectedSpace(B_SPACES[0]);
+      const spaceParam = searchParams.get("space");
+      const preselected = spaceParam ? B_SPACES.find((s) => s.slug === spaceParam) : null;
+      setSelectedSpace(preselected || B_SPACES[0]);
     }
   }, [B_SPACES]);
 
-  const [tags, setTags] = useState<string[]>(["react", "frontend", "performance"]);
+  const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [bodyImages, setBodyImages] = useState<PendingBodyImage[]>([]);
@@ -206,9 +213,12 @@ const CreatePost = () => {
     toast({ title: "Code block added", description: "Markdown code snippet inserted into body." });
   };
 
+  const [hasDraft, setHasDraft] = useState<boolean>(() => !!localStorage.getItem("borynx_post_draft"));
+
   const handleSaveDraft = () => {
     const draft = { title, body, postType, selectedSpaceSlug: selectedSpace.slug, tags };
     localStorage.setItem("borynx_post_draft", JSON.stringify(draft));
+    setHasDraft(true);
     toast({ title: "Draft saved", description: "Your post draft has been saved locally." });
   };
 
@@ -253,6 +263,12 @@ const CreatePost = () => {
       return;
     }
 
+    const cleanPollOptions = pollOptions.map((o) => o.trim()).filter(Boolean);
+    if (postType === "poll" && cleanPollOptions.length < 2) {
+      toast({ title: "Poll needs options", description: "Add at least 2 poll options before publishing.", variant: "destructive" });
+      return;
+    }
+
     if (!user?.uid) {
       toast({ title: "Not signed in", description: "Please sign in before posting.", variant: "destructive" });
       return;
@@ -268,7 +284,7 @@ const CreatePost = () => {
       const postPayload = {
         title: trimmedTitle,
         body: finalBody,
-        type: postType === "poll" ? "discussion" : postType,
+        type: postType,
         tags,
         communitySlug: selectedSpace.slug,
         author: { 
@@ -284,6 +300,7 @@ const CreatePost = () => {
         isPinned: pinToSpace,
         allowComments,
         visibility,
+        ...(postType === "poll" ? { pollOptions: cleanPollOptions } : {}),
       };
 
       await createPost({
@@ -295,6 +312,7 @@ const CreatePost = () => {
 
       // Clear draft
       localStorage.removeItem("borynx_post_draft");
+      setHasDraft(false);
 
       toast({ title: "Post published!", description: `Your post is live in ${selectedSpace.name}.` });
       queryClient.invalidateQueries({ queryKey: ['posts'] });
@@ -330,12 +348,14 @@ const CreatePost = () => {
           </div>
 
           <div className="flex items-center gap-4">
-            <button 
-              onClick={handleLoadDraft}
-              className="text-xs font-semibold text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1.5"
-            >
-              <span>Drafts (1)</span>
-            </button>
+            {hasDraft && (
+              <button 
+                onClick={handleLoadDraft}
+                className="text-xs font-semibold text-[var(--brand-info)] hover:opacity-80 transition-colors flex items-center gap-1.5"
+              >
+                <span>Drafts (1)</span>
+              </button>
+            )}
             <button
               onClick={() => navigate(-1)}
               className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
@@ -976,9 +996,9 @@ const CreatePost = () => {
               </span>
 
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full border border-purple-500/30 overflow-hidden shrink-0 bg-slate-800">
+                <div className="h-10 w-10 rounded-full border border-[var(--brand-primary)]/30 overflow-hidden shrink-0 bg-muted">
                   <img
-                    src={profile?.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"}
+                    src={profile?.avatarUrl || `https://api.dicebear.com/7.x/identicon/svg?seed=${user?.uid || "guest"}`}
                     alt={profile?.username || "User"}
                     className="h-full w-full object-cover"
                   />
@@ -986,25 +1006,13 @@ const CreatePost = () => {
                 <div>
                   <div className="flex items-center gap-1.5 font-heading text-sm font-bold text-foreground">
                     <span>{profile?.username || "you"}</span>
-                    <CheckCircle2 className="h-4 w-4 text-purple-400 fill-purple-400/20" />
+                    {profile?.isVerifiedPro && (
+                      <CheckCircle2 className="h-4 w-4 text-[var(--brand-primary)] fill-[var(--brand-primary)]/20" />
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground font-mono">
-                    Level 14 • Top 6%
+                    {(profile?.reputation ?? 0).toLocaleString()} reputation
                   </p>
-                </div>
-              </div>
-
-              {/* XP Bar */}
-              <div className="space-y-1.5 pt-1">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="font-bold text-purple-400 flex items-center gap-1">
-                    <Zap className="h-3.5 w-3.5 fill-purple-400" />
-                    4,820 XP
-                  </span>
-                  <span className="text-[11px] text-muted-foreground">to next level</span>
-                </div>
-                <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full w-[68%]" />
                 </div>
               </div>
             </div>
@@ -1017,5 +1025,6 @@ const CreatePost = () => {
     </AppLayout>
   );
 };
+
 
 export default CreatePost;

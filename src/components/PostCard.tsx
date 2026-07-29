@@ -15,6 +15,7 @@ import { updatePost, softDeletePost } from "@/lib/posts";
 import { useState } from "react";
 import { Editor } from "@/components/editor/Editor";
 import { stripMarkdown } from "@/lib/markdown";
+import { PollWidget } from "@/components/PollWidget";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,7 +27,7 @@ export interface PostData {
   id: string;
   title: string;
   body: string;
-  type: "discussion" | "question" | "resource" | "weekly";
+  type: "discussion" | "question" | "resource" | "weekly" | "poll";
   author: {
     uid?: string;
     name: string;
@@ -49,6 +50,9 @@ export interface PostData {
   externalLink?: string;
   category?: string;
   communitySlug?: string;
+  visibility?: "public" | "members" | "admins";
+  allowComments?: boolean;
+  isPinned?: boolean;
 }
 
 interface PostCardProps {
@@ -274,6 +278,8 @@ export function PostCard({ post, index }: PostCardProps) {
             </Link>
           )
         )}
+
+        {post.type === "poll" && <PollWidget postId={post.id} />}
 
         {post.tags && post.tags.length > 0 && (
           <div className="flex items-center gap-2 flex-wrap mt-0.5">
