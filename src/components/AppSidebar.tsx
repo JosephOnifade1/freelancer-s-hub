@@ -6,7 +6,7 @@ import {
   Trophy,
   Plus,
   Briefcase,
-  UserCheck,
+  TrendingUp,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -29,7 +29,7 @@ import { CreateCommunityModal } from "@/components/modals/CreateCommunityModal";
 
 const mainNav = [
   { title: "FEED", url: "/", icon: Home },
-  { title: "FOLLOWING", url: "/following", icon: UserCheck },
+  { title: "POPULAR", url: "/popular", icon: TrendingUp },
 ];
 
 const discover = [

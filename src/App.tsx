@@ -8,7 +8,7 @@ import { SidebarProvider } from "@/components/ui/sidebar.tsx";
 // Page imports
 import Index from "./pages/Index.tsx";
 import NewFeed from "./pages/NewFeed.tsx";
-import Following from "./pages/Following.tsx";
+import Popular from "./pages/Popular.tsx";
 import TagFeed from "./pages/TagFeed.tsx";
 import Communities from "./pages/Communities.tsx";
 import Bookmarks from "./pages/Bookmarks.tsx";
@@ -108,7 +108,7 @@ const App = () => (
 
               {/* ── Authenticated: feed views ───────────────────────────── */}
               <Route path="/new"       element={<ProtectedRoute><NewFeed /></ProtectedRoute>} />
-              <Route path="/following" element={<ProtectedRoute><Following /></ProtectedRoute>} />
+              <Route path="/popular" element={<ProtectedRoute><Popular /></ProtectedRoute>} />
               <Route path="/submit"    element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
               <Route path="/tag/:tagName" element={<ProtectedRoute><TagFeed /></ProtectedRoute>} />
 

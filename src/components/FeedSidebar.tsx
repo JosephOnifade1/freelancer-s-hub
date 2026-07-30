@@ -1,17 +1,50 @@
 import { useMemo } from "react";
-import { TrendingUp, Sparkles, Users } from "lucide-react";
+import { Flame, Award, Users, Compass, TrendingUp } from "lucide-react";
 import { PostData } from "@/components/PostCard";
 import { Link } from "react-router-dom";
 import { LiveReputation } from "@/components/LiveReputation";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useQuery } from "@tanstack/react-query";
 import { getTopContributors } from "@/lib/users";
+import { fetchAllCommunities, getUserCommunities } from "@/lib/communities";
+import { getMostActiveThisWeek, getUserStreak, getCommunityHealthStats } from "@/lib/stats";
 
-export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
+const WEEKDAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
+
+export function FeedSidebar({ posts = [], currentUserUid }: { posts?: PostData[]; currentUserUid?: string }) {
   const { data: topContributors = [] } = useQuery({
-    queryKey: ['top-contributors'],
+    queryKey: ["top-contributors"],
     queryFn: () => getTopContributors(5),
-    refetchInterval: 60000 // Refresh every minute
+    refetchInterval: 60000,
+  });
+
+  const { data: activeSpaces = [] } = useQuery({
+    queryKey: ["communities"],
+    queryFn: fetchAllCommunities,
+  });
+
+  const { data: joinedSlugs = [] } = useQuery({
+    queryKey: ["userCommunities", currentUserUid],
+    queryFn: () => (currentUserUid ? getUserCommunities(currentUserUid) : []),
+    enabled: !!currentUserUid,
+  });
+
+  const { data: mostActive = [] } = useQuery({
+    queryKey: ["most-active-week"],
+    queryFn: () => getMostActiveThisWeek(5),
+    refetchInterval: 60000,
+  });
+
+  const { data: streak } = useQuery({
+    queryKey: ["user-streak", currentUserUid],
+    queryFn: () => (currentUserUid ? getUserStreak(currentUserUid) : null),
+    enabled: !!currentUserUid,
+  });
+
+  const { data: health } = useQuery({
+    queryKey: ["community-health"],
+    queryFn: getCommunityHealthStats,
+    refetchInterval: 120000,
   });
 
   const { topTags, stats } = useMemo(() => {
@@ -19,15 +52,10 @@ export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
     const userMap: Record<string, boolean> = {};
 
     posts.forEach((post) => {
-      // Tags
       post.tags?.forEach((tag) => {
         tagCounts[tag] = (tagCounts[tag] || 0) + 1;
       });
-
-      // Users for stats
-      if (post.author?.uid) {
-        userMap[post.author.uid] = true;
-      }
+      if (post.author?.uid) userMap[post.author.uid] = true;
     });
 
     const calculatedTags = Object.entries(tagCounts)
@@ -39,8 +67,8 @@ export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
       topTags: calculatedTags,
       stats: {
         freelancers: Math.max(1, Object.keys(userMap).length),
-        totalPosts: posts.length
-      }
+        totalPosts: posts.length,
+      },
     };
   }, [posts]);
 
@@ -48,9 +76,11 @@ export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
     <div className="space-y-5">
       {/* Trending Tags */}
       <div className="rounded-xl border border-[var(--border-main)] bg-[var(--bg-surface)] p-4">
-        <div className="widget-header mb-3 pb-2 border-b border-[var(--border-main)]/50">
-          <TrendingUp className="h-4 w-4 text-[var(--brand-primary)]" />
-          <h3>Trending Tags</h3>
+        <div className="widget-header mb-3 pb-2 border-b border-[var(--border-main)]/50 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Flame className="h-4 w-4 text-[var(--brand-warning)]" />
+            <h3>Trending Tags</h3>
+          </div>
         </div>
         {topTags.length === 0 ? (
           <p className="font-body text-xs text-muted-foreground">No tags yet.</p>
@@ -73,7 +103,7 @@ export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
       {/* Top Contributors */}
       <div className="rounded-xl border border-[var(--border-main)] bg-[var(--bg-surface)] p-4">
         <div className="widget-header mb-3 pb-2 border-b border-[var(--border-main)]/50">
-          <Sparkles className="h-4 w-4 text-[var(--brand-accent)]" />
+          <Award className="h-4 w-4 text-[var(--brand-accent)]" />
           <h3>Top Contributors</h3>
         </div>
         {topContributors.length === 0 ? (
@@ -81,14 +111,12 @@ export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
         ) : (
           <div className="space-y-2.5">
             {topContributors.map((user, i) => (
-              <Link 
-                key={user.uid || user.username} 
-                to={user.uid ? `/f/${user.username || user.uid}` : "#"} 
+              <Link
+                key={user.uid || user.username}
+                to={user.uid ? `/f/${user.username || user.uid}` : "#"}
                 className="flex items-center gap-2 group hover:opacity-80 transition-opacity"
               >
-                <span className="font-heading text-xs font-bold text-muted-foreground w-4">
-                  {i + 1}
-                </span>
+                <span className="font-heading text-xs font-bold text-muted-foreground w-4">{i + 1}</span>
                 <div className="flex h-6 w-6 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-primary/20 text-primary group-hover:opacity-90">
                   {user.avatarUrl ? (
                     <img src={user.avatarUrl} alt={user.displayName} className="h-full w-full object-cover" />
@@ -109,7 +137,123 @@ export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
         )}
       </div>
 
-      {/* Community Stats */}
+      {/* Active Spaces */}
+      <div className="rounded-xl border border-[var(--border-main)] bg-[var(--bg-surface)] p-4">
+        <div className="widget-header mb-3 pb-2 border-b border-[var(--border-main)]/50">
+          <Compass className="h-4 w-4 text-[var(--brand-primary)]" />
+          <h3>Active Spaces</h3>
+        </div>
+        {activeSpaces.length === 0 ? (
+          <p className="font-body text-xs text-muted-foreground">No spaces yet.</p>
+        ) : (
+          <div className="space-y-2.5">
+            {activeSpaces.slice(0, 5).map((space) => (
+              <Link
+                key={space.slug}
+                to={`/b/${space.slug}`}
+                className="flex items-center justify-between group hover:opacity-90 transition-opacity"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] font-heading text-[11px] font-bold">
+                    {space.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-body text-xs font-semibold text-[var(--text-primary)] group-hover:text-[var(--brand-primary)] transition-colors truncate">
+                      {space.name}
+                    </p>
+                    <p className="font-body text-[10px] text-[var(--text-muted)]">
+                      {space.memberCount.toLocaleString()} members
+                    </p>
+                  </div>
+                </div>
+                {joinedSlugs.includes(space.slug) && (
+                  <span className="shrink-0 flex h-4 w-4 items-center justify-center rounded bg-[var(--brand-primary)] text-[9px] font-bold text-black">
+                    ✓
+                  </span>
+                )}
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Most Active This Week (real activity count, not fake XP) */}
+      <div className="rounded-xl border border-[var(--border-main)] bg-[var(--bg-surface)] p-4">
+        <div className="widget-header mb-3 pb-2 border-b border-[var(--border-main)]/50">
+          <TrendingUp className="h-4 w-4 text-[var(--brand-info)]" />
+          <h3>Most Active This Week</h3>
+        </div>
+        {mostActive.length === 0 ? (
+          <p className="font-body text-xs text-muted-foreground">No activity yet this week.</p>
+        ) : (
+          <div className="space-y-2.5">
+            {mostActive.map((c, i) => (
+              <Link
+                key={c.uid}
+                to={`/f/${c.username || c.uid}`}
+                className="flex items-center justify-between p-1.5 rounded-xl hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="font-mono text-xs font-bold text-muted-foreground/60 w-3">{i + 1}</span>
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg overflow-hidden bg-primary/20 text-primary font-heading text-[10px] font-bold">
+                    {c.avatarUrl ? (
+                      <img src={c.avatarUrl} alt={c.displayName} className="h-full w-full object-cover" />
+                    ) : (
+                      (c.displayName || c.username || "?").charAt(0).toUpperCase()
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 font-body text-xs font-semibold text-foreground">
+                    <span>{c.displayName || c.username}</span>
+                    <VerifiedBadge isVerified={c.isVerifiedPro} size={10} showTooltip={false} />
+                  </div>
+                </div>
+                <span className="font-mono text-xs font-bold text-[var(--brand-primary)]">
+                  {c.contributions} {c.contributions === 1 ? "post" : "posts"}
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Your Streak — personal, only shown when logged in */}
+      {currentUserUid && streak && (
+        <div className="rounded-xl border border-[var(--border-main)] bg-[var(--bg-surface)] p-4 space-y-4">
+          <h3 className="font-heading text-sm font-bold text-foreground">Your Streak</h3>
+
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--brand-warning-soft)] text-[var(--brand-warning)] border border-[var(--brand-warning)]/20">
+              <Flame className="h-6 w-6 fill-[var(--brand-warning)]" />
+            </div>
+            <div>
+              <div className="font-heading text-lg font-black text-foreground">{streak.streakDays} days</div>
+              <div className="font-body text-[11px] text-muted-foreground">
+                {streak.streakDays > 0 ? "Keep it going! 🔥" : "Post or comment to start a streak"}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-1">
+            {WEEKDAY_LABELS.map((day, idx) => {
+              const isActive = streak.activeWeekdays.includes(idx);
+              return (
+                <div
+                  key={idx}
+                  className={`flex h-7 w-7 items-center justify-center rounded-full font-mono text-[11px] font-bold ${
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                      : "bg-muted/50 text-muted-foreground"
+                  }`}
+                >
+                  {day}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Community Live Stats */}
       <div className="rounded-xl border border-[var(--border-main)] bg-[var(--bg-surface)] p-4">
         <div className="widget-header mb-3 pb-2 border-b border-[var(--border-main)]/50">
           <Users className="h-4 w-4 text-[var(--brand-primary)]" />
@@ -125,11 +269,11 @@ export function FeedSidebar({ posts = [] }: { posts?: PostData[] }) {
             <p className="font-body text-[11px] text-[var(--text-muted)]">Total Posts</p>
           </div>
           <div>
-            <p className="font-heading text-lg font-bold text-[var(--text-primary)]">98%</p>
+            <p className="font-heading text-lg font-bold text-[var(--text-primary)]">{health?.helpfulRate ?? 0}%</p>
             <p className="font-body text-[11px] text-[var(--text-muted)]">Helpful rate</p>
           </div>
           <div>
-            <p className="font-heading text-lg font-bold text-[var(--text-primary)]">&lt; 1h</p>
+            <p className="font-heading text-lg font-bold text-[var(--text-primary)]">{health?.avgResponseLabel ?? "—"}</p>
             <p className="font-body text-[11px] text-[var(--text-muted)]">Avg Response</p>
           </div>
         </div>

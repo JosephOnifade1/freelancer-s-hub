@@ -21,7 +21,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   // Real navigable segments
   l: "Leads",
   new: "New Posts",
-  following: "Following",
+  popular: "Popular",
   tag: "Tag",
   submit: "Create Post",
   settings: "Settings",
