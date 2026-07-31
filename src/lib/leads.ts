@@ -2,25 +2,6 @@ import { supabase } from "./supabase";
 
 export type LeadType = "Bounty" | "Project" | "Retainer" | "Full-time";
 export type LeadStatus = "open" | "in-progress" | "closed";
-export type BoardStage = "new" | "conversation" | "proposal" | "negotiation" | "won";
-
-export interface BoardLead {
-  id: string;
-  company: string;
-  title: string;
-  description?: string;
-  budget: string;
-  stage: BoardStage;
-  category: string;
-  initials?: string;
-  avatarColor?: string;
-  avatarUrl?: string;
-  isVerified?: boolean;
-  timeAgo: string;
-  statusBadge?: string;
-  source?: string;
-  createdAt: number;
-}
 
 export interface Lead {
   id: string;
@@ -44,370 +25,62 @@ export interface Lead {
   applicantsCount: number;
 }
 
-const DEFAULT_BOARD_LEADS: BoardLead[] = [
-  // New Leads (6)
-  {
-    id: "lead-1",
-    company: "Acme Corporation",
-    title: "Landing page design for SaaS product",
-    budget: "$2,500 - $3,000",
-    stage: "new",
-    category: "Web Design",
-    initials: "AC",
-    avatarColor: "bg-blue-600",
-    timeAgo: "2h ago",
-    source: "Borynx Spaces",
-    createdAt: Date.now() - 2 * 3600000,
-  },
-  {
-    id: "lead-2",
-    company: "James Lee",
-    title: "Need help with React component build",
-    budget: "$800 - $1,200",
-    stage: "new",
-    category: "Development",
-    initials: "JL",
-    avatarColor: "bg-amber-500",
-    timeAgo: "5h ago",
-    source: "Direct / Profile",
-    createdAt: Date.now() - 5 * 3600000,
-  },
-  {
-    id: "lead-3",
-    company: "InnovateHub",
-    title: "Branding and website redesign",
-    budget: "$3,000 - $5,800",
-    stage: "new",
-    category: "Design",
-    initials: "IH",
-    avatarColor: "bg-emerald-500",
-    isVerified: true,
-    timeAgo: "1d ago",
-    source: "Borynx Spaces",
-    createdAt: Date.now() - 24 * 3600000,
-  },
-  {
-    id: "lead-4",
-    company: "Sarah O.",
-    title: "Looking for a Notion template expert",
-    budget: "$150 - $300",
-    stage: "new",
-    category: "Productivity",
-    initials: "SO",
-    avatarColor: "bg-pink-500",
-    isVerified: true,
-    timeAgo: "1d ago",
-    source: "Search",
-    createdAt: Date.now() - 24 * 3600000,
-  },
-  {
-    id: "lead-5",
-    company: "PixelGrid Studio",
-    title: "Framer website implementation",
-    budget: "$1,500 - $2,500",
-    stage: "new",
-    category: "Development",
-    initials: "PG",
-    avatarColor: "bg-purple-600",
-    timeAgo: "2d ago",
-    source: "Referrals",
-    createdAt: Date.now() - 48 * 3600000,
-  },
-  {
-    id: "lead-6",
-    company: "Michael Thompson",
-    title: "Figma to Webflow conversion",
-    budget: "$600 - $900",
-    stage: "new",
-    category: "No-Code",
-    initials: "MT",
-    avatarColor: "bg-orange-600",
-    timeAgo: "2d ago",
-    source: "Search",
-    createdAt: Date.now() - 48 * 3600000,
-  },
-
-  // In Conversation (4)
-  {
-    id: "lead-7",
-    company: "OpenView Labs",
-    title: "Dashboard design and analytics",
-    budget: "$4,000 - $6,000",
-    stage: "conversation",
-    category: "UI/UX",
-    initials: "OV",
-    avatarColor: "bg-indigo-600",
-    timeAgo: "3h ago",
-    source: "Borynx Spaces",
-    createdAt: Date.now() - 3 * 3600000,
-  },
-  {
-    id: "lead-8",
-    company: "NeonByte",
-    title: "Mobile app UI kit design",
-    budget: "$2,000 - $3,500",
-    stage: "conversation",
-    category: "Mobile Design",
-    initials: "NB",
-    avatarColor: "bg-cyan-600",
-    timeAgo: "8h ago",
-    source: "Direct / Profile",
-    createdAt: Date.now() - 8 * 3600000,
-  },
-  {
-    id: "lead-9",
-    company: "Clara Bennett",
-    title: "Personal portfolio website",
-    budget: "$1,000 - $1,800",
-    stage: "conversation",
-    category: "Web Design",
-    avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80",
-    timeAgo: "1d ago",
-    source: "Referrals",
-    createdAt: Date.now() - 24 * 3600000,
-  },
-  {
-    id: "lead-10",
-    company: "DataWorks",
-    title: "Build internal tools app",
-    budget: "$6,000 - $8,000",
-    stage: "conversation",
-    category: "Development",
-    initials: "DW",
-    avatarColor: "bg-orange-600",
-    timeAgo: "2d ago",
-    source: "Borynx Spaces",
-    createdAt: Date.now() - 48 * 3600000,
-  },
-
-  // Proposal Sent (3)
-  {
-    id: "lead-11",
-    company: "TechStart Inc.",
-    title: "SaaS marketing website",
-    budget: "$3,500 - $5,500",
-    stage: "proposal",
-    category: "Web Design",
-    initials: "TS",
-    avatarColor: "bg-sky-600",
-    timeAgo: "1d ago",
-    statusBadge: "Sent 1d ago",
-    source: "Borynx Spaces",
-    createdAt: Date.now() - 24 * 3600000,
-  },
-  {
-    id: "lead-12",
-    company: "LaunchFrame",
-    title: "Framer website with animations",
-    budget: "$2,200 - $2,800",
-    stage: "proposal",
-    category: "Development",
-    initials: "LF",
-    avatarColor: "bg-purple-600",
-    timeAgo: "2d ago",
-    statusBadge: "Sent 2d ago",
-    source: "Direct / Profile",
-    createdAt: Date.now() - 48 * 3600000,
-  },
-  {
-    id: "lead-13",
-    company: "Arise Marketing",
-    title: "Rebranding + website redesign",
-    budget: "$5,000 - $7,000",
-    stage: "proposal",
-    category: "Design",
-    initials: "AR",
-    avatarColor: "bg-emerald-600",
-    timeAgo: "3d ago",
-    statusBadge: "Sent 3d ago",
-    source: "Referrals",
-    createdAt: Date.now() - 72 * 3600000,
-  },
-
-  // Negotiation (2)
-  {
-    id: "lead-14",
-    company: "BrightKey",
-    title: "Web app UI/UX and prototyping",
-    budget: "$7,000 - $9,000",
-    stage: "negotiation",
-    category: "UI/UX",
-    initials: "BK",
-    avatarColor: "bg-pink-600",
-    timeAgo: "1d ago",
-    statusBadge: "Last reply 2h ago",
-    source: "Borynx Spaces",
-    createdAt: Date.now() - 24 * 3600000,
-  },
-  {
-    id: "lead-15",
-    company: "Inova Agency",
-    title: "Custom dashboard development",
-    budget: "$4,500 - $6,000",
-    stage: "negotiation",
-    category: "Development",
-    initials: "IA",
-    avatarColor: "bg-indigo-600",
-    timeAgo: "2d ago",
-    statusBadge: "Last reply 5h ago",
-    source: "Borynx Spaces",
-    createdAt: Date.now() - 48 * 3600000,
-  },
-
-  // Closed Won (5)
-  {
-    id: "lead-16",
-    company: "Waverly",
-    title: "Marketing site redesign",
-    budget: "$2,800",
-    stage: "won",
-    category: "Web Design",
-    initials: "W",
-    avatarColor: "bg-indigo-900",
-    timeAgo: "Won 2d ago",
-    statusBadge: "Paid",
-    source: "Direct / Profile",
-    createdAt: Date.now() - 48 * 3600000,
-  },
-  {
-    id: "lead-17",
-    company: "FlowCraft",
-    title: "Webflow development and CMS",
-    budget: "$3,200",
-    stage: "won",
-    category: "No-Code",
-    initials: "FC",
-    avatarColor: "bg-emerald-500",
-    timeAgo: "Won 4d ago",
-    statusBadge: "Paid",
-    source: "Borynx Spaces",
-    createdAt: Date.now() - 96 * 3600000,
-  },
-  {
-    id: "lead-18",
-    company: "Studio Paper",
-    title: "Portfolio website for creative studio",
-    budget: "$1,600",
-    stage: "won",
-    category: "Web Design",
-    initials: "SP",
-    avatarColor: "bg-pink-600",
-    timeAgo: "Won 5d ago",
-    statusBadge: "Paid",
-    source: "Referrals",
-    createdAt: Date.now() - 120 * 3600000,
-  },
-  {
-    id: "lead-19",
-    company: "GrowthRack",
-    title: "Landing page optimization",
-    budget: "$950",
-    stage: "won",
-    category: "Development",
-    initials: "GR",
-    avatarColor: "bg-blue-600",
-    timeAgo: "Won 1w ago",
-    statusBadge: "Paid",
-    source: "Borynx Spaces",
-    createdAt: Date.now() - 168 * 3600000,
-  },
-  {
-    id: "lead-20",
-    company: "Brandify Digital",
-    title: "Brand identity package",
-    budget: "$2,100",
-    stage: "won",
-    category: "Design",
-    initials: "BD",
-    avatarColor: "bg-amber-500",
-    timeAgo: "Won 1w ago",
-    statusBadge: "Paid",
-    source: "Direct / Profile",
-    createdAt: Date.now() - 168 * 3600000,
-  },
-];
-
-const BOARD_LEADS_STORAGE_KEY = "borynx_board_leads_v2";
-
-export const getBoardLeads = (): BoardLead[] => {
-  const stored = localStorage.getItem(BOARD_LEADS_STORAGE_KEY);
-  if (!stored) {
-    localStorage.setItem(BOARD_LEADS_STORAGE_KEY, JSON.stringify(DEFAULT_BOARD_LEADS));
-    return DEFAULT_BOARD_LEADS;
-  }
-  try {
-    return JSON.parse(stored);
-  } catch {
-    return DEFAULT_BOARD_LEADS;
-  }
+type LeadProfileRow = {
+  username?: string | null;
+  displayName?: string | null;
+  avatarUrl?: string | null;
+  isVerifiedPro?: boolean | null;
 };
 
-export const saveBoardLead = (lead: Partial<BoardLead> & { company: string; title: string; budget: string; stage: BoardStage; category: string }) => {
-  const current = getBoardLeads();
-  const initials = lead.company.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) || "LD";
-  const colors = ["bg-blue-600", "bg-purple-600", "bg-emerald-600", "bg-amber-500", "bg-pink-600", "bg-indigo-600"];
-  const randomColor = colors[Math.floor(Math.random() * colors.length)];
-
-  const newLead: BoardLead = {
-    id: lead.id || `lead-${Date.now()}`,
-    company: lead.company,
-    title: lead.title,
-    description: lead.description || "",
-    budget: lead.budget,
-    stage: lead.stage,
-    category: lead.category,
-    initials: lead.initials || initials,
-    avatarColor: lead.avatarColor || randomColor,
-    avatarUrl: lead.avatarUrl,
-    isVerified: lead.isVerified ?? false,
-    timeAgo: "Just now",
-    statusBadge: lead.statusBadge,
-    source: lead.source || "Direct / Profile",
-    createdAt: Date.now(),
-  };
-
-  const existingIdx = current.findIndex(l => l.id === newLead.id);
-  if (existingIdx >= 0) {
-    current[existingIdx] = { ...current[existingIdx], ...newLead };
-  } else {
-    current.unshift(newLead);
-  }
-
-  localStorage.setItem(BOARD_LEADS_STORAGE_KEY, JSON.stringify(current));
-  return newLead;
+type LeadRow = {
+  id: string;
+  title: string;
+  description: string;
+  budget: string;
+  currency: string;
+  location: string;
+  type: LeadType;
+  status: LeadStatus;
+  skills?: string[] | null;
+  isVerified?: boolean | null;
+  postedAt: string;
+  applicantsCount?: number | null;
+  postedByUid: string;
+  profiles?: LeadProfileRow | null;
 };
 
-export const updateBoardLeadStage = (leadId: string, newStage: BoardStage) => {
-  const current = getBoardLeads();
-  const updated = current.map(l => {
-    if (l.id === leadId) {
-      let badge = l.statusBadge;
-      if (newStage === "proposal") badge = "Sent just now";
-      if (newStage === "negotiation") badge = "Last reply just now";
-      if (newStage === "won") badge = "Paid";
-      return { ...l, stage: newStage, statusBadge: badge, timeAgo: newStage === "won" ? "Won just now" : "Just now" };
-    }
-    return l;
-  });
-  localStorage.setItem(BOARD_LEADS_STORAGE_KEY, JSON.stringify(updated));
-  return updated;
-};
+const mapLeadRow = (lead: LeadRow): Lead => ({
+  id: lead.id,
+  title: lead.title,
+  description: lead.description,
+  budget: lead.budget,
+  currency: lead.currency,
+  location: lead.location,
+  type: lead.type,
+  status: lead.status,
+  skills: lead.skills || [],
+  isVerified: lead.isVerified ?? false,
+  postedAt: new Date(lead.postedAt).getTime(),
+  applicantsCount: lead.applicantsCount || 0,
+  postedBy: {
+    uid: lead.postedByUid,
+    username: lead.profiles?.username || undefined,
+    name: lead.profiles?.displayName || lead.profiles?.username || "Unknown",
+    avatar: lead.profiles?.avatarUrl || undefined,
+    isVerified: lead.profiles?.isVerifiedPro || false,
+  },
+});
 
-export const deleteBoardLead = (leadId: string) => {
-  const current = getBoardLeads();
-  const updated = current.filter(l => l.id !== leadId);
-  localStorage.setItem(BOARD_LEADS_STORAGE_KEY, JSON.stringify(updated));
-  return updated;
-};
+const LEAD_SELECT = `
+  id, title, description, budget, currency, location, type, status,
+  skills, isVerified, postedAt, applicantsCount, postedByUid,
+  profiles!leads_postedByUid_fkey (username, displayName, avatarUrl, isVerifiedPro)
+`;
 
 export const fetchLeads = async (): Promise<Lead[]> => {
   const { data, error } = await supabase
     .from("leads")
-    .select(`
-      id, title, description, budget, currency, location, type, status,
-      skills, isVerified, postedAt, applicantsCount, postedByUid,
-      profiles!leads_postedByUid_fkey (username, displayName, avatarUrl, isVerifiedPro)
-    `)
+    .select(LEAD_SELECT)
     .order("postedAt", { ascending: false });
 
   if (error || !data) {
@@ -415,63 +88,19 @@ export const fetchLeads = async (): Promise<Lead[]> => {
     return [];
   }
 
-  return (data || []).map((l: any) => ({
-    id: l.id,
-    title: l.title,
-    description: l.description,
-    budget: l.budget,
-    currency: l.currency,
-    location: l.location,
-    type: l.type,
-    status: l.status,
-    skills: l.skills || [],
-    isVerified: l.isVerified,
-    postedAt: new Date(l.postedAt).getTime(),
-    applicantsCount: l.applicantsCount,
-    postedBy: {
-      uid: l.postedByUid,
-      username: l.profiles?.username,
-      name: l.profiles?.displayName || l.profiles?.username || "Unknown",
-      avatar: l.profiles?.avatarUrl,
-      isVerified: l.profiles?.isVerifiedPro || false,
-    },
-  }));
+  return (data as LeadRow[]).map(mapLeadRow);
 };
 
 export const fetchLeadById = async (id: string): Promise<Lead | null> => {
   const { data, error } = await supabase
     .from("leads")
-    .select(`
-      id, title, description, budget, currency, location, type, status,
-      skills, isVerified, postedAt, applicantsCount, postedByUid,
-      profiles!leads_postedByUid_fkey (username, displayName, avatarUrl, isVerifiedPro)
-    `)
+    .select(LEAD_SELECT)
     .eq("id", id)
     .single();
 
   if (error || !data) return null;
 
-  return {
-    id: data.id,
-    title: data.title,
-    description: data.description,
-    budget: data.budget,
-    currency: data.currency,
-    location: data.location,
-    type: data.type,
-    status: data.status,
-    skills: data.skills || [],
-    isVerified: data.isVerified,
-    postedAt: new Date(data.postedAt).getTime(),
-    applicantsCount: data.applicantsCount,
-    postedBy: {
-      uid: data.postedByUid,
-      name: (data as any).profiles?.displayName || (data as any).profiles?.username || "Unknown",
-      avatar: (data as any).profiles?.avatarUrl,
-      username: (data as any).profiles?.username,
-      isVerified: (data as any).profiles?.isVerifiedPro || false,
-    },
-  };
+  return mapLeadRow(data as LeadRow);
 };
 
 export const createLead = async (
@@ -498,4 +127,3 @@ export const createLead = async (
   if (error) throw new Error(error.message);
   return data?.id as string;
 };
-

@@ -59,38 +59,17 @@ export const handleVote = async (
     });
   }
 
-  // 2. Update entity score/ups/downs in the appropriate table
-  const table = type === "post" ? "posts" : "comments";
-  const { data: entity } = await supabase
-    .from(table)
-    .select("score, ups, downs")
-    .eq("id", entityId)
-    .single();
+  // 2. Update aggregate counters through a backend RPC. This keeps score,
+  // ups, downs, and reputation changes out of broad client-side update RLS.
+  const { error } = await supabase.rpc("apply_vote_aggregate", {
+    entity_id: entityId,
+    entity_type: type,
+    author_uid: authorUid ?? null,
+    voter_uid: currentUserId,
+    score_delta: diff,
+    ups_delta: upDiff,
+    downs_delta: downDiff,
+  });
 
-  if (entity) {
-    await supabase
-      .from(table)
-      .update({
-        score: (entity.score || 0) + diff,
-        ups: (entity.ups || 0) + upDiff,
-        downs: (entity.downs || 0) + downDiff,
-      })
-      .eq("id", entityId);
-  }
-
-  // 3. Update author reputation
-  if (authorUid && authorUid !== currentUserId) {
-    const { data: authorProfile } = await supabase
-      .from("profiles")
-      .select("reputation")
-      .eq("uid", authorUid)
-      .single();
-
-    if (authorProfile) {
-      await supabase
-        .from("profiles")
-        .update({ reputation: (authorProfile.reputation || 0) + diff })
-        .eq("uid", authorUid);
-    }
-  }
+  if (error) throw new Error(error.message || "Failed to update vote totals");
 };

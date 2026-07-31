@@ -894,6 +894,29 @@ export class MockSupabaseClient {
       return { data: null, error: null };
     }
 
+    if (fnName === "apply_vote_aggregate") {
+      const tableKey = args.entity_type === "comment" ? "mock_supabase_comments" : "mock_supabase_posts";
+      const records = JSON.parse(localStorage.getItem(tableKey) || "[]");
+      const recordIdx = records.findIndex((item: any) => item.id === args.entity_id);
+      if (recordIdx >= 0) {
+        records[recordIdx].score = (records[recordIdx].score || 0) + args.score_delta;
+        records[recordIdx].ups = (records[recordIdx].ups || 0) + args.ups_delta;
+        records[recordIdx].downs = (records[recordIdx].downs || 0) + args.downs_delta;
+        localStorage.setItem(tableKey, JSON.stringify(records));
+      }
+
+      if (args.author_uid && args.author_uid !== args.voter_uid) {
+        const profiles = JSON.parse(localStorage.getItem("mock_supabase_profiles") || "[]");
+        const profileIdx = profiles.findIndex((p: any) => p.uid === args.author_uid);
+        if (profileIdx >= 0) {
+          profiles[profileIdx].reputation = (profiles[profileIdx].reputation || 0) + args.score_delta;
+          localStorage.setItem("mock_supabase_profiles", JSON.stringify(profiles));
+        }
+      }
+
+      return { data: null, error: null };
+    }
+
     if (fnName === "jsonb_set_community") {
       const profiles = JSON.parse(localStorage.getItem("mock_supabase_profiles") || "[]");
       const idx = profiles.findIndex((p: any) => p.uid === args.uid);
