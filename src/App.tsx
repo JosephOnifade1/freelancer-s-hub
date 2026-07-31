@@ -130,8 +130,8 @@ const App = () => (
               <Route path="/f/me"   element={<UserMeRedirect />} />
               <Route path="/f/:uid" element={<ProtectedRoute><ErrorBoundary><ProfileDetail /></ErrorBoundary></ProtectedRoute>} />
               <Route path="/u"      element={<Navigate to="/" replace />} />
-              <Route path="/u/me"   element={<UserMeRedirect />} />
-              <Route path="/u/:uid" element={<ProtectedRoute><ErrorBoundary><ProfileDetail /></ErrorBoundary></ProtectedRoute>} />
+              <Route path="/f/me"   element={<UserMeRedirect />} />
+              <Route path="/f/:username" element={<ProtectedRoute><ErrorBoundary><ProfileDetail /></ErrorBoundary></ProtectedRoute>} />
 
               {/* ── Authenticated: Leads ────────────────────────────────── */}
               <Route path="/l"         element={<ProtectedRoute><LeadsBoard /></ProtectedRoute>} />

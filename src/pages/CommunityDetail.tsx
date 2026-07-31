@@ -788,17 +788,8 @@ const CommunityDetail = () => {
             </div>
           </div>
         </div>
-
-        {/* Floating Action Button */}
-        <button
-          onClick={() => handleOpenComposer("post")}
-          className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-transform hover:scale-105 active:scale-95"
-        >
-          <PenTool className="h-5 w-5" />
-        </button>
       </div>
-    </AppLayout>
-  );
-};
-
+      </AppLayout>
+    );
+  };
 export default CommunityDetail;

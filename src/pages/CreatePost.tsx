@@ -26,7 +26,8 @@ import {
   Rocket, 
   TrendingUp, 
   Cpu, 
-  Layout 
+  Layout,
+  User,
 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { Input } from "@/components/ui/input";
@@ -74,11 +75,10 @@ const CreatePost = () => {
   const [searchParams] = useSearchParams();
   const bodyImageInputRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
 
-  // Real spaces (communities) from the database — replaces the old
-  // hardcoded fake list. slug: "" is a loading placeholder that the
-  // submit button below refuses to post with, so there's no race
-  // condition where a post could go out before real data has loaded.
+  // Real spaces (communities) from the database
   const LOADING_SPACE: BSpaceOption = {
     id: "loading",
     name: "Loading spaces…",
@@ -93,19 +93,43 @@ const CreatePost = () => {
     queryFn: fetchAllCommunities,
   });
 
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.uid],
+    queryFn: () => user ? getUserProfile(user.uid) : null,
+    enabled: !!user,
+  });
+
   const B_SPACES: BSpaceOption[] = useMemo(() => {
-    return realSpaces.map((c) => {
-      const style = getCommunityStyle(c.category);
-      return {
-        id: c.slug,
-        name: c.name,
-        slug: c.slug,
-        icon: style.icon,
-        color: style.iconBg,
-        popularTags: c.topics?.length ? c.topics : ["general"],
-      };
-    });
-  }, [realSpaces]);
+    const spaces: BSpaceOption[] = [];
+
+    // First option: Your Profile (like Reddit's r/username)
+    if (profile?.username) {
+      spaces.push({
+        id: `profile:${profile.uid}`,
+        name: `Your Profile (f/${profile.username})`,
+        slug: "", // profile posts have no community slug
+        icon: User,
+        color: "text-[var(--brand-primary)] bg-[var(--brand-primary-soft)]",
+        popularTags: [],
+      });
+    }
+
+    // Then all communities
+    return [
+      ...spaces,
+      ...realSpaces.map((c) => {
+        const style = getCommunityStyle(c.category);
+        return {
+          id: c.slug,
+          name: c.name,
+          slug: c.slug,
+          icon: style.icon,
+          color: style.iconBg,
+          popularTags: c.topics?.length ? c.topics : ["general"],
+        };
+      }),
+    ];
+  }, [realSpaces, profile?.username, profile?.uid]);
 
   // Form State
   const VALID_TYPES: PostType[] = ["discussion", "question", "resource", "poll"];
@@ -139,16 +163,7 @@ const CreatePost = () => {
   const [visibility, setVisibility] = useState<"public" | "members" | "admins">("public");
   const [allowComments, setAllowComments] = useState(true);
   const [pinToSpace, setPinToSpace] = useState(false);
-  
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const { data: profile } = useQuery({
-    queryKey: ['profile', user?.uid],
-    queryFn: () => user ? getUserProfile(user.uid) : null,
-    enabled: !!user,
-  });
 
   const bodyImagePreviews = useMemo(() => bodyImages, [bodyImages]);
 
@@ -286,7 +301,7 @@ const CreatePost = () => {
         body: finalBody,
         type: postType,
         tags,
-        communitySlug: selectedSpace.slug,
+        communitySlug: selectedSpace.slug || null, // null for profile posts, slug for community posts
         author: { 
           uid: user.uid,
           name: profile?.displayName || profile?.username || "Anonymous",
@@ -316,7 +331,13 @@ const CreatePost = () => {
 
       toast({ title: "Post published!", description: `Your post is live in ${selectedSpace.name}.` });
       queryClient.invalidateQueries({ queryKey: ['posts'] });
-      navigate(`/b/${selectedSpace.slug}`);
+      queryClient.invalidateQueries({ queryKey: ['communityPosts', selectedSpace.slug] });
+      if (selectedSpace.slug) {
+        navigate(`/b/${selectedSpace.slug}`);
+      } else {
+        // Profile post — navigate to the user's own profile
+        navigate(`/f/${profile?.username || user.uid}`);
+      }
     } catch (error: unknown) {
       const description = error instanceof Error ? error.message : "Failed to create post.";
       toast({ title: "Error", description, variant: "destructive" });
@@ -902,7 +923,7 @@ const CreatePost = () => {
                 className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-heading text-xs font-bold flex items-center gap-2 shadow-lg shadow-purple-600/25 transition-all disabled:opacity-50"
               >
                 <Send className="h-3.5 w-3.5" />
-                <span>{isSubmitting ? "Publishing..." : `Post to ${selectedSpace.name}`}</span>
+                <span>{isSubmitting ? "Publishing..." : selectedSpace.slug ? `Post to ${selectedSpace.name}` : "Post to Profile"}</span>
               </button>
             </div>
 

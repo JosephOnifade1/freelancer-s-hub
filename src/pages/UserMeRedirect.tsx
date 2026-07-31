@@ -1,20 +1,26 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import { getUserProfile } from "@/lib/users";
 
 const UserMeRedirect = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
+  const { data: profile } = useQuery({
+    queryKey: ["profile", user?.uid],
+    queryFn: () => (user ? getUserProfile(user.uid) : null),
+    enabled: !!user && !loading,
+  });
+
   useEffect(() => {
-    if (!loading) {
-      if (user) {
-        navigate(`/f/${user.uid}`);
-      } else {
-        navigate("/login");
-      }
+    if (!loading && user && (profile !== undefined)) {
+      navigate(`/f/${profile?.username || user.uid}`);
+    } else if (!loading && !user) {
+      navigate("/login");
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, profile, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center">

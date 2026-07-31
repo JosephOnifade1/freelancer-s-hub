@@ -153,7 +153,7 @@ const LeadDetail = () => {
                     )}
                   </div>
                   <div>
-                    <Link to={`/f/${lead.postedBy.uid}`} className="font-heading font-bold text-sm hover:text-primary transition-colors flex items-center gap-1">
+                    <Link to={`/f/${lead.postedBy.username || lead.postedBy.uid}`} className="font-heading font-bold text-sm hover:text-primary transition-colors flex items-center gap-1">
                       {lead.postedBy.name}
                       <VerifiedBadge isVerified={!!lead.postedBy.isVerified} size={12} showTooltip={false} />
                     </Link>

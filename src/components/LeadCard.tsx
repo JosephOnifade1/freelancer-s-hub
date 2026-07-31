@@ -60,7 +60,7 @@ export function LeadCard({ lead }: LeadCardProps) {
             {lead.applicantsCount || 0} applicants
           </div>
           <div className="flex items-center gap-1.5 ml-auto">
-            <Link to={`/f/${lead.postedBy.uid}`} className="flex items-center gap-1.5 hover:text-foreground transition-colors">
+            <Link to={`/f/${lead.postedBy.username || lead.postedBy.uid}`} className="flex items-center gap-1.5 hover:text-foreground transition-colors">
               <div className="h-4 w-4 rounded-full overflow-hidden bg-muted">
                 {lead.postedBy.avatar ? (
                   <img src={lead.postedBy.avatar} alt={lead.postedBy.name} className="h-full w-full object-cover" />
