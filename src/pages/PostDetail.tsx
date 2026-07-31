@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, MessageSquare, Share2, Bookmark, Loader2, MoreHorizontal, Edit2, Trash2, Eye, ExternalLink } from "lucide-react";
+import { ArrowLeft, MessageSquare, Share2, Bookmark, Loader2, MoreHorizontal, Edit2, Trash2, Eye, ExternalLink, Globe } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { VoteControls } from "@/components/VoteControls";
 import { PostTypeBadge } from "@/components/PostTypeBadge";
@@ -10,7 +10,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchPostById, incrementPostViews, updatePost, softDeletePost } from "@/lib/posts";
 import { fetchComments, addComment, updateComment, softDeleteComment, CommentData } from "@/lib/comments";
 import { useAuth } from "@/hooks/useAuth";
-import { getUserProfile, toggleBookmark } from "@/lib/users";
+import { getUserProfile, toggleBookmark, isVeteran } from "@/lib/users";
+import { fetchAllCommunities, getCommunityStyle } from "@/lib/communities";
 import { formatTimeAgo } from "@/lib/utils";
 import { toast } from "sonner";
 import { Editor } from "@/components/editor/Editor";
@@ -275,6 +276,18 @@ const PostDetail = () => {
     enabled: !!user
   });
 
+  const { data: communities = [] } = useQuery({
+    queryKey: ["communities"],
+    queryFn: fetchAllCommunities,
+  });
+
+  const community = post?.communitySlug
+    ? communities.find((c) => c.slug === post.communitySlug)
+    : null;
+
+  const style = community ? getCommunityStyle(community.category) : null;
+  const IconComp = style ? style.icon : Globe;
+
   // Track views
   useEffect(() => {
     if (id) {
@@ -406,19 +419,69 @@ const PostDetail = () => {
             <div className="flex gap-4">
               <VoteControls score={post.score || 0} entityId={post.id} authorUid={post.author?.uid} type="post" />
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <PostTypeBadge type={post.type} />
+                <div className="flex flex-col gap-2 mb-3 border-b border-border/50 pb-3">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {post.communitySlug ? (
+                      // Community Post Header
+                      <Link to={`/b/${post.communitySlug}`} className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
+                        <div className={`flex h-5 w-5 items-center justify-center rounded-md ${style?.iconBg || 'bg-primary/20 text-primary'}`}>
+                          {IconComp && <IconComp className="h-3 w-3" />}
+                        </div>
+                        <span className="font-body text-xs font-semibold text-foreground hover:underline">
+                          b/{post.communitySlug}
+                        </span>
+                      </Link>
+                    ) : (
+                      // Profile Post Header (Space is the user)
+                      <Link to={`/f/${post.author?.username || post.author?.uid}`} className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-primary/20 text-primary">
+                          {post.author?.avatar ? (
+                            <img src={post.author.avatar} alt={post.author.name} className="h-full w-full object-cover" />
+                          ) : (
+                            post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'
+                          )}
+                        </div>
+                        <span className="font-body text-xs font-semibold text-foreground hover:underline flex items-center gap-1">
+                          f/{post.author?.username || 'user'}
+                          <VerifiedBadge isVerified={!!(post.author as any).isVerifiedPro} size={12} showTooltip={false} />
+                        </span>
+                      </Link>
+                    )}
+
+                    <span className="text-muted-foreground text-xs">•</span>
                     <span className="font-body text-xs text-muted-foreground flex items-center gap-1">
                       {formatTimeAgo(post.createdAt)}
                       {post.isEdited && <span className="italic text-[10px]">(edited)</span>}
                     </span>
+
+                    <div className="ml-auto flex items-center gap-2">
+                      <span className="font-body text-xs text-muted-foreground flex items-center gap-1">
+                        <Eye className="h-3.5 w-3.5" /> {post.views || 0}
+                      </span>
+                      {post.type !== 'discussion' && <PostTypeBadge type={post.type} />}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-body text-xs text-muted-foreground flex items-center gap-1">
-                      <Eye className="h-3.5 w-3.5" /> {post.views || 0}
-                    </span>
-                  </div>
+
+                  {/* Line 2: Only show author details if it is a community post */}
+                  {post.communitySlug && (
+                    <div className="flex items-center gap-1.5 pl-6 text-xs text-muted-foreground">
+                      <span>Posted by</span>
+                      <Link to={`/f/${post.author?.username || post.author?.uid}`} className="flex items-center gap-1 hover:text-foreground font-medium text-foreground transition-colors">
+                        <div className="flex h-4 w-4 items-center justify-center rounded-full font-heading text-[8px] font-bold overflow-hidden bg-primary/20 text-primary">
+                          {post.author?.avatar ? (
+                            <img src={post.author.avatar} alt={post.author.name} className="h-full w-full object-cover" />
+                          ) : (
+                            post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'
+                          )}
+                        </div>
+                        <span>f/{post.author?.username || 'user'}</span>
+                        <VerifiedBadge isVerified={!!(post.author as any).isVerifiedPro} size={10} showTooltip={false} />
+                      </Link>
+                      {isVeteran(post.author?.reputation || 0) && (
+                        <span className="text-[var(--brand-primary)] font-bold ml-1" title="Veteran">V</span>
+                      )}
+                    </div>
+                  )}
                 </div>
                 
                 <h1 className="font-heading text-2xl font-bold text-foreground leading-tight mb-3">
@@ -471,53 +534,35 @@ const PostDetail = () => {
                   ))}
                 </div>
                 
-                <div className="flex items-center justify-between pt-3 border-t border-border/50">
-                  <Link to={post.author?.uid ? `/f/${post.author.uid}` : "#"} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full font-heading text-xs font-bold overflow-hidden bg-primary/20 text-primary">
-                      {post.author?.avatar ? (
-                        <img src={post.author.avatar} alt={post.author.name} className="h-full w-full object-cover" />
-                      ) : (
-                        post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'
-                      )}
-                    </div>
-                    <span className="font-body text-sm font-medium text-foreground flex items-center gap-1">
-                      {post.author?.name || 'Anonymous'}
-                      <VerifiedBadge isVerified={!!(post.author as any).isVerifiedPro} size={14} showTooltip={false} />
-                    </span>
-                    <span className="font-body text-[11px] text-muted-foreground">
-                      <LiveReputation uid={post.author?.uid} fallback={post.author?.reputation || 0} />
-                    </span>
-                  </Link>
-                  <div className="flex items-center gap-1">
-                    <div className="flex items-center gap-1 rounded-md px-2 py-1 font-body text-xs text-muted-foreground">
-                      <MessageSquare className="h-3.5 w-3.5" /> {comments.length}
-                    </div>
-                    <button onClick={handleShare} className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
-                      <Share2 className="h-3.5 w-3.5" />
-                    </button>
-                    <button onClick={() => bookmarkMutation.mutate()} disabled={bookmarkMutation.isPending} className={`rounded-md p-1.5 transition-colors hover:bg-secondary ${isSaved ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
-                      <Bookmark className="h-3.5 w-3.5" fill={isSaved ? "currentColor" : "none"} />
-                    </button>
-                    {isOwnPost && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground focus:outline-none">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40 font-body">
-                          <DropdownMenuItem onClick={() => setIsEditingPost(true)} className="cursor-pointer">
-                            <Edit2 className="h-4 w-4 mr-2" />
-                            <span>Edit Post</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => deletePostMutation.mutate()} className="cursor-pointer text-destructive focus:text-destructive">
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            <span>Delete Post</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
+                <div className="flex items-center justify-end pt-3 border-t border-border/50 gap-2">
+                  <div className="flex items-center gap-1 rounded-md px-2 py-1 font-body text-xs text-muted-foreground">
+                    <MessageSquare className="h-3.5 w-3.5" /> {comments.length}
                   </div>
+                  <button onClick={handleShare} className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors" title="Copy Link">
+                    <Share2 className="h-3.5 w-3.5" />
+                  </button>
+                  <button onClick={() => bookmarkMutation.mutate()} disabled={bookmarkMutation.isPending} className={`rounded-md p-1.5 transition-colors hover:bg-secondary ${isSaved ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`} title="Save Post">
+                    <Bookmark className="h-3.5 w-3.5" fill={isSaved ? "currentColor" : "none"} />
+                  </button>
+                  {isOwnPost && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground focus:outline-none">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40 font-body">
+                        <DropdownMenuItem onClick={() => setIsEditingPost(true)} className="cursor-pointer">
+                          <Edit2 className="h-4 w-4 mr-2" />
+                          <span>Edit Post</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => deletePostMutation.mutate()} className="cursor-pointer text-destructive focus:text-destructive">
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          <span>Delete Post</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
               </div>
             </div>

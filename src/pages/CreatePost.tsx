@@ -289,8 +289,8 @@ const CreatePost = () => {
       return;
     }
 
-    if (!selectedSpace.slug) {
-      toast({ title: "Spaces still loading", description: "Give it a second and try again.", variant: "destructive" });
+    if (selectedSpace.id === "loading") {
+      toast({ title: "Destinations still loading", description: "Give it a second and try again.", variant: "destructive" });
       return;
     }
 
@@ -329,7 +329,12 @@ const CreatePost = () => {
       localStorage.removeItem("borynx_post_draft");
       setHasDraft(false);
 
-      toast({ title: "Post published!", description: `Your post is live in ${selectedSpace.name}.` });
+      toast({
+        title: "Post published!",
+        description: selectedSpace.slug
+          ? `Your post is live in b/${selectedSpace.slug}.`
+          : "Your post is live on your profile. You can share it to a space later.",
+      });
       queryClient.invalidateQueries({ queryKey: ['posts'] });
       queryClient.invalidateQueries({ queryKey: ['communityPosts', selectedSpace.slug] });
       if (selectedSpace.slug) {
@@ -556,13 +561,13 @@ const CreatePost = () => {
               </div>
             </div>
 
-            {/* Section 2: Choose a B-Space */}
+                {/* Section 2: Choose destination */}
             <div className="space-y-1.5">
               <h2 className="font-heading text-sm font-bold text-foreground">
-                2. Choose a B-Space
+                2. Choose where to post
               </h2>
               <p className="text-xs text-muted-foreground">
-                Select the most relevant space for your post.
+                Post to your profile for personal updates, or choose a space for a community discussion.
               </p>
 
               <div className="pt-1">
@@ -578,7 +583,7 @@ const CreatePost = () => {
                             {selectedSpace.name}
                           </p>
                           <p className="text-[11px] font-mono text-muted-foreground">
-                            b/{selectedSpace.slug}
+                            {selectedSpace.slug ? `b/${selectedSpace.slug}` : "Personal profile post"}
                           </p>
                         </div>
                       </div>
