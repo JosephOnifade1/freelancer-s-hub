@@ -1,4 +1,4 @@
-import { MessageSquare, Share2, Bookmark, MoreHorizontal, Edit2, Trash2, Eye, ExternalLink, Globe } from "lucide-react";
+import { MessageSquare, Share2, Bookmark, MoreHorizontal, Edit2, Trash2, Eye, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 import { VoteControls } from "@/components/VoteControls";
 import { PostTypeBadge } from "@/components/PostTypeBadge";
@@ -11,10 +11,10 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getUserProfile, toggleBookmark } from "@/lib/users";
-import { sharePostToCommunity, updatePost, softDeletePost } from "@/lib/posts";
-import { fetchAllCommunities, getCommunityStyle } from "@/lib/communities";
-import { getAuthorHandle, getAuthorPath, getDestinationLabel, getDestinationPath, getPostPath, isProfilePost } from "@/lib/postIdentity";
+import { updatePost, softDeletePost } from "@/lib/posts";
 import { useState } from "react";
+import { CommunityHoverCard } from "@/components/CommunityHoverCard";
+import { UserHoverCard } from "@/components/UserHoverCard";
 import { Editor } from "@/components/editor/Editor";
 import { stripMarkdown } from "@/lib/markdown";
 import { PollWidget } from "@/components/PollWidget";
@@ -85,25 +85,6 @@ export function PostCard({ post, index }: PostCardProps) {
 
   const isSaved = profile?.savedPosts?.[post.id] === true;
   const isOwnPost = user?.uid === post.author?.uid;
-  const postPath = getPostPath(post);
-
-  const { data: communities = [] } = useQuery({
-    queryKey: ["communities"],
-    queryFn: fetchAllCommunities,
-  });
-
-  const { data: shareSpaces = [] } = useQuery({
-    queryKey: ["communities", "share-destinations"],
-    queryFn: fetchAllCommunities,
-    enabled: isOwnPost && isProfilePost(post),
-  });
-
-  const community = post.communitySlug
-    ? communities.find((c) => c.slug === post.communitySlug)
-    : null;
-
-  const style = community ? getCommunityStyle(community.category) : null;
-  const IconComp = style ? style.icon : Globe;
 
   const bookmarkMutation = useMutation({
     mutationFn: async () => {
@@ -140,20 +121,10 @@ export function PostCard({ post, index }: PostCardProps) {
     onError: () => toast.error("Failed to delete post")
   });
 
-  const shareToSpaceMutation = useMutation({
-    mutationFn: (communitySlug: string) => sharePostToCommunity(post.id, communitySlug),
-    onSuccess: (_data, communitySlug) => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] });
-      queryClient.invalidateQueries({ queryKey: ['post', post.id] });
-      queryClient.invalidateQueries({ queryKey: ['communityPosts', communitySlug] });
-      toast.success(`Shared to b/${communitySlug}`);
-    },
-    onError: () => toast.error("Failed to share post to that space"),
-  });
-
   const handleShare = (e: React.MouseEvent) => {
     e.preventDefault();
-    const shareUrl = window.location.origin + `${postPath}${user?.uid ? `?ref_id=${user.uid}` : ''}`;
+    const spacePath = post.category ? `/b/${post.category}` : '';
+    const shareUrl = window.location.origin + `${spacePath}/p/${post.id}${user?.uid ? `?ref_id=${user.uid}` : ''}`;
     navigator.clipboard.writeText(shareUrl);
     toast.success("Link copied to clipboard!");
   };
@@ -181,7 +152,7 @@ export function PostCard({ post, index }: PostCardProps) {
             </span>
           </div>
 
-          <Link to={postPath} className="block">
+          <Link to={post.category ? `/b/${post.category}/p/${post.id}` : `/p/${post.id}`} className="block">
             <h3 className="font-heading text-base font-semibold text-muted-foreground leading-snug mb-1 transition-colors cursor-pointer line-through opacity-80">
               {post.title}
             </h3>
@@ -202,7 +173,7 @@ export function PostCard({ post, index }: PostCardProps) {
             </div>
 
             <div className="flex items-center gap-1">
-              <Link to={postPath} className="flex items-center gap-1 rounded-md px-2 py-1 font-body text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
+              <Link to={post.category ? `/b/${post.category}/p/${post.id}` : `/p/${post.id}`} className="flex items-center gap-1 rounded-md px-2 py-1 font-body text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
                 <MessageSquare className="h-3.5 w-3.5" />
                 {post.commentCount || 0}
               </Link>
@@ -225,7 +196,7 @@ export function PostCard({ post, index }: PostCardProps) {
       } ${isVeteran(post.author?.reputation || 0) ? 'veteran-aura' : ''}`}
     >
       {postImages[0] && !isEditing && (
-        <Link to={postPath} className="shrink-0 mt-1 block h-[72px] w-[96px] overflow-hidden rounded-md border border-[var(--border-main)] bg-muted/20">
+        <Link to={post.category ? `/b/${post.category}/p/${post.id}` : `/p/${post.id}`} className="shrink-0 mt-1 block h-[72px] w-[96px] overflow-hidden rounded-md border border-[var(--border-main)] bg-muted/20">
           <img
             src={postImages[0].src}
             alt={postImages[0].alt || "Post thumbnail"}
@@ -236,36 +207,68 @@ export function PostCard({ post, index }: PostCardProps) {
 
       <div className="flex-1 min-w-0 flex flex-col gap-1.5">
         <div className="flex items-center gap-1.5 flex-wrap">
+
           {post.communitySlug ? (
-            // Community Post Header
-            <Link to={`/b/${post.communitySlug}`} className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
-              <div className={`flex h-5 w-5 items-center justify-center rounded-md ${style?.iconBg || 'bg-primary/20 text-primary'}`}>
-                {IconComp && <IconComp className="h-3 w-3" />}
-              </div>
-              <span className="font-body text-[12px] font-semibold text-[var(--text-primary)] hover:underline">
-                b/{post.communitySlug}
-              </span>
-            </Link>
+            // ── COMMUNITY POST: b/space is the primary identity ──────────────
+            <>
+              <CommunityHoverCard slug={post.communitySlug} asChild>
+                <Link
+                  to={`/b/${post.communitySlug}`}
+                  className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+                >
+                  <div className="flex h-5 w-5 items-center justify-center rounded bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] font-heading text-[9px] font-bold shrink-0">
+                    {post.communitySlug.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="font-body text-[12px] font-bold text-[var(--text-primary)] hover:underline">
+                    b/{post.communitySlug}
+                  </span>
+                </Link>
+              </CommunityHoverCard>
+              <span className="text-[var(--text-muted)] text-[11px]">·</span>
+              <UserHoverCard handle={post.author.username || post.author.uid || ''} asChild>
+                <Link
+                  to={post.author?.uid ? `/f/${post.author.username || post.author.name?.replace(/\s+/g, '')}` : "#"}
+                  className="flex items-center gap-1 hover:opacity-80 transition-opacity"
+                >
+                  <div className="flex h-4 w-4 items-center justify-center rounded-full font-heading text-[9px] font-bold overflow-hidden bg-muted text-muted-foreground shrink-0">
+                    {(post.author?.avatar || post.author?.avatarUrl) ? (
+                      <img src={post.author.avatar || post.author.avatarUrl} alt={post.author.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <span>{post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'}</span>
+                    )}
+                  </div>
+                  <span className="font-body text-[11px] text-[var(--text-muted)] hover:underline flex items-center gap-0.5">
+                    f/{post.author?.username || post.author?.name?.replace(/\s+/g, '') || 'unknown'}
+                    <VerifiedBadge isVerified={!!post.author?.isVerifiedPro} size={10} showTooltip={false} />
+                  </span>
+                </Link>
+              </UserHoverCard>
+            </>
           ) : (
-            // Profile Post Header (Space is the user)
-            <Link to={getAuthorPath(post.author)} className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
-              <div className="flex h-5 w-5 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-primary/20 text-primary">
-                {(post.author?.avatar || post.author?.avatarUrl) ? (
-                  <img src={post.author.avatar || post.author.avatarUrl} alt={post.author.name} className="h-full w-full object-cover" />
-                ) : (
-                  <span>{post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'}</span>
-                )}
-              </div>
-              <span className="font-body text-[12px] font-semibold text-[var(--text-primary)] hover:underline flex items-center gap-1">
-                {getAuthorHandle(post.author)}
-                <VerifiedBadge isVerified={!!post.author?.isVerifiedPro} size={12} showTooltip={false} />
-              </span>
-            </Link>
+            // ── PROFILE POST: f/username is the primary identity ─────────────
+            <UserHoverCard handle={post.author.username || post.author.uid || ''} asChild>
+              <Link
+                to={post.author?.uid ? `/f/${post.author.username || post.author.name?.replace(/\s+/g, '')}` : "#"}
+                className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+              >
+                <div className="flex h-5 w-5 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-primary/20 text-primary shrink-0">
+                  {(post.author?.avatar || post.author?.avatarUrl) ? (
+                    <img src={post.author.avatar || post.author.avatarUrl} alt={post.author.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <span>{post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'}</span>
+                  )}
+                </div>
+                <span className="font-body text-[12px] font-medium text-[var(--text-primary)] hover:underline flex items-center gap-1">
+                  f/{post.author?.username || post.author?.name?.replace(/\s+/g, '') || 'unknown'}
+                  <VerifiedBadge isVerified={!!post.author?.isVerifiedPro} size={12} showTooltip={false} />
+                </span>
+              </Link>
+            </UserHoverCard>
           )}
+
           <span className="text-[var(--text-muted)] text-[12px]">•</span>
           <span className="font-body text-[12px] text-[var(--text-muted)] flex items-center gap-1">
             {formatTimeAgo(post.createdAt)}
-            {post.isEdited && <span className="text-[10px] italic">(edited)</span>}
             {isVeteran(post.author?.reputation || 0) && (
               <span className="text-[var(--brand-primary)] font-bold ml-1" title="Veteran">V</span>
             )}
@@ -275,7 +278,7 @@ export function PostCard({ post, index }: PostCardProps) {
           </div>
         </div>
 
-        <Link to={postPath} className="block">
+        <Link to={post.category ? `/b/${post.category}/p/${post.id}` : `/p/${post.id}`} className="block">
           <h3 className="font-heading text-[1.1rem] font-semibold text-[var(--text-primary)] leading-tight group-hover:text-[var(--brand-primary)] transition-colors cursor-pointer">
             {post.title}
           </h3>
@@ -316,7 +319,7 @@ export function PostCard({ post, index }: PostCardProps) {
           </div>
         ) : (
           !postImages[0] && previewText && (
-            <Link to={postPath} className="block mt-0.5">
+            <Link to={post.category ? `/b/${post.category}/p/${post.id}` : `/p/${post.id}`} className="block mt-0.5">
               <p className="font-body text-sm text-[var(--text-muted)] leading-relaxed line-clamp-2">
                 {previewText}
               </p>
@@ -343,7 +346,7 @@ export function PostCard({ post, index }: PostCardProps) {
         <div className="flex items-center gap-2 mt-1.5 flex-wrap">
           <VoteControls score={post.score || 0} entityId={post.id} authorUid={post.author?.uid} type="post" orientation="horizontal" />
           
-          <Link to={postPath} className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-body text-[12px] font-medium text-[var(--text-muted)] transition-colors hover:bg-muted/40 hover:text-[var(--text-primary)]">
+          <Link to={post.category ? `/b/${post.category}/p/${post.id}` : `/p/${post.id}`} className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-body text-[12px] font-medium text-[var(--text-muted)] transition-colors hover:bg-muted/40 hover:text-[var(--text-primary)]">
             <MessageSquare className="h-4 w-4" />
             {post.commentCount || 0}
           </Link>
@@ -374,21 +377,6 @@ export function PostCard({ post, index }: PostCardProps) {
                   <Edit2 className="h-4 w-4 mr-2" />
                   <span>Edit Post</span>
                 </DropdownMenuItem>
-                {isProfilePost(post) && shareSpaces.length > 0 && (
-                  <>
-                    {shareSpaces.slice(0, 6).map((space) => (
-                      <DropdownMenuItem
-                        key={space.slug}
-                        onClick={() => shareToSpaceMutation.mutate(space.slug)}
-                        disabled={shareToSpaceMutation.isPending}
-                        className="cursor-pointer"
-                      >
-                        <Share2 className="h-4 w-4 mr-2" />
-                        <span>Share to b/{space.slug}</span>
-                      </DropdownMenuItem>
-                    ))}
-                  </>
-                )}
                 <DropdownMenuItem onClick={() => deleteMutation.mutate()} className="cursor-pointer text-destructive focus:text-destructive">
                   <Trash2 className="h-4 w-4 mr-2" />
                   <span>Delete Post</span>

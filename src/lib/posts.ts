@@ -261,15 +261,6 @@ export const updatePost = async (id: string, body: string) => {
   await supabase.from("posts").update({ body, isEdited: true }).eq("id", id);
 };
 
-export const sharePostToCommunity = async (id: string, communitySlug: string) => {
-  const { error } = await supabase
-    .from("posts")
-    .update({ communitySlug })
-    .eq("id", id);
-
-  if (error) throw new Error(error.message);
-};
-
 export const softDeletePost = async (id: string) => {
   await supabase.from("posts").update({ isDeleted: true }).eq("id", id);
 };

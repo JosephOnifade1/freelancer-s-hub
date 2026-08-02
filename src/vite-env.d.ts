@@ -1,11 +1,1 @@
 /// <reference types="vite/client" />
-
-interface ImportMetaEnv {
-  readonly VITE_SUPABASE_URL?: string;
-  readonly VITE_SUPABASE_ANON_KEY?: string;
-  readonly VITE_USE_MOCK_SUPABASE?: "true" | "false";
-}
-
-interface ImportMeta {
-  readonly env: ImportMetaEnv;
-}

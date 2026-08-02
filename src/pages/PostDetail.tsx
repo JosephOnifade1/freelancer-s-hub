@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, MessageSquare, Share2, Bookmark, Loader2, MoreHorizontal, Edit2, Trash2, Eye, ExternalLink, Globe } from "lucide-react";
+import { ArrowLeft, MessageSquare, Share2, Bookmark, Loader2, MoreHorizontal, Edit2, Trash2, Eye, ExternalLink } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { VoteControls } from "@/components/VoteControls";
 import { PostTypeBadge } from "@/components/PostTypeBadge";
@@ -11,9 +11,10 @@ import { fetchPostById, incrementPostViews, updatePost, softDeletePost } from "@
 import { fetchComments, addComment, updateComment, softDeleteComment, CommentData } from "@/lib/comments";
 import { useAuth } from "@/hooks/useAuth";
 import { getUserProfile, toggleBookmark, isVeteran } from "@/lib/users";
-import { fetchAllCommunities, getCommunityStyle } from "@/lib/communities";
 import { formatTimeAgo } from "@/lib/utils";
 import { toast } from "sonner";
+import { CommunityHoverCard } from "@/components/CommunityHoverCard";
+import { UserHoverCard } from "@/components/UserHoverCard";
 import { Editor } from "@/components/editor/Editor";
 import { MarkdownRenderer } from "@/components/editor/MarkdownRenderer";
 import {
@@ -423,29 +424,33 @@ const PostDetail = () => {
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {post.communitySlug ? (
                       // Community Post Header
-                      <Link to={`/b/${post.communitySlug}`} className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
-                        <div className={`flex h-5 w-5 items-center justify-center rounded-md ${style?.iconBg || 'bg-primary/20 text-primary'}`}>
-                          {IconComp && <IconComp className="h-3 w-3" />}
-                        </div>
-                        <span className="font-body text-xs font-semibold text-foreground hover:underline">
-                          b/{post.communitySlug}
-                        </span>
-                      </Link>
+                      <CommunityHoverCard slug={post.communitySlug} asChild>
+                        <Link to={`/b/${post.communitySlug}`} className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
+                          <div className={`flex h-5 w-5 items-center justify-center rounded-md ${style?.iconBg || 'bg-primary/20 text-primary'}`}>
+                            {IconComp && <IconComp className="h-3 w-3" />}
+                          </div>
+                          <span className="font-body text-xs font-semibold text-foreground hover:underline">
+                            b/{post.communitySlug}
+                          </span>
+                        </Link>
+                      </CommunityHoverCard>
                     ) : (
                       // Profile Post Header (Space is the user)
-                      <Link to={`/f/${post.author?.username || post.author?.uid}`} className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
-                        <div className="flex h-5 w-5 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-primary/20 text-primary">
-                          {post.author?.avatar ? (
-                            <img src={post.author.avatar} alt={post.author.name} className="h-full w-full object-cover" />
-                          ) : (
-                            post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'
-                          )}
-                        </div>
-                        <span className="font-body text-xs font-semibold text-foreground hover:underline flex items-center gap-1">
-                          f/{post.author?.username || 'user'}
-                          <VerifiedBadge isVerified={!!(post.author as any).isVerifiedPro} size={12} showTooltip={false} />
-                        </span>
-                      </Link>
+                      <UserHoverCard handle={post.author?.username || post.author?.uid || ''} asChild>
+                        <Link to={`/f/${post.author?.username || post.author?.uid}`} className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
+                          <div className="flex h-5 w-5 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-primary/20 text-primary shrink-0">
+                            {post.author?.avatar ? (
+                              <img src={post.author.avatar} alt={post.author.name} className="h-full w-full object-cover" />
+                            ) : (
+                              post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'
+                            )}
+                          </div>
+                          <span className="font-body text-xs font-semibold text-foreground hover:underline flex items-center gap-1">
+                            f/{post.author?.username || 'user'}
+                            <VerifiedBadge isVerified={!!(post.author as any).isVerifiedPro} size={12} showTooltip={false} />
+                          </span>
+                        </Link>
+                      </UserHoverCard>
                     )}
 
                     <span className="text-muted-foreground text-xs">•</span>
@@ -466,17 +471,19 @@ const PostDetail = () => {
                   {post.communitySlug && (
                     <div className="flex items-center gap-1.5 pl-6 text-xs text-muted-foreground">
                       <span>Posted by</span>
-                      <Link to={`/f/${post.author?.username || post.author?.uid}`} className="flex items-center gap-1 hover:text-foreground font-medium text-foreground transition-colors">
-                        <div className="flex h-4 w-4 items-center justify-center rounded-full font-heading text-[8px] font-bold overflow-hidden bg-primary/20 text-primary">
-                          {post.author?.avatar ? (
-                            <img src={post.author.avatar} alt={post.author.name} className="h-full w-full object-cover" />
-                          ) : (
-                            post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'
-                          )}
-                        </div>
-                        <span>f/{post.author?.username || 'user'}</span>
-                        <VerifiedBadge isVerified={!!(post.author as any).isVerifiedPro} size={10} showTooltip={false} />
-                      </Link>
+                      <UserHoverCard handle={post.author?.username || post.author?.uid || ''} asChild>
+                        <Link to={`/f/${post.author?.username || post.author?.uid}`} className="flex items-center gap-1 hover:text-foreground font-medium text-foreground transition-colors">
+                          <div className="flex h-4 w-4 items-center justify-center rounded-full font-heading text-[8px] font-bold overflow-hidden bg-primary/20 text-primary shrink-0">
+                            {post.author?.avatar ? (
+                              <img src={post.author.avatar} alt={post.author.name} className="h-full w-full object-cover" />
+                            ) : (
+                              post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'
+                            )}
+                          </div>
+                          <span>f/{post.author?.username || 'user'}</span>
+                          <VerifiedBadge isVerified={!!(post.author as any).isVerifiedPro} size={10} showTooltip={false} />
+                        </Link>
+                      </UserHoverCard>
                       {isVeteran(post.author?.reputation || 0) && (
                         <span className="text-[var(--brand-primary)] font-bold ml-1" title="Veteran">V</span>
                       )}

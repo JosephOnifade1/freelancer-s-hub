@@ -1,4 +1,3 @@
-import { lazy, Suspense, type CSSProperties } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -6,27 +5,27 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider } from "@/components/ui/sidebar.tsx";
 
-// Route-level code splitting keeps large feature pages out of the initial app shell.
-const Index = lazy(() => import("./pages/Index.tsx"));
-const NewFeed = lazy(() => import("./pages/NewFeed.tsx"));
-const Popular = lazy(() => import("./pages/Popular.tsx"));
-const TagFeed = lazy(() => import("./pages/TagFeed.tsx"));
-const Communities = lazy(() => import("./pages/Communities.tsx"));
-const Bookmarks = lazy(() => import("./pages/Bookmarks.tsx"));
-const Achievements = lazy(() => import("./pages/Achievements.tsx"));
-const ProfileDetail = lazy(() => import("./pages/Profile.tsx"));
-const UserMeRedirect = lazy(() => import("./pages/UserMeRedirect.tsx"));
-const LeadsBoard = lazy(() => import("./pages/LeadsBoard.tsx"));
-const LeadDetail = lazy(() => import("./pages/LeadDetail.tsx"));
-const CreateLead = lazy(() => import("./pages/CreateLead.tsx"));
-const Settings = lazy(() => import("./pages/Settings.tsx"));
-const CreatePost = lazy(() => import("./pages/CreatePost.tsx"));
-const PostDetail = lazy(() => import("./pages/PostDetail.tsx"));
-const CommunityDetail = lazy(() => import("./pages/CommunityDetail.tsx"));
-const NotFound = lazy(() => import("./pages/NotFound.tsx"));
-const Login = lazy(() => import("./pages/Login.tsx"));
-const Signup = lazy(() => import("./pages/Signup.tsx"));
-const Landing = lazy(() => import("./pages/Landing.tsx"));
+// Page imports
+import Index from "./pages/Index.tsx";
+import NewFeed from "./pages/NewFeed.tsx";
+import Popular from "./pages/Popular.tsx";
+import TagFeed from "./pages/TagFeed.tsx";
+import Communities from "./pages/Communities.tsx";
+import Bookmarks from "./pages/Bookmarks.tsx";
+import Achievements from "./pages/Achievements.tsx";
+import ProfileDetail from "./pages/Profile.tsx";
+import UserMeRedirect from "./pages/UserMeRedirect.tsx";
+import LeadsBoard from "./pages/LeadsBoard.tsx";
+import LeadDetail from "./pages/LeadDetail.tsx";
+import CreateLead from "./pages/CreateLead.tsx";
+import Settings from "./pages/Settings.tsx";
+import CreatePost from "./pages/CreatePost.tsx";
+import PostDetail from "./pages/PostDetail.tsx";
+import CommunityDetail from "./pages/CommunityDetail.tsx";
+import NotFound from "./pages/NotFound.tsx";
+import Login from "./pages/Login.tsx";
+import Signup from "./pages/Signup.tsx";
+import Landing from "./pages/Landing.tsx";
 
 // Component imports
 import { ProtectedRoute } from "./components/ProtectedRoute.tsx";
@@ -72,12 +71,6 @@ const ComingSoonPage = ({
   </AppLayout>
 );
 
-const RouteFallback = () => (
-  <div className="min-h-screen flex items-center justify-center">
-    <div className="animate-pulse h-8 w-8 rounded-full bg-primary/30" />
-  </div>
-);
-
 // ─── Standalone Coming-Soon (no sidebar, for public/marketing pages) ─────────
 const StandaloneComingSoon = ({
   title,
@@ -98,10 +91,9 @@ const App = () => (
       <Toaster />
       <Sonner />
       <AuthProvider>
-        <SidebarProvider style={{ "--sidebar-top": "3.5rem" } as CSSProperties}>
+        <SidebarProvider style={{ "--sidebar-top": "3.5rem" } as React.CSSProperties}>
           <BrowserRouter>
-            <Suspense fallback={<RouteFallback />}>
-              <Routes>
+            <Routes>
 
               {/* ── Public routes ───────────────────────────────────────── */}
               <Route path="/" element={<RootRoute />} />
@@ -138,8 +130,8 @@ const App = () => (
               <Route path="/f/me"   element={<UserMeRedirect />} />
               <Route path="/f/:uid" element={<ProtectedRoute><ErrorBoundary><ProfileDetail /></ErrorBoundary></ProtectedRoute>} />
               <Route path="/u"      element={<Navigate to="/" replace />} />
-              <Route path="/u/me"   element={<UserMeRedirect />} />
-              <Route path="/u/:username" element={<ProtectedRoute><ErrorBoundary><ProfileDetail /></ErrorBoundary></ProtectedRoute>} />
+              <Route path="/f/me"   element={<UserMeRedirect />} />
+              <Route path="/f/:username" element={<ProtectedRoute><ErrorBoundary><ProfileDetail /></ErrorBoundary></ProtectedRoute>} />
 
               {/* ── Authenticated: Leads ────────────────────────────────── */}
               <Route path="/l"         element={<ProtectedRoute><LeadsBoard /></ProtectedRoute>} />
@@ -158,8 +150,7 @@ const App = () => (
               {/* ── 404 catch-all ────────────────────────────────────────── */}
               <Route path="*" element={<NotFound />} />
 
-              </Routes>
-            </Suspense>
+            </Routes>
           </BrowserRouter>
         </SidebarProvider>
       </AuthProvider>

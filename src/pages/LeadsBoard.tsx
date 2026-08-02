@@ -32,7 +32,7 @@ import {
   saveBoardLead, 
   updateBoardLeadStage, 
   deleteBoardLead 
-} from "@/lib/boardLeads";
+} from "@/lib/leads";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 

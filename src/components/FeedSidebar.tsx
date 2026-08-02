@@ -8,6 +8,8 @@ import { useQuery } from "@tanstack/react-query";
 import { getTopContributors } from "@/lib/users";
 import { fetchAllCommunities, getUserCommunities } from "@/lib/communities";
 import { getMostActiveThisWeek, getUserStreak, getCommunityHealthStats } from "@/lib/stats";
+import { CommunityHoverCard } from "@/components/CommunityHoverCard";
+import { UserHoverCard } from "@/components/UserHoverCard";
 
 const WEEKDAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 
@@ -111,27 +113,28 @@ export function FeedSidebar({ posts = [], currentUserUid }: { posts?: PostData[]
         ) : (
           <div className="space-y-2.5">
             {topContributors.map((user, i) => (
-              <Link
-                key={user.uid || user.username}
-                to={user.uid ? `/f/${user.username || user.uid}` : "#"}
-                className="flex items-center gap-2 group hover:opacity-80 transition-opacity"
-              >
-                <span className="font-heading text-xs font-bold text-muted-foreground w-4">{i + 1}</span>
-                <div className="flex h-6 w-6 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-primary/20 text-primary group-hover:opacity-90">
-                  {user.avatarUrl ? (
-                    <img src={user.avatarUrl} alt={user.displayName} className="h-full w-full object-cover" />
-                  ) : (
-                    user.displayName?.charAt(0).toUpperCase() || user.username?.charAt(0).toUpperCase()
-                  )}
-                </div>
-                <span className="flex-1 font-body text-xs font-medium text-[var(--text-primary)] group-hover:text-[var(--brand-primary)] transition-colors flex items-center gap-1">
-                  {user.displayName || user.username}
-                  <VerifiedBadge isVerified={user.isVerifiedPro} size={10} showTooltip={false} />
-                </span>
-                <span className="font-body text-[10px] text-muted-foreground">
-                  <LiveReputation uid={user.uid} fallback={user.reputation} />
-                </span>
-              </Link>
+              <UserHoverCard key={user.uid || user.username} handle={user.username || user.uid || ''} asChild>
+                <Link
+                  to={user.uid ? `/f/${user.username || user.uid}` : "#"}
+                  className="flex items-center gap-2 group hover:opacity-80 transition-opacity"
+                >
+                  <span className="font-heading text-xs font-bold text-muted-foreground w-4">{i + 1}</span>
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-primary/20 text-primary group-hover:opacity-90">
+                    {user.avatarUrl ? (
+                      <img src={user.avatarUrl} alt={user.displayName} className="h-full w-full object-cover" />
+                    ) : (
+                      user.displayName?.charAt(0).toUpperCase() || user.username?.charAt(0).toUpperCase()
+                    )}
+                  </div>
+                  <span className="flex-1 font-body text-xs font-medium text-[var(--text-primary)] group-hover:text-[var(--brand-primary)] transition-colors flex items-center gap-1">
+                    {user.displayName || user.username}
+                    <VerifiedBadge isVerified={user.isVerifiedPro} size={10} showTooltip={false} />
+                  </span>
+                  <span className="font-body text-[10px] text-muted-foreground">
+                    <LiveReputation uid={user.uid} fallback={user.reputation} />
+                  </span>
+                </Link>
+              </UserHoverCard>
             ))}
           </div>
         )}
@@ -148,30 +151,31 @@ export function FeedSidebar({ posts = [], currentUserUid }: { posts?: PostData[]
         ) : (
           <div className="space-y-2.5">
             {activeSpaces.slice(0, 5).map((space) => (
-              <Link
-                key={space.slug}
-                to={`/b/${space.slug}`}
-                className="flex items-center justify-between group hover:opacity-90 transition-opacity"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] font-heading text-[11px] font-bold">
-                    {space.name.charAt(0).toUpperCase()}
+              <CommunityHoverCard key={space.slug} slug={space.slug} asChild>
+                <Link
+                  to={`/b/${space.slug}`}
+                  className="flex items-center justify-between group hover:opacity-90 transition-opacity"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] font-heading text-[11px] font-bold">
+                      {space.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-body text-xs font-semibold text-[var(--text-primary)] group-hover:text-[var(--brand-primary)] transition-colors truncate">
+                        {space.name}
+                      </p>
+                      <p className="font-body text-[10px] text-[var(--text-muted)]">
+                        {space.memberCount.toLocaleString()} members
+                      </p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="font-body text-xs font-semibold text-[var(--text-primary)] group-hover:text-[var(--brand-primary)] transition-colors truncate">
-                      {space.name}
-                    </p>
-                    <p className="font-body text-[10px] text-[var(--text-muted)]">
-                      {space.memberCount.toLocaleString()} members
-                    </p>
-                  </div>
-                </div>
-                {joinedSlugs.includes(space.slug) && (
-                  <span className="shrink-0 flex h-4 w-4 items-center justify-center rounded bg-[var(--brand-primary)] text-[9px] font-bold text-black">
-                    ✓
-                  </span>
-                )}
-              </Link>
+                  {joinedSlugs.includes(space.slug) && (
+                    <span className="shrink-0 flex h-4 w-4 items-center justify-center rounded bg-[var(--brand-primary)] text-[9px] font-bold text-black">
+                      ✓
+                    </span>
+                  )}
+                </Link>
+              </CommunityHoverCard>
             ))}
           </div>
         )}
@@ -188,29 +192,30 @@ export function FeedSidebar({ posts = [], currentUserUid }: { posts?: PostData[]
         ) : (
           <div className="space-y-2.5">
             {mostActive.map((c, i) => (
-              <Link
-                key={c.uid}
-                to={`/f/${c.username || c.uid}`}
-                className="flex items-center justify-between p-1.5 rounded-xl hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className="font-mono text-xs font-bold text-muted-foreground/60 w-3">{i + 1}</span>
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg overflow-hidden bg-primary/20 text-primary font-heading text-[10px] font-bold">
-                    {c.avatarUrl ? (
-                      <img src={c.avatarUrl} alt={c.displayName} className="h-full w-full object-cover" />
-                    ) : (
-                      (c.displayName || c.username || "?").charAt(0).toUpperCase()
-                    )}
+              <UserHoverCard key={c.uid} handle={c.username || c.uid} asChild>
+                <Link
+                  to={`/f/${c.username || c.uid}`}
+                  className="flex items-center justify-between p-1.5 rounded-xl hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className="font-mono text-xs font-bold text-muted-foreground/60 w-3">{i + 1}</span>
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg overflow-hidden bg-primary/20 text-primary font-heading text-[10px] font-bold">
+                      {c.avatarUrl ? (
+                        <img src={c.avatarUrl} alt={c.displayName} className="h-full w-full object-cover" />
+                      ) : (
+                        (c.displayName || c.username || "?").charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 font-body text-xs font-semibold text-foreground">
+                      <span>{c.displayName || c.username}</span>
+                      <VerifiedBadge isVerified={c.isVerifiedPro} size={10} showTooltip={false} />
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 font-body text-xs font-semibold text-foreground">
-                    <span>{c.displayName || c.username}</span>
-                    <VerifiedBadge isVerified={c.isVerifiedPro} size={10} showTooltip={false} />
-                  </div>
-                </div>
-                <span className="font-mono text-xs font-bold text-[var(--brand-primary)]">
-                  {c.contributions} {c.contributions === 1 ? "post" : "posts"}
-                </span>
-              </Link>
+                  <span className="font-mono text-xs font-bold text-[var(--brand-primary)]">
+                    {c.contributions} {c.contributions === 1 ? "post" : "posts"}
+                  </span>
+                </Link>
+              </UserHoverCard>
             ))}
           </div>
         )}
