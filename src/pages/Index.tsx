@@ -157,11 +157,11 @@ const Index = () => {
           </div>
 
           {/* Right Sidebar Column (4 cols) */}
-          <div className="lg:col-span-4">
-            <div className="sticky top-20">
+          <aside className="lg:col-span-4 self-start sticky top-6">
+            <div className="max-h-[calc(100vh-6rem)] overflow-y-auto scrollbar-thin">
               <FeedSidebar posts={posts} currentUserUid={user?.uid} />
             </div>
-          </div>
+          </aside>
         </div>
       </div>
       </AppLayout>
