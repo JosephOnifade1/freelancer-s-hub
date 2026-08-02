@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, MessageSquare, Share2, Bookmark, Loader2, MoreHorizontal, Edit2, Trash2, Eye, ExternalLink } from "lucide-react";
+import { ArrowLeft, MessageSquare, Share2, Bookmark, Loader2, MoreHorizontal, Edit2, Trash2, Eye, ExternalLink, Globe } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { VoteControls } from "@/components/VoteControls";
 import { PostTypeBadge } from "@/components/PostTypeBadge";
@@ -11,6 +11,7 @@ import { fetchPostById, incrementPostViews, updatePost, softDeletePost } from "@
 import { fetchComments, addComment, updateComment, softDeleteComment, CommentData } from "@/lib/comments";
 import { useAuth } from "@/hooks/useAuth";
 import { getUserProfile, toggleBookmark, isVeteran } from "@/lib/users";
+import { fetchAllCommunities, getCommunityStyle } from "@/lib/communities";
 import { formatTimeAgo } from "@/lib/utils";
 import { toast } from "sonner";
 import { CommunityHoverCard } from "@/components/CommunityHoverCard";
@@ -152,18 +153,20 @@ const CommentThread = ({ comment, postId, depth = 0 }: { comment: CommentData; p
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
-              <Link to={comment.authorUid ? `/f/${comment.author || comment.authorUid}` : "#"} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                <div className="flex h-5 w-5 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-primary/20 text-primary">
-                  {comment.author ? comment.author.charAt(0).toUpperCase() : '?'}
-                </div>
-                <span className="font-body text-xs font-semibold text-foreground flex items-center gap-1">
-                  {comment.author || 'Anonymous'}
-                  <VerifiedBadge isVerified={!!(comment as any).isVerifiedPro} size={12} showTooltip={false} />
-                </span>
-                <span className="font-body text-[10px] text-muted-foreground">
-                  <LiveReputation uid={comment.authorUid} fallback={comment.reputation || 0} />
-                </span>
-              </Link>
+              <UserHoverCard handle={comment.author || comment.authorUid || ''} asChild>
+                <Link to={comment.authorUid ? `/u/${comment.author || comment.authorUid}` : "#"} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                  <div className="flex h-5 w-5 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-primary/20 text-primary">
+                    {comment.author ? comment.author.charAt(0).toUpperCase() : '?'}
+                  </div>
+                  <span className="font-body text-xs font-semibold text-foreground flex items-center gap-1">
+                    u/{comment.author || 'Anonymous'}
+                    <VerifiedBadge isVerified={!!(comment as any).isVerifiedPro} size={12} showTooltip={false} />
+                  </span>
+                  <span className="font-body text-[10px] text-muted-foreground">
+                    <LiveReputation uid={comment.authorUid} fallback={comment.reputation || 0} />
+                  </span>
+                </Link>
+              </UserHoverCard>
               <span className="font-body text-[10px] text-muted-foreground flex items-center gap-1">
                 · {formatTimeAgo(comment.createdAt)}
                 {comment.isEdited && <span className="italic">(edited)</span>}
@@ -277,7 +280,7 @@ const PostDetail = () => {
     enabled: !!user
   });
 
-  const { data: communities = [] } = useQuery({
+  const { data: communities = [] } = useQuery<any[]>({
     queryKey: ["communities"],
     queryFn: fetchAllCommunities,
   });
@@ -437,7 +440,7 @@ const PostDetail = () => {
                     ) : (
                       // Profile Post Header (Space is the user)
                       <UserHoverCard handle={post.author?.username || post.author?.uid || ''} asChild>
-                        <Link to={`/f/${post.author?.username || post.author?.uid}`} className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
+                        <Link to={`/u/${post.author?.username || post.author?.uid}`} className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
                           <div className="flex h-5 w-5 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-primary/20 text-primary shrink-0">
                             {post.author?.avatar ? (
                               <img src={post.author.avatar} alt={post.author.name} className="h-full w-full object-cover" />
@@ -446,7 +449,7 @@ const PostDetail = () => {
                             )}
                           </div>
                           <span className="font-body text-xs font-semibold text-foreground hover:underline flex items-center gap-1">
-                            f/{post.author?.username || 'user'}
+                            u/{post.author?.username || 'user'}
                             <VerifiedBadge isVerified={!!(post.author as any).isVerifiedPro} size={12} showTooltip={false} />
                           </span>
                         </Link>
@@ -472,7 +475,7 @@ const PostDetail = () => {
                     <div className="flex items-center gap-1.5 pl-6 text-xs text-muted-foreground">
                       <span>Posted by</span>
                       <UserHoverCard handle={post.author?.username || post.author?.uid || ''} asChild>
-                        <Link to={`/f/${post.author?.username || post.author?.uid}`} className="flex items-center gap-1 hover:text-foreground font-medium text-foreground transition-colors">
+                        <Link to={`/u/${post.author?.username || post.author?.uid}`} className="flex items-center gap-1 hover:text-foreground font-medium text-foreground transition-colors">
                           <div className="flex h-4 w-4 items-center justify-center rounded-full font-heading text-[8px] font-bold overflow-hidden bg-primary/20 text-primary shrink-0">
                             {post.author?.avatar ? (
                               <img src={post.author.avatar} alt={post.author.name} className="h-full w-full object-cover" />
@@ -480,7 +483,7 @@ const PostDetail = () => {
                               post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'
                             )}
                           </div>
-                          <span>f/{post.author?.username || 'user'}</span>
+                          <span>u/{post.author?.username || 'user'}</span>
                           <VerifiedBadge isVerified={!!(post.author as any).isVerifiedPro} size={10} showTooltip={false} />
                         </Link>
                       </UserHoverCard>

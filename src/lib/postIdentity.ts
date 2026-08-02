@@ -5,12 +5,12 @@ export const getPostPath = (post: Pick<PostData, "id" | "communitySlug">) =>
 
 export const getAuthorHandle = (author: PostData["author"]) => {
   const handle = author?.username || author?.name?.replace(/\s+/g, "") || "Unknown";
-  return `f/${handle}`;
+  return `u/${handle}`;
 };
 
 export const getAuthorPath = (author: PostData["author"]) => {
   const identifier = author?.username || author?.uid;
-  return identifier ? `/f/${identifier}` : "#";
+  return identifier ? `/u/${identifier}` : "#";
 };
 
 export const getDestinationLabel = (post: Pick<PostData, "communitySlug" | "author">) =>

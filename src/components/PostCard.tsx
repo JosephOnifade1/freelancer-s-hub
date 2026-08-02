@@ -227,7 +227,7 @@ export function PostCard({ post, index }: PostCardProps) {
               <span className="text-[var(--text-muted)] text-[11px]">·</span>
               <UserHoverCard handle={post.author.username || post.author.uid || ''} asChild>
                 <Link
-                  to={post.author?.uid ? `/f/${post.author.username || post.author.name?.replace(/\s+/g, '')}` : "#"}
+                  to={post.author?.uid ? `/u/${post.author.username || post.author.name?.replace(/\s+/g, '')}` : "#"}
                   className="flex items-center gap-1 hover:opacity-80 transition-opacity"
                 >
                   <div className="flex h-4 w-4 items-center justify-center rounded-full font-heading text-[9px] font-bold overflow-hidden bg-muted text-muted-foreground shrink-0">
@@ -238,17 +238,17 @@ export function PostCard({ post, index }: PostCardProps) {
                     )}
                   </div>
                   <span className="font-body text-[11px] text-[var(--text-muted)] hover:underline flex items-center gap-0.5">
-                    f/{post.author?.username || post.author?.name?.replace(/\s+/g, '') || 'unknown'}
+                    u/{post.author?.username || post.author?.name?.replace(/\s+/g, '') || 'unknown'}
                     <VerifiedBadge isVerified={!!post.author?.isVerifiedPro} size={10} showTooltip={false} />
                   </span>
                 </Link>
               </UserHoverCard>
             </>
           ) : (
-            // ── PROFILE POST: f/username is the primary identity ─────────────
+            // ── PROFILE POST: u/username is the primary identity ─────────────
             <UserHoverCard handle={post.author.username || post.author.uid || ''} asChild>
               <Link
-                to={post.author?.uid ? `/f/${post.author.username || post.author.name?.replace(/\s+/g, '')}` : "#"}
+                to={post.author?.uid ? `/u/${post.author.username || post.author.name?.replace(/\s+/g, '')}` : "#"}
                 className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
               >
                 <div className="flex h-5 w-5 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-primary/20 text-primary shrink-0">
@@ -259,7 +259,7 @@ export function PostCard({ post, index }: PostCardProps) {
                   )}
                 </div>
                 <span className="font-body text-[12px] font-medium text-[var(--text-primary)] hover:underline flex items-center gap-1">
-                  f/{post.author?.username || post.author?.name?.replace(/\s+/g, '') || 'unknown'}
+                  u/{post.author?.username || post.author?.name?.replace(/\s+/g, '') || 'unknown'}
                   <VerifiedBadge isVerified={!!post.author?.isVerifiedPro} size={12} showTooltip={false} />
                 </span>
               </Link>

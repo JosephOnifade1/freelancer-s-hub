@@ -115,7 +115,7 @@ export function FeedSidebar({ posts = [], currentUserUid }: { posts?: PostData[]
             {topContributors.map((user, i) => (
               <UserHoverCard key={user.uid || user.username} handle={user.username || user.uid || ''} asChild>
                 <Link
-                  to={user.uid ? `/f/${user.username || user.uid}` : "#"}
+                  to={user.uid ? `/u/${user.username || user.uid}` : "#"}
                   className="flex items-center gap-2 group hover:opacity-80 transition-opacity"
                 >
                   <span className="font-heading text-xs font-bold text-muted-foreground w-4">{i + 1}</span>
@@ -194,7 +194,7 @@ export function FeedSidebar({ posts = [], currentUserUid }: { posts?: PostData[]
             {mostActive.map((c, i) => (
               <UserHoverCard key={c.uid} handle={c.username || c.uid} asChild>
                 <Link
-                  to={`/f/${c.username || c.uid}`}
+                  to={`/u/${c.username || c.uid}`}
                   className="flex items-center justify-between p-1.5 rounded-xl hover:bg-muted/50 transition-colors"
                 >
                   <div className="flex items-center gap-2.5">

@@ -4,6 +4,7 @@ import { Lead } from "@/lib/leads";
 import { formatTimeAgo } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { UserHoverCard } from "@/components/UserHoverCard";
 
 interface LeadCardProps {
   lead: Lead;
@@ -60,19 +61,21 @@ export function LeadCard({ lead }: LeadCardProps) {
             {lead.applicantsCount || 0} applicants
           </div>
           <div className="flex items-center gap-1.5 ml-auto">
-            <Link to={`/f/${lead.postedBy.username || lead.postedBy.uid}`} className="flex items-center gap-1.5 hover:text-foreground transition-colors">
-              <div className="h-4 w-4 rounded-full overflow-hidden bg-muted">
-                {lead.postedBy.avatar ? (
-                  <img src={lead.postedBy.avatar} alt={lead.postedBy.name} className="h-full w-full object-cover" />
-                ) : (
-                  <span className="flex items-center justify-center text-[8px] font-bold h-full w-full">
-                    {lead.postedBy.name.charAt(0)}
-                  </span>
-                )}
-              </div>
-              {lead.postedBy.name}
-              <VerifiedBadge isVerified={!!lead.postedBy.isVerified} size={10} showTooltip={false} />
-            </Link>
+            <UserHoverCard handle={lead.postedBy.username || lead.postedBy.uid} asChild>
+              <Link to={`/u/${lead.postedBy.username || lead.postedBy.uid}`} className="flex items-center gap-1.5 hover:text-foreground transition-colors">
+                <div className="h-4 w-4 rounded-full overflow-hidden bg-muted">
+                  {lead.postedBy.avatar ? (
+                    <img src={lead.postedBy.avatar} alt={lead.postedBy.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="flex items-center justify-center text-[8px] font-bold h-full w-full">
+                      {lead.postedBy.name.charAt(0)}
+                    </span>
+                  )}
+                </div>
+                {lead.postedBy.name}
+                <VerifiedBadge isVerified={!!lead.postedBy.isVerified} size={10} showTooltip={false} />
+              </Link>
+            </UserHoverCard>
           </div>
         </div>
 

@@ -144,7 +144,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       setActiveIndex(prev => (prev > 0 ? prev - 1 : prev));
     } else if (e.key === 'Enter' && activeIndex >= 0) {
       const result = allResults[activeIndex];
-      if (result.type === 'user') handleNav(`/f/${result.data.username || result.data.uid}`);
+      if (result.type === 'user') handleNav(`/u/${result.data.username || result.data.uid}`);
       else handleNav(result.data.category ? `/b/${result.data.category}/p/${result.data.id}` : `/p/${result.data.id}`);
     }
   };
@@ -235,7 +235,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                         {searchResults.users.map((u, i) => (
                           <button
                             key={u.uid}
-                            onClick={() => handleNav(`/f/${u.username || u.uid}`)}
+                            onClick={() => handleNav(`/u/${u.username || u.uid}`)}
                             onMouseEnter={() => setActiveIndex(i)}
                             className={cn(
                               "flex items-center gap-3 w-full p-2 rounded-lg transition-all text-left",
@@ -341,7 +341,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                        {searchResults.users.map((u) => (
                         <button
                           key={u.uid}
-                          onClick={() => handleNav(`/f/${u.username || u.uid}`)}
+                          onClick={() => handleNav(`/u/${u.username || u.uid}`)}
                           className="flex items-center gap-3 w-full p-3 rounded-xl bg-white/5"
                         >
                           <div className="h-10 w-10 rounded-full overflow-hidden bg-primary/20 flex items-center justify-center shrink-0">
@@ -482,7 +482,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             >
               <div className="py-2">
                 <button 
-                  onClick={() => { navigate(user ? `/f/${profile?.username || user.uid}` : '/login'); setIsAvatarMenuOpen(false); }}
+                  onClick={() => { navigate(user ? `/u/${profile?.username || user.uid}` : '/login'); setIsAvatarMenuOpen(false); }}
                   className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-[var(--text-muted)] transition-all hover:bg-white/5 hover:text-[var(--text-primary)] group"
                 >
                   <User className="h-4 w-4 shrink-0" />

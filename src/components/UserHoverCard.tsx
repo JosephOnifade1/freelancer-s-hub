@@ -16,9 +16,10 @@ import { cn } from "@/lib/utils";
 interface UserHoverCardProps {
   handle: string; // The username (f/username)
   children: React.ReactNode;
+  asChild?: boolean;
 }
 
-export function UserHoverCard({ handle, children }: UserHoverCardProps) {
+export function UserHoverCard({ handle, children, asChild }: UserHoverCardProps) {
   const { data: profile, isLoading } = useQuery({
     queryKey: ['profile', handle],
     queryFn: () => handle ? getUserProfile(handle) : null,
@@ -30,13 +31,17 @@ export function UserHoverCard({ handle, children }: UserHoverCardProps) {
 
   return (
     <HoverCard openDelay={300}>
-      <HoverCardTrigger asChild>
-        <Link 
-          to={profile?.uid ? `/f/${profile.uid}` : `/f/${handle}`} 
-          className="text-primary hover:underline font-medium decoration-primary/30 underline-offset-2"
-        >
-          {children}
-        </Link>
+      <HoverCardTrigger asChild={asChild}>
+        {asChild ? (
+          children
+        ) : (
+          <Link 
+            to={profile?.uid ? `/u/${profile.uid}` : `/u/${handle}`} 
+            className="text-primary hover:underline font-medium decoration-primary/30 underline-offset-2"
+          >
+            {children}
+          </Link>
+        )}
       </HoverCardTrigger>
       <HoverCardContent className="w-80 p-0 overflow-hidden border-border/40 shadow-2xl bg-card/95 backdrop-blur-md rounded-2xl">
         {loading ? (
@@ -94,7 +99,7 @@ export function UserHoverCard({ handle, children }: UserHoverCardProps) {
                   {profile.displayName}
                 </h3>
                 <p className="font-body text-xs text-muted-foreground">
-                  f/{profile.username}
+                  u/{profile.username}
                 </p>
               </div>
 

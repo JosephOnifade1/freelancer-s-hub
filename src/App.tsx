@@ -126,12 +126,10 @@ const App = () => (
 
               {/* ── Authenticated: Freelancer profiles ─────────────────── */}
               {/* /f and /u are prefix namespaces, not pages themselves */}
-              <Route path="/f"      element={<Navigate to="/" replace />} />
-              <Route path="/f/me"   element={<UserMeRedirect />} />
-              <Route path="/f/:uid" element={<ProtectedRoute><ErrorBoundary><ProfileDetail /></ErrorBoundary></ProtectedRoute>} />
               <Route path="/u"      element={<Navigate to="/" replace />} />
-              <Route path="/f/me"   element={<UserMeRedirect />} />
-              <Route path="/f/:username" element={<ProtectedRoute><ErrorBoundary><ProfileDetail /></ErrorBoundary></ProtectedRoute>} />
+              <Route path="/u/me"   element={<UserMeRedirect />} />
+              <Route path="/u/:uid" element={<ProtectedRoute><ErrorBoundary><ProfileDetail /></ErrorBoundary></ProtectedRoute>} />
+              <Route path="/u/:username" element={<ProtectedRoute><ErrorBoundary><ProfileDetail /></ErrorBoundary></ProtectedRoute>} />
 
               {/* ── Authenticated: Leads ────────────────────────────────── */}
               <Route path="/l"         element={<ProtectedRoute><LeadsBoard /></ProtectedRoute>} />

@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { formatTimeAgo } from "@/lib/utils";
+import { UserHoverCard } from "@/components/UserHoverCard";
 import { MarkdownRenderer } from "@/components/editor/MarkdownRenderer";
 
 const LeadDetail = () => {
@@ -153,10 +154,12 @@ const LeadDetail = () => {
                     )}
                   </div>
                   <div>
-                    <Link to={`/f/${lead.postedBy.username || lead.postedBy.uid}`} className="font-heading font-bold text-sm hover:text-primary transition-colors flex items-center gap-1">
-                      {lead.postedBy.name}
-                      <VerifiedBadge isVerified={!!lead.postedBy.isVerified} size={12} showTooltip={false} />
-                    </Link>
+                    <UserHoverCard handle={lead.postedBy.username || lead.postedBy.uid} asChild>
+                      <Link to={`/u/${lead.postedBy.username || lead.postedBy.uid}`} className="font-heading font-bold text-sm hover:text-primary transition-colors flex items-center gap-1">
+                        {lead.postedBy.name}
+                        <VerifiedBadge isVerified={!!lead.postedBy.isVerified} size={12} showTooltip={false} />
+                      </Link>
+                    </UserHoverCard>
                     <p className="text-[10px] text-muted-foreground">Premium Client</p>
                   </div>
                 </div>

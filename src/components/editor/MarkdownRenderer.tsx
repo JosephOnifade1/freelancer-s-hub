@@ -4,6 +4,7 @@ import rehypeRaw from 'rehype-raw';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import { cn } from '@/lib/utils';
 import { UserHoverCard } from '../UserHoverCard';
+import { CommunityHoverCard } from '../CommunityHoverCard';
 
 interface MarkdownRendererProps {
   content: string;
@@ -24,10 +25,10 @@ export const MarkdownRenderer = ({ content, className }: MarkdownRendererProps) 
     const start = match.indexOf(p1);
     const prefixChar = match.substring(0, start);
     
-    // Normalize prefix: b/ stays b/, u/ and f/ both resolve to /f/
+    // Normalize prefix: b/ stays b/, u/ and f/ both resolve to /u/
     let targetLink = p1;
-    if (p1.startsWith('u/')) {
-      targetLink = p1.replace('u/', 'f/');
+    if (p1.startsWith('f/')) {
+      targetLink = p1.replace('f/', 'u/');
     }
 
     return `${prefixChar}[${p1}](/${targetLink})`;
@@ -71,10 +72,16 @@ export const MarkdownRenderer = ({ content, className }: MarkdownRendererProps) 
           a: ({ node, ...props }) => {
             const href = props.href || "";
             const isUserLink = (href.startsWith("/u/") || href.startsWith("/f/")) && href.length > 3;
+            const isCommunityLink = href.startsWith("/b/") && href.length > 3;
             
             if (isUserLink) {
               const handle = href.replace("/u/", "").replace("/f/", "");
               return <UserHoverCard handle={handle}>{props.children}</UserHoverCard>;
+            }
+            
+            if (isCommunityLink) {
+              const slug = href.replace("/b/", "");
+              return <CommunityHoverCard slug={slug}>{props.children}</CommunityHoverCard>;
             }
             
             return (

@@ -336,7 +336,7 @@ const CreatePost = () => {
         navigate(`/b/${selectedSpace.slug}`);
       } else {
         // Profile post — navigate to the user's own profile
-        navigate(`/f/${profile?.username || user.uid}`);
+        navigate(`/u/${profile?.username || user.uid}`);
       }
     } catch (error: unknown) {
       const description = error instanceof Error ? error.message : "Failed to create post.";
