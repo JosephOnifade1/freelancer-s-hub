@@ -18,7 +18,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { formatTimeAgo } from "@/lib/utils";
-import { UserHoverCard } from "@/components/UserHoverCard";
 import { MarkdownRenderer } from "@/components/editor/MarkdownRenderer";
 
 const LeadDetail = () => {
@@ -80,10 +79,10 @@ const LeadDetail = () => {
                 {lead.title}
               </h1>
               {lead.isVerified && (
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/25 w-fit">
-                  <BadgeCheck className="h-4 w-4 text-emerald-400" />
-                  <span className="font-heading text-sm font-bold text-emerald-400 tracking-wide">Verified Opportunity</span>
-                  <span className="font-body text-xs text-emerald-500/70">— vetted by a Borynx moderator</span>
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-success/10 border border-success/25 w-fit">
+                  <BadgeCheck className="h-4 w-4 text-success" />
+                  <span className="font-heading text-sm font-bold text-success tracking-wide">Verified Opportunity</span>
+                  <span className="font-body text-xs text-success/70">— vetted by a Borynx moderator</span>
                 </div>
               )}
               <div className="flex flex-wrap items-center gap-x-6 gap-y-3 font-body text-sm text-muted-foreground">
@@ -95,7 +94,7 @@ const LeadDetail = () => {
                   <Calendar className="h-4 w-4 text-primary" />
                   Apply by: Flexible
                 </div>
-                <div className="flex items-center gap-2 text-emerald-500 font-bold">
+                <div className="flex items-center gap-2 text-success font-bold">
                   <DollarSign className="h-4 w-4" />
                   {lead.budget}
                 </div>
@@ -127,13 +126,13 @@ const LeadDetail = () => {
               <div className="mb-6">
                 <p className="text-xs text-muted-foreground font-body mb-1">Opportunity Status</p>
                 <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <div className="h-2 w-2 rounded-full bg-success" />
                   <span className="text-sm font-bold font-heading text-foreground uppercase tracking-wide">Accepting Proposals</span>
                 </div>
               </div>
 
               <div className="space-y-3">
-                <Button className="w-full h-12 font-heading font-bold text-base rounded-xl glow-primary">
+                <Button className="w-full h-12 font-heading font-bold text-base rounded-xl">
                   Apply Now
                 </Button>
                 <Button variant="outline" className="w-full h-12 font-heading font-bold text-base rounded-xl gap-2">
@@ -154,12 +153,10 @@ const LeadDetail = () => {
                     )}
                   </div>
                   <div>
-                    <UserHoverCard handle={lead.postedBy.username || lead.postedBy.uid} asChild>
-                      <Link to={`/u/${lead.postedBy.username || lead.postedBy.uid}`} className="font-heading font-bold text-sm hover:text-primary transition-colors flex items-center gap-1">
-                        {lead.postedBy.name}
-                        <VerifiedBadge isVerified={!!lead.postedBy.isVerified} size={12} showTooltip={false} />
-                      </Link>
-                    </UserHoverCard>
+                    <Link to={`/f/${lead.postedBy.username || lead.postedBy.uid}`} className="font-heading font-bold text-sm hover:text-primary transition-colors flex items-center gap-1">
+                      {lead.postedBy.name}
+                      <VerifiedBadge isVerified={!!lead.postedBy.isVerified} size={12} showTooltip={false} />
+                    </Link>
                     <p className="text-[10px] text-muted-foreground">Premium Client</p>
                   </div>
                 </div>

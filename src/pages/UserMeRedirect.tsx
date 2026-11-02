@@ -16,7 +16,7 @@ const UserMeRedirect = () => {
 
   useEffect(() => {
     if (!loading && user && (profile !== undefined)) {
-      navigate(`/u/${profile?.username || user.uid}`);
+      navigate(`/f/${profile?.username || user.uid}`);
     } else if (!loading && !user) {
       navigate("/login");
     }

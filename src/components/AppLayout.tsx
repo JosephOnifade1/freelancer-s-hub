@@ -1,7 +1,7 @@
 import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { VeteranCelebration } from "./VeteranCelebration";
-import { MessageSquare, Plus, Bell, User, LogOut, Settings, Search, X, FileText, Sparkles, Monitor, Sun, Moon, Trophy, Circle, Shield, Check } from "lucide-react";
+import { Plus, User, LogOut, Settings, Search, X, FileText, Sparkles, Monitor, Sun, Moon, Shield, Check } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { getUserProfile, UserProfile } from "@/lib/users";
@@ -144,7 +144,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       setActiveIndex(prev => (prev > 0 ? prev - 1 : prev));
     } else if (e.key === 'Enter' && activeIndex >= 0) {
       const result = allResults[activeIndex];
-      if (result.type === 'user') handleNav(`/u/${result.data.username || result.data.uid}`);
+      if (result.type === 'user') handleNav(`/f/${result.data.username || result.data.uid}`);
       else handleNav(result.data.category ? `/b/${result.data.category}/p/${result.data.id}` : `/p/${result.data.id}`);
     }
   };
@@ -154,7 +154,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <header 
         className={cn(
           "sticky top-0 z-30 w-full border-b border-border transition-all duration-300",
-          theme === 'light' ? "bg-white/80 border-slate-200" : "bg-background/80 border-white/10 backdrop-blur-md",
+          theme === 'light' ? "bg-white/80 border-border" : "bg-background/80 border-white/10 backdrop-blur-md",
           isAvatarMenuOpen && "bg-background/95 shadow-2xl"
         )}
       >
@@ -177,7 +177,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   <span className="font-heading text-lg font-bold tracking-tight text-foreground leading-none">
                     Borynx
                   </span>
-                  <span className="relative rounded-full bg-primary/10 px-2.5 py-1 font-body text-[10px] font-bold text-primary border border-primary/20 leading-none">
+                  <span className="hidden sm:inline-flex rounded-md border border-border px-1.5 py-0.5 font-body text-[10px] font-semibold uppercase tracking-wide text-muted-foreground leading-none">
                     BETA
                   </span>
                 </div>
@@ -212,7 +212,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               
               {/* Instant Results Dropdown (Desktop) */}
               <div className={cn(
-                "hidden group-focus-within:block absolute top-full left-0 right-0 mt-2 bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-xl shadow-2xl z-50 p-2 max-h-[480px] overflow-auto scrollbar-stealth theme-transition",
+                "hidden group-focus-within:block absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-2xl z-50 p-2 max-h-[480px] overflow-auto scrollbar-stealth theme-transition",
                 (!searchQuery || (allResults.length === 0 && !isSearching)) && "group-focus-within:hidden"
               )}>
                 {isSearching ? (
@@ -235,7 +235,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                         {searchResults.users.map((u, i) => (
                           <button
                             key={u.uid}
-                            onClick={() => handleNav(`/u/${u.username || u.uid}`)}
+                            onClick={() => handleNav(`/f/${u.username || u.uid}`)}
                             onMouseEnter={() => setActiveIndex(i)}
                             className={cn(
                               "flex items-center gap-3 w-full p-2 rounded-lg transition-all text-left",
@@ -279,7 +279,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                               )}
                             >
                               <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
-                                {p.type === 'resource' ? <Sparkles className="h-4 w-4 text-[var(--brand-accent)]" /> : <FileText className="h-4 w-4 text-[var(--brand-primary)]" />}
+                                {p.type === 'resource' ? <Sparkles className="h-4 w-4 text-primary" /> : <FileText className="h-4 w-4 text-primary" />}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="text-xs font-semibold text-foreground truncate">{p.title}</div>
@@ -341,7 +341,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                        {searchResults.users.map((u) => (
                         <button
                           key={u.uid}
-                          onClick={() => handleNav(`/u/${u.username || u.uid}`)}
+                          onClick={() => handleNav(`/f/${u.username || u.uid}`)}
                           className="flex items-center gap-3 w-full p-3 rounded-xl bg-white/5"
                         >
                           <div className="h-10 w-10 rounded-full overflow-hidden bg-primary/20 flex items-center justify-center shrink-0">
@@ -370,7 +370,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                           className="flex items-center gap-3 w-full p-3 rounded-xl bg-white/5"
                         >
                           <div className="h-10 w-10 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
-                            {p.type === 'resource' ? <Sparkles className="h-5 w-5 text-[var(--brand-accent)]" /> : <FileText className="h-5 w-5 text-[var(--brand-primary)]" />}
+                            {p.type === 'resource' ? <Sparkles className="h-5 w-5 text-primary" /> : <FileText className="h-5 w-5 text-primary" />}
                           </div>
                           <div className="flex-1 min-w-0 text-left">
                             <div className="text-sm font-semibold text-foreground truncate">{p.title}</div>
@@ -397,28 +397,16 @@ export function AppLayout({ children }: AppLayoutProps) {
             <div className={`flex items-center gap-2 lg:gap-3 shrink-0 ml-auto ${isSearchExpanded ? "hidden" : "flex"}`}>
               <button 
                 onClick={() => setIsSearchExpanded(true)}
-                className="lg:hidden p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/5 rounded-full transition-colors"
+                className="lg:hidden p-2 text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-full transition-colors"
               >
                 <Search className="h-5 w-5" />
               </button>
 
-              <button className="hidden md:flex p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/5 rounded-full transition-colors">
-                <MessageSquare className="h-5 w-5" />
-              </button>
-              
-              <Link to="/submit" className="flex items-center gap-2 p-2 px-4 bg-accent/50 hover:bg-accent text-foreground rounded-full transition-colors font-body text-sm font-bold">
+              <Link to="/submit" className="flex items-center gap-1.5 h-9 px-3 sm:px-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md transition-colors font-body text-sm font-semibold">
                 <Plus className="h-4 w-4" />
                 <span className="hidden sm:inline">Create</span>
               </Link>
 
-              <button className="p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/5 rounded-full transition-colors relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-2 right-2 flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                </span>
-              </button>
-              
               <div className="relative">
                 <button
                   onClick={() => setIsAvatarMenuOpen(prev => !prev)}
@@ -450,10 +438,6 @@ export function AppLayout({ children }: AppLayoutProps) {
                       {profile?.initial || user?.user_metadata?.display_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || "?"}
                     </span>
                   </div>
-                  <div className={cn(
-                    "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-[2px] border-background z-10 transition-colors",
-                    isOnline ? "bg-lime-500 shadow-[0_0_6px_rgba(132,204,22,1)]" : "bg-slate-500"
-                  )} />
                 </button>
 
 
@@ -478,12 +462,12 @@ export function AppLayout({ children }: AppLayoutProps) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
               transition={{ duration: 0.1, ease: "easeOut" }}
-              className="fixed top-[3.75rem] right-4 w-[240px] bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] z-[999] overflow-hidden theme-transition"
+              className="fixed top-[3.75rem] right-4 w-[240px] bg-card border border-border rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] z-[999] overflow-hidden theme-transition"
             >
               <div className="py-2">
                 <button 
-                  onClick={() => { navigate(user ? `/u/${profile?.username || user.uid}` : '/login'); setIsAvatarMenuOpen(false); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-[var(--text-muted)] transition-all hover:bg-white/5 hover:text-[var(--text-primary)] group"
+                  onClick={() => { navigate(user ? `/f/${profile?.username || user.uid}` : '/login'); setIsAvatarMenuOpen(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground transition-all hover:bg-white/5 hover:text-foreground group"
                 >
                   <User className="h-4 w-4 shrink-0" />
                   <span className="flex items-center">View Profile</span>
@@ -491,7 +475,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
                 <button 
                   onClick={() => { navigate('/drafts'); setIsAvatarMenuOpen(false); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-[var(--text-muted)] transition-all hover:bg-white/5 hover:text-[var(--text-primary)] group"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground transition-all hover:bg-white/5 hover:text-foreground group"
                 >
                   <FileText className="h-4 w-4 shrink-0" />
                   <span className="flex items-center">Drafts</span>
@@ -499,7 +483,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
                 <button 
                   onClick={() => { navigate('/premium'); setIsAvatarMenuOpen(false); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-[var(--text-muted)] transition-all hover:bg-white/5 hover:text-[var(--text-primary)] group"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground transition-all hover:bg-white/5 hover:text-foreground group"
                 >
                   <Shield className="h-4 w-4 shrink-0" />
                   <span className="flex items-center">Premium</span>
@@ -507,7 +491,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
                 <button 
                   onClick={() => { setIsThemeModalOpen(true); setIsAvatarMenuOpen(false); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-[var(--text-muted)] transition-all hover:bg-white/5 hover:text-[var(--text-primary)] group"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground transition-all hover:bg-white/5 hover:text-foreground group"
                 >
                   <Moon className="h-4 w-4 shrink-0" />
                   <span className="flex items-center">Display Mode</span>
@@ -517,7 +501,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
                 <button 
                   onClick={handleSignOut}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-[var(--text-muted)] transition-all hover:bg-white/5 hover:text-[var(--brand-danger)] group"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground transition-all hover:bg-white/5 hover:text-destructive group"
                 >
                   <LogOut className="h-4 w-4 shrink-0" />
                   <span className="flex items-center">Log Out</span>
@@ -525,7 +509,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
                 <button 
                   onClick={() => { navigate('/settings'); setIsAvatarMenuOpen(false); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-[var(--text-muted)] transition-all hover:bg-white/5 hover:text-[var(--text-primary)] group"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground transition-all hover:bg-white/5 hover:text-foreground group"
                 >
                   <Settings className="h-4 w-4 shrink-0" />
                   <span className="flex items-center">Settings</span>
@@ -549,31 +533,20 @@ export function AppLayout({ children }: AppLayoutProps) {
         >
           <SidebarTrigger 
             className={cn(
-              "rounded-full w-8 h-8 flex items-center justify-center p-0 border border-border transition-all duration-300 shadow-[0_0_10px_rgba(99,102,241,0.3)] hover:scale-110 active:scale-95 pointer-events-auto",
-              theme === 'dark' ? "bg-[#0D0D12]/60 backdrop-blur-[8px]" : "bg-white"
+              "rounded-full w-8 h-8 flex items-center justify-center p-0 border border-border transition-all duration-300 hover:scale-110 active:scale-95 pointer-events-auto",
+              "bg-background"
             )}
           />
         </div>
 
-        <main className="flex-1 overflow-y-auto bg-[var(--bg-app)] relative flex flex-col">
+        <main className="flex-1 overflow-y-auto bg-background relative flex flex-col">
           <div className="flex-1 p-4 sm:p-6 lg:p-8">
             <Breadcrumbs />
             {children}
           </div>
           
-          {/* Sticky Technical Footer */}
-          <footer className={cn(
-            "sticky bottom-0 z-20 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-2 px-4 flex items-center justify-between text-xs text-muted-foreground font-body",
-            theme === 'light' ? "border-slate-200" : "border-white/10"
-          )}>
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-lime-500"></span>
-              </span>
-              All systems operational
-            </div>
-            <div>&copy; {new Date().getFullYear()} Borynx</div>
+          <footer className="border-t border-border px-4 py-4 text-xs text-muted-foreground">
+            &copy; {new Date().getFullYear()} Borynx
           </footer>
         </main>
       </div>
@@ -589,7 +562,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsThemeModalOpen(false)}
-              className="fixed inset-0 bg-black/70 backdrop-blur-[20px] z-[9998]"
+              className="fixed inset-0 bg-black/60 z-[9998]"
             />
             
             <motion.div
@@ -599,15 +572,15 @@ export function AppLayout({ children }: AppLayoutProps) {
               transition={{ duration: 0.2, ease: "easeOut" }}
               className={cn(
                 "relative z-[9999] w-full max-w-[420px] rounded-[20px] shadow-2xl overflow-hidden theme-transition",
-                theme === 'light' ? "bg-[var(--bg-surface)] border border-black/5" : "bg-[var(--bg-surface)] border border-[var(--border-main)]"
+                theme === 'light' ? "bg-card border border-black/5" : "bg-card border border-border"
               )}
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-5 border-b border-[var(--border-main)]">
-                <h2 className="text-lg font-bold text-[var(--text-primary)]">Display Mode</h2>
+              <div className="flex items-center justify-between p-5 border-b border-border">
+                <h2 className="text-lg font-bold text-foreground">Display Mode</h2>
                 <button 
                   onClick={() => setIsThemeModalOpen(false)}
-                  className="p-2 hover:bg-white/5 rounded-full text-[var(--text-muted)] transition-colors"
+                  className="p-2 hover:bg-white/5 rounded-full text-muted-foreground transition-colors"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -631,7 +604,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                     <div className="flex items-center gap-4">
                       <Icon className={cn(
                         "h-5 w-5 transition-colors",
-                        theme === id ? "text-[var(--brand-accent)]" : "text-[var(--text-muted)] group-hover:text-[var(--text-primary)]"
+                        theme === id ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
                       )} />
                       <span className={cn(
                         "text-sm font-medium transition-colors",
@@ -641,17 +614,17 @@ export function AppLayout({ children }: AppLayoutProps) {
                       </span>
                     </div>
                     {theme === id && (
-                      <Check className="h-5 w-5 text-[var(--brand-accent)]" />
+                      <Check className="h-5 w-5 text-primary" />
                     )}
                   </button>
                 ))}
               </div>
 
               {/* Footer */}
-              <div className="p-5 flex justify-end border-t border-[var(--border-main)]">
+              <div className="p-5 flex justify-end border-t border-border">
                 <button
                   onClick={() => setIsThemeModalOpen(false)}
-                  className="px-8 py-2.5 rounded-full bg-[var(--brand-primary)] hover:opacity-90 text-white text-sm font-bold transition-all shadow-lg shadow-primary/20"
+                  className="px-8 py-2.5 rounded-full bg-primary hover:opacity-90 text-white text-sm font-bold transition-all shadow-lg shadow-primary/20"
                 >
                   Done
                 </button>

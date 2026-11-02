@@ -4,7 +4,6 @@ import { Lead } from "@/lib/leads";
 import { formatTimeAgo } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
-import { UserHoverCard } from "@/components/UserHoverCard";
 
 interface LeadCardProps {
   lead: Lead;
@@ -12,10 +11,10 @@ interface LeadCardProps {
 
 export function LeadCard({ lead }: LeadCardProps) {
   const typeColors = {
-    "Bounty": "bg-amber-500/10 text-amber-500 border-amber-500/20",
-    "Project": "bg-blue-500/10 text-blue-500 border-blue-500/20",
-    "Retainer": "bg-purple-500/10 text-purple-500 border-purple-500/20",
-    "Full-time": "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+    "Bounty": "bg-warning/10 text-warning border-warning/20",
+    "Project": "bg-info/10 text-info border-info/20",
+    "Retainer": "bg-primary/10 text-primary border-primary/20",
+    "Full-time": "bg-success/10 text-success border-success/20",
   };
 
   return (
@@ -29,7 +28,7 @@ export function LeadCard({ lead }: LeadCardProps) {
                 {lead.type}
               </Badge>
               {lead.isVerified && (
-                <span className="inline-flex items-center gap-1 px-2 py-0 rounded-full bg-emerald-500/10 border border-emerald-500/20 font-heading text-[10px] text-emerald-500 font-bold uppercase tracking-wider">
+                <span className="inline-flex items-center gap-1 px-2 py-0 rounded-full bg-success/10 border border-success/20 font-heading text-[10px] text-success font-bold uppercase tracking-wider">
                   <BadgeCheck className="h-3 w-3" /> Verified
                 </span>
               )}
@@ -61,21 +60,19 @@ export function LeadCard({ lead }: LeadCardProps) {
             {lead.applicantsCount || 0} applicants
           </div>
           <div className="flex items-center gap-1.5 ml-auto">
-            <UserHoverCard handle={lead.postedBy.username || lead.postedBy.uid} asChild>
-              <Link to={`/u/${lead.postedBy.username || lead.postedBy.uid}`} className="flex items-center gap-1.5 hover:text-foreground transition-colors">
-                <div className="h-4 w-4 rounded-full overflow-hidden bg-muted">
-                  {lead.postedBy.avatar ? (
-                    <img src={lead.postedBy.avatar} alt={lead.postedBy.name} className="h-full w-full object-cover" />
-                  ) : (
-                    <span className="flex items-center justify-center text-[8px] font-bold h-full w-full">
-                      {lead.postedBy.name.charAt(0)}
-                    </span>
-                  )}
-                </div>
-                {lead.postedBy.name}
-                <VerifiedBadge isVerified={!!lead.postedBy.isVerified} size={10} showTooltip={false} />
-              </Link>
-            </UserHoverCard>
+            <Link to={`/f/${lead.postedBy.username || lead.postedBy.uid}`} className="flex items-center gap-1.5 hover:text-foreground transition-colors">
+              <div className="h-4 w-4 rounded-full overflow-hidden bg-muted">
+                {lead.postedBy.avatar ? (
+                  <img src={lead.postedBy.avatar} alt={lead.postedBy.name} className="h-full w-full object-cover" />
+                ) : (
+                  <span className="flex items-center justify-center text-[8px] font-bold h-full w-full">
+                    {lead.postedBy.name.charAt(0)}
+                  </span>
+                )}
+              </div>
+              {lead.postedBy.name}
+              <VerifiedBadge isVerified={!!lead.postedBy.isVerified} size={10} showTooltip={false} />
+            </Link>
           </div>
         </div>
 

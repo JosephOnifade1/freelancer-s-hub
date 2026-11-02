@@ -459,7 +459,7 @@ export function ResourceBodyEditor({
           margin: 0;
         }
         .ProseMirror .selectedCell:after {
-          background: rgba(99, 102, 241, 0.12);
+          background: hsl(var(--primary) / 0.12);
           content: "";
           left: 0;
           right: 0;
@@ -633,7 +633,7 @@ function ToolbarButton({ onActivate, active, disabled, label, icon: Icon }: Tool
       }}
       disabled={disabled}
       className={cn(
-        "flex h-10 w-10 items-center justify-center rounded-xl border border-transparent text-[#586d7a] transition-all",
+        "flex h-10 w-10 items-center justify-center rounded-xl border border-transparent text-muted-foreground transition-all",
         active
           ? "bg-primary/12 text-primary shadow-sm"
           : "hover:bg-muted/70 hover:text-foreground",

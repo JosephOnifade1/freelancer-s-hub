@@ -26,8 +26,6 @@ const Landing = () => {
 
       {/* Hero Section */}
       <section className="pt-20 pb-8 px-6 relative overflow-hidden">
-        {/* Subtle background glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[400px] bg-primary/5 blur-3xl rounded-full pointer-events-none"></div>
 
         <div className="max-w-4xl mx-auto text-center relative z-10 space-y-5">
           <h1 className="font-heading text-5xl md:text-7xl font-bold leading-[1.1] tracking-tight text-foreground mt-4">
@@ -48,16 +46,9 @@ const Landing = () => {
       <section className="px-6 pb-24 relative">
         <div className="max-w-[800px] mx-auto relative">
           
-          {/* Sticky Badge */}
-          <div className="sticky top-24 z-40 flex justify-center mb-8 pointer-events-none">
-            <div className="inline-flex items-center gap-2 border border-border/50 bg-background/80 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-semibold tracking-wider text-muted-foreground shadow-sm pointer-events-auto">
-              <span className="w-2 h-2 rounded-full bg-[#D1FF4A]"></span> Invite-Only Access Open
-            </div>
-          </div>
-
           <div className="space-y-4 relative z-10">
             {/* Mock Post 1 */}
-            <div className="bg-white p-5 rounded-xl border border-black/5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] transition-all hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)]">
+            <div className="bg-card p-5 rounded-xl border border-border transition-all hover:border-foreground/30">
               <div className="flex gap-4">
                 <div className="w-10 h-10 rounded flex-shrink-0 bg-primary/10 flex items-center justify-center text-primary font-bold">M</div>
                 <div className="flex-1">
@@ -72,9 +63,9 @@ const Landing = () => {
             </div>
 
             {/* Mock Post 2 */}
-            <div className="bg-white p-5 rounded-xl border border-black/5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] transition-all hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)]">
+            <div className="bg-card p-5 rounded-xl border border-border transition-all hover:border-foreground/30">
               <div className="flex gap-4">
-                <div className="w-10 h-10 rounded flex-shrink-0 bg-[#D1FF4A]/30 flex items-center justify-center text-[#1A1A1A] font-bold">S</div>
+                <div className="w-10 h-10 rounded flex-shrink-0 bg-primary/20 flex items-center justify-center text-foreground font-bold">S</div>
                 <div className="flex-1">
                   <h3 className="font-bold text-foreground text-lg">How do you handle clients who ghost after the discovery call?</h3>
                   <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">Had 4 discovery calls this month. All went great, everyone seemed excited. Then... silence. Is this normal? What's your follow-up cadence for high-ticket clients?</p>
@@ -86,7 +77,7 @@ const Landing = () => {
             </div>
 
             {/* Mock Post 3 */}
-            <div className="bg-white p-5 rounded-xl border border-black/5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] transition-all hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)]">
+            <div className="bg-card p-5 rounded-xl border border-border transition-all hover:border-foreground/30">
               <div className="flex gap-4">
                 <div className="w-10 h-10 rounded flex-shrink-0 bg-primary/10 flex items-center justify-center text-primary font-bold">A</div>
                 <div className="flex-1">
@@ -104,14 +95,14 @@ const Landing = () => {
           {/* Conversion Wall (Fade-to-Join) */}
           <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-background via-background/80 to-transparent flex items-end justify-center pb-8 z-20">
             <Link to="/signup" className="bg-foreground text-background px-8 py-4 rounded-full font-medium flex items-center justify-center gap-2 hover:bg-foreground/90 transition-all shadow-xl hover:scale-105 active:scale-95">
-              Sign up to unlock the full Board <Zap className="w-4 h-4 text-[#D1FF4A]" />
+              Sign up to unlock the full Board <Zap className="w-4 h-4 text-primary" />
             </Link>
           </div>
         </div>
       </section>
 
       {/* Features Grid */}
-      <section className="py-20 bg-[#FAFAFA] border-t border-border/50">
+      <section className="py-20 bg-muted/30 border-t border-border/50">
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             <div className="space-y-3">
@@ -123,7 +114,7 @@ const Landing = () => {
             </div>
             
             <div className="space-y-3">
-              <div className="h-10 w-10 rounded-xl bg-[#D1FF4A]/30 flex items-center justify-center text-[#1A1A1A]">
+              <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center text-foreground">
                 <Hash className="h-5 w-5" />
               </div>
               <h3 className="font-heading text-lg font-bold text-foreground">Trending Tags</h3>
@@ -131,7 +122,7 @@ const Landing = () => {
             </div>
             
             <div className="space-y-3">
-              <div className="h-10 w-10 rounded-xl bg-secondary/20 flex items-center justify-center text-foreground border border-black/5">
+              <div className="h-10 w-10 rounded-xl bg-secondary/20 flex items-center justify-center text-foreground border border-border">
                 <DollarSign className="h-5 w-5" />
               </div>
               <h3 className="font-heading text-lg font-bold text-foreground">Top Contributors</h3>
@@ -142,13 +133,13 @@ const Landing = () => {
       </section>
 
       {/* Final CTA Section */}
-      <section className="py-24 bg-[#1E1B4B]">
+      <section className="py-24 bg-card">
         <div className="max-w-4xl mx-auto px-6 text-center space-y-8">
           <h2 className="font-heading text-4xl md:text-5xl font-bold text-white">
             Join the top 1% of solo professionals.
           </h2>
           <div className="flex justify-center">
-            <Link to="/signup" className="bg-[#D1FF4A] text-[#1A1A1A] px-8 py-4 rounded-full font-bold flex items-center justify-center gap-2 hover:bg-[#D1FF4A]/90 transition-all shadow-lg hover:scale-105 active:scale-95">
+            <Link to="/signup" className="bg-primary text-primary-foreground px-8 py-4 rounded-full font-bold flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-lg hover:scale-105 active:scale-95">
               Get Early Access <ArrowRight className="h-5 w-5" />
             </Link>
           </div>
@@ -156,7 +147,7 @@ const Landing = () => {
       </section>
 
       {/* Technical Footer */}
-      <footer className="bg-white border-t border-border/50 pt-16 pb-8">
+      <footer className="bg-card border-t border-border/50 pt-16 pb-8">
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between gap-12 mb-16">
             {/* Column 1 (Identity) */}
@@ -181,15 +172,6 @@ const Landing = () => {
                 </ul>
               </div>
               
-              <div className="pt-8">
-                <Link to="/status" className="inline-flex items-center gap-2 group">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#D1FF4A] opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#D1FF4A]"></span>
-                  </span>
-                  <span className="text-[12px] text-muted-foreground group-hover:text-foreground transition-colors">All systems operational</span>
-                </Link>
-              </div>
             </div>
 
             {/* Column 3 (Technical/Social) */}

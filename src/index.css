@@ -31,6 +31,10 @@
     --destructive-foreground: 0 0% 100%;
     --warning: 42 100% 56%;
     --warning-foreground: 0 0% 5%;
+    --success: 152 60% 48%;
+    --success-foreground: 0 0% 5%;
+    --info: 187 100% 65%;
+    --info-foreground: 0 0% 5%;
     --border: 0 0% 18%;
     --input: 0 0% 18%;
     --ring: 75 100% 65%;
@@ -58,7 +62,6 @@
     --brand-info: #4AE8FF;
     --border-main: rgba(209, 255, 74, 0.14);
     --border-strong: rgba(209, 255, 74, 0.32);
-    --glow-primary: 75 100% 65%;
 
     /* Proper translucent tints — computed once here so components never
        have to rely on Tailwind's /NN opacity modifier against a hex-string
@@ -68,9 +71,6 @@
     --brand-warning-soft: rgba(255, 176, 32, 0.12);
     --brand-danger-soft: rgba(239, 68, 68, 0.12);
 
-    /* Blueprint dot-matrix grid */
-    --grid-dot-color: rgba(209, 255, 74, 0.16);
-    --grid-line-color: rgba(255, 255, 255, 0.035);
   }
 
   .theme-dark {
@@ -86,8 +86,6 @@
     --brand-accent: #D1FF4A;
     --border-main: rgba(209, 255, 74, 0.14);
     --border-strong: rgba(209, 255, 74, 0.32);
-    --grid-dot-color: rgba(209, 255, 74, 0.16);
-    --grid-line-color: rgba(255, 255, 255, 0.035);
   }
 
   /* ============================================================
@@ -113,8 +111,12 @@
     --destructive-foreground: 0 0% 100%;
     --warning: 38 95% 42%;
     --warning-foreground: 0 0% 100%;
-    --border: 0 0% 10%;
-    --input: 0 0% 10%;
+    --success: 152 70% 28%;
+    --success-foreground: 0 0% 100%;
+    --info: 190 85% 31%;
+    --info-foreground: 0 0% 100%;
+    --border: 60 6% 86%;
+    --input: 60 6% 86%;
     --ring: 82 88% 30%;
 
     --sidebar-background: 60 20% 98%;
@@ -145,8 +147,6 @@
     --brand-warning-soft: rgba(184, 121, 10, 0.10);
     --brand-danger-soft: rgba(192, 54, 44, 0.10);
 
-    --grid-dot-color: rgba(0, 0, 0, 0.1);
-    --grid-line-color: rgba(0, 0, 0, 0.05);
   }
 
   .landing-theme {
@@ -170,7 +170,10 @@
     --border: 0 0% 18%;
     --input: 0 0% 18%;
     --ring: 75 100% 65%;
-    --glow-primary: 75 100% 65%;
+    --success: 152 60% 48%;
+    --success-foreground: 0 0% 5%;
+    --info: 187 100% 65%;
+    --info-foreground: 0 0% 5%;
   }
 }
 
@@ -183,12 +186,6 @@
     @apply bg-background text-foreground;
     font-family: var(--font-body);
     transition: background-color 0.25s ease, color 0.25s ease;
-    background-image:
-      radial-gradient(var(--grid-dot-color) 1px, transparent 1px),
-      linear-gradient(var(--grid-line-color) 1px, transparent 1px),
-      linear-gradient(90deg, var(--grid-line-color) 1px, transparent 1px);
-    background-size: 22px 22px, 88px 88px, 88px 88px;
-    background-attachment: fixed;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -213,72 +210,9 @@
     transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   }
 
-  .glow-primary {
-    box-shadow: 0 0 24px -4px hsl(var(--glow-primary) / 0.55);
-  }
-
-  .text-gradient-primary {
-    background: linear-gradient(135deg, hsl(var(--primary)), var(--brand-info));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
   .font-mono-tag {
     font-family: var(--font-body);
     text-transform: uppercase;
     letter-spacing: 0.08em;
   }
-}
-
-/* ============================================================
-   COLOR SAFETY NET
-   Several pages still have Tailwind decorative color utilities
-   hardcoded (purple-500, indigo-600, etc.) left over from the old
-   theme. Rather than hunting every className string by hand, this
-   remaps the whole "cool decorative" family into the terminal's
-   two functional accents at the CSS layer, so nothing is left
-   showing the old palette. "Warm" (amber/orange) and "success"
-   (emerald/green/teal) families are left alone since they already
-   read correctly as warning/positive status colors in this theme.
-   ============================================================ */
-:is([class*="text-purple-"], [class*="text-indigo-"], [class*="text-violet-"],
-    [class*="text-fuchsia-"], [class*="text-pink-"], [class*="text-rose-"],
-    [class*="text-blue-"], [class*="text-sky-"], [class*="text-cyan-"]) {
-  color: var(--brand-info) !important;
-}
-:is([class*="bg-purple-"], [class*="bg-indigo-"], [class*="bg-violet-"],
-    [class*="bg-fuchsia-"], [class*="bg-pink-"], [class*="bg-rose-"],
-    [class*="bg-blue-"], [class*="bg-sky-"], [class*="bg-cyan-"]) {
-  /* Always a translucent wash — never solid. A solid override here is what
-     caused text to render invisible (text + background resolving to the
-     exact same color) and stomped existing /10, /20 opacity tints into
-     opaque blocks. color-mix keeps it a subtle tint regardless of what
-     opacity suffix (if any) the original class had. */
-  background-color: color-mix(in srgb, var(--brand-info) 24%, transparent) !important;
-}
-:is([class*="border-purple-"], [class*="border-indigo-"], [class*="border-violet-"],
-    [class*="border-fuchsia-"], [class*="border-pink-"], [class*="border-rose-"],
-    [class*="border-blue-"], [class*="border-sky-"], [class*="border-cyan-"]) {
-  border-color: var(--brand-info) !important;
-}
-:is([class*="ring-purple-"], [class*="ring-indigo-"], [class*="ring-violet-"],
-    [class*="ring-blue-"], [class*="ring-cyan-"]) {
-  --tw-ring-color: var(--brand-info) !important;
-}
-:is([class*="fill-purple-"], [class*="fill-indigo-"], [class*="fill-blue-"],
-    [class*="fill-cyan-"]) {
-  fill: var(--brand-info) !important;
-}
-:is([class*="from-purple-"], [class*="from-indigo-"], [class*="from-violet-"],
-    [class*="from-blue-"], [class*="from-cyan-"]) {
-  --tw-gradient-from: var(--brand-info) var(--tw-gradient-from-position) !important;
-}
-:is([class*="via-purple-"], [class*="via-indigo-"], [class*="via-violet-"],
-    [class*="via-blue-"], [class*="via-cyan-"]) {
-  --tw-gradient-via: var(--brand-info) var(--tw-gradient-via-position) !important;
-}
-:is([class*="to-purple-"], [class*="to-indigo-"], [class*="to-violet-"],
-    [class*="to-blue-"], [class*="to-cyan-"]) {
-  --tw-gradient-to: var(--brand-info) var(--tw-gradient-to-position) !important;
 }

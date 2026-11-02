@@ -13,8 +13,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getUserProfile, toggleBookmark } from "@/lib/users";
 import { updatePost, softDeletePost } from "@/lib/posts";
 import { useState } from "react";
-import { CommunityHoverCard } from "@/components/CommunityHoverCard";
-import { UserHoverCard } from "@/components/UserHoverCard";
 import { Editor } from "@/components/editor/Editor";
 import { stripMarkdown } from "@/lib/markdown";
 import { PollWidget } from "@/components/PollWidget";
@@ -189,14 +187,10 @@ export function PostCard({ post, index }: PostCardProps) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.3 }}
-      className={`group flex gap-3 rounded-xl border border-[var(--border-main)] bg-[var(--bg-surface)] py-3 px-4 transition-all duration-300 hover:bg-white/5 hover:border-[var(--brand-primary)]/40 hover:border-b-2 ${
-        post.type === 'discussion' 
-          ? 'border-[var(--brand-primary)]/30 shadow-[0_4px_15px_rgba(99,102,241,0.05)] hover:border-[var(--brand-primary)]/50' 
-          : 'border-[var(--border-main)] hover:border-[var(--brand-primary)]/20'
-      } ${isVeteran(post.author?.reputation || 0) ? 'veteran-aura' : ''}`}
+      className="group flex gap-3 rounded-xl border border-border bg-card py-3 px-4 transition-colors hover:border-foreground/25"
     >
       {postImages[0] && !isEditing && (
-        <Link to={post.category ? `/b/${post.category}/p/${post.id}` : `/p/${post.id}`} className="shrink-0 mt-1 block h-[72px] w-[96px] overflow-hidden rounded-md border border-[var(--border-main)] bg-muted/20">
+        <Link to={post.category ? `/b/${post.category}/p/${post.id}` : `/p/${post.id}`} className="shrink-0 mt-1 block h-[72px] w-[96px] overflow-hidden rounded-md border border-border bg-muted/20">
           <img
             src={postImages[0].src}
             alt={postImages[0].alt || "Post thumbnail"}
@@ -211,66 +205,60 @@ export function PostCard({ post, index }: PostCardProps) {
           {post.communitySlug ? (
             // ── COMMUNITY POST: b/space is the primary identity ──────────────
             <>
-              <CommunityHoverCard slug={post.communitySlug} asChild>
-                <Link
-                  to={`/b/${post.communitySlug}`}
-                  className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
-                >
-                  <div className="flex h-5 w-5 items-center justify-center rounded bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] font-heading text-[9px] font-bold shrink-0">
-                    {post.communitySlug.charAt(0).toUpperCase()}
-                  </div>
-                  <span className="font-body text-[12px] font-bold text-[var(--text-primary)] hover:underline">
-                    b/{post.communitySlug}
-                  </span>
-                </Link>
-              </CommunityHoverCard>
-              <span className="text-[var(--text-muted)] text-[11px]">·</span>
-              <UserHoverCard handle={post.author.username || post.author.uid || ''} asChild>
-                <Link
-                  to={post.author?.uid ? `/u/${post.author.username || post.author.name?.replace(/\s+/g, '')}` : "#"}
-                  className="flex items-center gap-1 hover:opacity-80 transition-opacity"
-                >
-                  <div className="flex h-4 w-4 items-center justify-center rounded-full font-heading text-[9px] font-bold overflow-hidden bg-muted text-muted-foreground shrink-0">
-                    {(post.author?.avatar || post.author?.avatarUrl) ? (
-                      <img src={post.author.avatar || post.author.avatarUrl} alt={post.author.name} className="h-full w-full object-cover" />
-                    ) : (
-                      <span>{post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'}</span>
-                    )}
-                  </div>
-                  <span className="font-body text-[11px] text-[var(--text-muted)] hover:underline flex items-center gap-0.5">
-                    u/{post.author?.username || post.author?.name?.replace(/\s+/g, '') || 'unknown'}
-                    <VerifiedBadge isVerified={!!post.author?.isVerifiedPro} size={10} showTooltip={false} />
-                  </span>
-                </Link>
-              </UserHoverCard>
-            </>
-          ) : (
-            // ── PROFILE POST: u/username is the primary identity ─────────────
-            <UserHoverCard handle={post.author.username || post.author.uid || ''} asChild>
               <Link
-                to={post.author?.uid ? `/u/${post.author.username || post.author.name?.replace(/\s+/g, '')}` : "#"}
+                to={`/b/${post.communitySlug}`}
                 className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
               >
-                <div className="flex h-5 w-5 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-primary/20 text-primary shrink-0">
+                <div className="flex h-5 w-5 items-center justify-center rounded bg-primary/10 text-primary font-heading text-[9px] font-bold shrink-0">
+                  {post.communitySlug.charAt(0).toUpperCase()}
+                </div>
+                <span className="font-body text-[12px] font-bold text-foreground hover:underline">
+                  b/{post.communitySlug}
+                </span>
+              </Link>
+              <span className="text-muted-foreground text-[11px]">·</span>
+              <Link
+                to={post.author?.uid ? `/f/${post.author.username || post.author.name?.replace(/\s+/g, '')}` : "#"}
+                className="flex items-center gap-1 hover:opacity-80 transition-opacity"
+              >
+                <div className="flex h-4 w-4 items-center justify-center rounded-full font-heading text-[9px] font-bold overflow-hidden bg-muted text-muted-foreground shrink-0">
                   {(post.author?.avatar || post.author?.avatarUrl) ? (
                     <img src={post.author.avatar || post.author.avatarUrl} alt={post.author.name} className="h-full w-full object-cover" />
                   ) : (
                     <span>{post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'}</span>
                   )}
                 </div>
-                <span className="font-body text-[12px] font-medium text-[var(--text-primary)] hover:underline flex items-center gap-1">
-                  u/{post.author?.username || post.author?.name?.replace(/\s+/g, '') || 'unknown'}
-                  <VerifiedBadge isVerified={!!post.author?.isVerifiedPro} size={12} showTooltip={false} />
+                <span className="font-body text-[11px] text-muted-foreground hover:underline flex items-center gap-0.5">
+                  f/{post.author?.username || post.author?.name?.replace(/\s+/g, '') || 'unknown'}
+                  <VerifiedBadge isVerified={!!post.author?.isVerifiedPro} size={10} showTooltip={false} />
                 </span>
               </Link>
-            </UserHoverCard>
+            </>
+          ) : (
+            // ── PROFILE POST: f/username is the primary identity ─────────────
+            <Link
+              to={post.author?.uid ? `/f/${post.author.username || post.author.name?.replace(/\s+/g, '')}` : "#"}
+              className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+            >
+              <div className="flex h-5 w-5 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-primary/20 text-primary shrink-0">
+                {(post.author?.avatar || post.author?.avatarUrl) ? (
+                  <img src={post.author.avatar || post.author.avatarUrl} alt={post.author.name} className="h-full w-full object-cover" />
+                ) : (
+                  <span>{post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'}</span>
+                )}
+              </div>
+              <span className="font-body text-[12px] font-medium text-foreground hover:underline flex items-center gap-1">
+                f/{post.author?.username || post.author?.name?.replace(/\s+/g, '') || 'unknown'}
+                <VerifiedBadge isVerified={!!post.author?.isVerifiedPro} size={12} showTooltip={false} />
+              </span>
+            </Link>
           )}
 
-          <span className="text-[var(--text-muted)] text-[12px]">•</span>
-          <span className="font-body text-[12px] text-[var(--text-muted)] flex items-center gap-1">
+          <span className="text-muted-foreground text-[12px]">•</span>
+          <span className="font-body text-[12px] text-muted-foreground flex items-center gap-1">
             {formatTimeAgo(post.createdAt)}
             {isVeteran(post.author?.reputation || 0) && (
-              <span className="text-[var(--brand-primary)] font-bold ml-1" title="Veteran">V</span>
+              <span className="text-primary font-bold ml-1" title="Veteran">V</span>
             )}
           </span>
           <div className="ml-auto flex items-center gap-2">
@@ -279,7 +267,7 @@ export function PostCard({ post, index }: PostCardProps) {
         </div>
 
         <Link to={post.category ? `/b/${post.category}/p/${post.id}` : `/p/${post.id}`} className="block">
-          <h3 className="font-heading text-[1.1rem] font-semibold text-[var(--text-primary)] leading-tight group-hover:text-[var(--brand-primary)] transition-colors cursor-pointer">
+          <h3 className="font-heading text-[1.1rem] font-semibold text-foreground leading-tight group-hover:text-primary transition-colors cursor-pointer">
             {post.title}
           </h3>
         </Link>
@@ -290,7 +278,7 @@ export function PostCard({ post, index }: PostCardProps) {
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-1.5 font-body text-[11px] text-[var(--brand-primary)] hover:underline"
+            className="inline-flex items-center gap-1.5 font-body text-[11px] text-primary hover:underline"
           >
             <ExternalLink className="h-3 w-3" />
             Source Reference
@@ -320,7 +308,7 @@ export function PostCard({ post, index }: PostCardProps) {
         ) : (
           !postImages[0] && previewText && (
             <Link to={post.category ? `/b/${post.category}/p/${post.id}` : `/p/${post.id}`} className="block mt-0.5">
-              <p className="font-body text-sm text-[var(--text-muted)] leading-relaxed line-clamp-2">
+              <p className="font-body text-sm text-muted-foreground leading-relaxed line-clamp-2">
                 {previewText}
               </p>
             </Link>
@@ -335,7 +323,7 @@ export function PostCard({ post, index }: PostCardProps) {
               <Link
                 key={tag}
                 to={`/tag/${tag}`}
-                className="rounded-md bg-white/5 border border-[var(--border-main)] px-2 py-0.5 font-body text-[10px] font-medium text-[var(--text-muted)] cursor-pointer hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)] transition-all"
+                className="rounded-md bg-white/5 border border-border px-2 py-0.5 font-body text-[10px] font-medium text-muted-foreground cursor-pointer hover:border-primary hover:text-primary transition-all"
               >
                 #{tag}
               </Link>
@@ -346,29 +334,29 @@ export function PostCard({ post, index }: PostCardProps) {
         <div className="flex items-center gap-2 mt-1.5 flex-wrap">
           <VoteControls score={post.score || 0} entityId={post.id} authorUid={post.author?.uid} type="post" orientation="horizontal" />
           
-          <Link to={post.category ? `/b/${post.category}/p/${post.id}` : `/p/${post.id}`} className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-body text-[12px] font-medium text-[var(--text-muted)] transition-colors hover:bg-muted/40 hover:text-[var(--text-primary)]">
+          <Link to={post.category ? `/b/${post.category}/p/${post.id}` : `/p/${post.id}`} className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-body text-[12px] font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground">
             <MessageSquare className="h-4 w-4" />
             {post.commentCount || 0}
           </Link>
           
-          <button onClick={handleShare} className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-body text-[12px] font-medium text-[var(--text-muted)] transition-colors hover:bg-muted/40 hover:text-[var(--text-primary)]">
+          <button onClick={handleShare} aria-label="Share post" className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-body text-[12px] font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground">
             <Share2 className="h-4 w-4" />
-            Share
+            <span className="hidden sm:inline">Share</span>
           </button>
           
-          <button 
+          <button aria-label={isSaved ? "Unsave post" : "Save post"} 
             onClick={(e) => { e.preventDefault(); bookmarkMutation.mutate(); }}
             disabled={bookmarkMutation.isPending}
-            className={`flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-body text-[12px] font-medium transition-colors hover:bg-muted/40 ${isSaved ? 'text-[var(--brand-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+            className={`flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-body text-[12px] font-medium transition-colors hover:bg-muted/40 ${isSaved ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
           >
             <Bookmark className="h-4 w-4" fill={isSaved ? "currentColor" : "none"} />
-            Save
+            <span className="hidden sm:inline">{isSaved ? "Saved" : "Save"}</span>
           </button>
 
           {isOwnPost && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[var(--text-muted)] transition-colors hover:bg-muted/40 hover:text-[var(--text-primary)] focus:outline-none">
+                <button className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground focus:outline-none">
                   <MoreHorizontal className="h-4 w-4" />
                 </button>
               </DropdownMenuTrigger>

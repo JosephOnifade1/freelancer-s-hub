@@ -46,11 +46,11 @@ export function VeteranCelebration() {
 
         const particleCount = 50 * (timeLeft / duration);
         // use violet and lime colors
-        confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }, colors: ['#6366F1', '#D1FF4A'] });
-        confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }, colors: ['#6366F1', '#D1FF4A'] });
+        confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }, colors: ['#D1FF4A', '#FFFFFF'] });
+        confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }, colors: ['#D1FF4A', '#FFFFFF'] });
       }, 250);
 
-      toast("🏆 ELITE STATUS UNLOCKED: You are now a Veteran Freelancer!", {
+      toast("Elite status unlocked: you are now a Veteran Freelancer.", {
         description: "Your reputation has surpassed 5,000. Enjoy your new elite aura.",
         duration: 10000,
       });

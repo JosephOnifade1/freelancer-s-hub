@@ -77,8 +77,8 @@ export function VoteControls({ entityId, authorUid, score, type = "post", postId
         onClick={(e) => { e.preventDefault(); handleVote("up"); }}
         className={`rounded-full p-1 transition-all duration-200 ${
           vote === "up"
-            ? "text-[var(--brand-primary)] bg-[var(--brand-primary)]/10"
-            : "text-[var(--text-muted)] hover:text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/5"
+            ? "text-primary bg-primary/10"
+            : "text-muted-foreground hover:text-primary hover:bg-primary/5"
         }`}
       >
         <ArrowBigUp className={isHorizontal ? "h-4 w-4" : "h-5 w-5"} fill={vote === "up" ? "currentColor" : "none"} />
@@ -90,7 +90,7 @@ export function VoteControls({ entityId, authorUid, score, type = "post", postId
           initial={{ scale: 1.2, opacity: 0.7 }}
           animate={{ scale: 1, opacity: 1 }}
           className={`font-heading ${isHorizontal ? 'text-[12px]' : 'text-sm'} font-bold leading-none ${
-            vote === "up" ? "text-[var(--brand-primary)]" : vote === "down" ? "text-[var(--text-muted)]" : "text-[var(--text-primary)]"
+            vote === "up" ? "text-primary" : vote === "down" ? "text-muted-foreground" : "text-foreground"
           }`}
         >
           {displayScore}
@@ -101,8 +101,8 @@ export function VoteControls({ entityId, authorUid, score, type = "post", postId
         onClick={(e) => { e.preventDefault(); handleVote("down"); }}
         className={`rounded-full p-1 transition-all duration-200 ${
           vote === "down"
-            ? "text-[var(--text-muted)] bg-[var(--text-muted)]/10"
-            : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/5"
+            ? "text-muted-foreground bg-muted-foreground/10"
+            : "text-muted-foreground hover:text-foreground hover:bg-white/5"
         }`}
       >
         <ArrowBigDown className={isHorizontal ? "h-4 w-4" : "h-5 w-5"} fill={vote === "down" ? "currentColor" : "none"} />

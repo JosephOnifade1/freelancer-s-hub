@@ -1,34 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { 
-  Feather, 
-  X, 
-  BarChart2, 
-  HelpCircle, 
-  BookOpen, 
-  ChevronDown, 
-  ImageIcon, 
-  Video, 
-  Code2, 
-  FileUp, 
-  Sparkles, 
-  Target, 
-  Hash, 
-  Search, 
-  Paperclip, 
-  CheckCircle2, 
-  Zap, 
-  Plus, 
-  Send, 
-  Globe, 
-  Users, 
-  ShieldAlert, 
-  Rocket, 
-  TrendingUp, 
-  Cpu, 
-  Layout,
-  User,
-} from "lucide-react";
+import { X, BarChart2, HelpCircle, BookOpen, ChevronDown, ImageIcon, Video, Code2, FileUp, Search, CheckCircle2, Plus, Send, Globe, Users, ShieldAlert, Layout, User } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -99,6 +71,9 @@ const CreatePost = () => {
     enabled: !!user,
   });
 
+  const spaceHandle = (sp: { id: string; slug: string }) =>
+    sp.id.startsWith("profile:") ? `f/${profile?.username || "you"}` : `b/${sp.slug}`;
+
   const B_SPACES: BSpaceOption[] = useMemo(() => {
     const spaces: BSpaceOption[] = [];
 
@@ -106,10 +81,10 @@ const CreatePost = () => {
     if (profile?.username) {
       spaces.push({
         id: `profile:${profile.uid}`,
-        name: `Your Profile (f/${profile.username})`,
+        name: "Your profile",
         slug: "", // profile posts have no community slug
         icon: User,
-        color: "text-[var(--brand-primary)] bg-[var(--brand-primary-soft)]",
+        color: "text-primary bg-primary/10",
         popularTags: [],
       });
     }
@@ -143,6 +118,9 @@ const CreatePost = () => {
   const [pollOptions, setPollOptions] = useState<string[]>(["Option 1", "Option 2"]);
   const [selectedSpace, setSelectedSpace] = useState<BSpaceOption>(LOADING_SPACE);
 
+  // A post to your own profile has no space: no space-only visibility, no pinning.
+  const isProfileTarget = !selectedSpace.slug && selectedSpace.id.startsWith("profile:");
+
   useEffect(() => {
     if (B_SPACES.length > 0 && selectedSpace.slug === "") {
       const spaceParam = searchParams.get("space");
@@ -164,6 +142,13 @@ const CreatePost = () => {
   const [allowComments, setAllowComments] = useState(true);
   const [pinToSpace, setPinToSpace] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isProfileTarget) {
+      setVisibility("public");
+      setPinToSpace(false);
+    }
+  }, [isProfileTarget]);
 
   const bodyImagePreviews = useMemo(() => bodyImages, [bodyImages]);
 
@@ -336,7 +321,7 @@ const CreatePost = () => {
         navigate(`/b/${selectedSpace.slug}`);
       } else {
         // Profile post — navigate to the user's own profile
-        navigate(`/u/${profile?.username || user.uid}`);
+        navigate(`/f/${profile?.username || user.uid}`);
       }
     } catch (error: unknown) {
       const description = error instanceof Error ? error.message : "Failed to create post.";
@@ -355,15 +340,12 @@ const CreatePost = () => {
         {/* Top Header */}
         <div className="flex items-center justify-between pb-2 border-b border-border/40">
           <div className="flex items-center gap-3.5">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.15)]">
-              <Feather className="h-5.5 w-5.5" />
-            </div>
             <div>
               <h1 className="font-heading text-xl sm:text-2xl font-bold text-foreground tracking-tight">
                 Create New Post
               </h1>
               <p className="font-body text-xs sm:text-sm text-muted-foreground mt-0.5">
-                Share knowledge. Start a conversation.
+                Post to a space, or to your own profile.
               </p>
             </div>
           </div>
@@ -372,7 +354,7 @@ const CreatePost = () => {
             {hasDraft && (
               <button 
                 onClick={handleLoadDraft}
-                className="text-xs font-semibold text-[var(--brand-info)] hover:opacity-80 transition-colors flex items-center gap-1.5"
+                className="text-xs font-semibold text-info hover:opacity-80 transition-colors flex items-center gap-1.5"
               >
                 <span>Drafts (1)</span>
               </button>
@@ -475,8 +457,8 @@ const CreatePost = () => {
 
                 {/* Poll Options Input (if Poll selected) */}
                 {postType === "poll" && (
-                  <div className="p-3 rounded-xl bg-purple-500/5 border border-purple-500/20 space-y-2.5 animate-in fade-in duration-300">
-                    <span className="text-xs font-semibold text-purple-300 flex items-center gap-1.5">
+                  <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 space-y-2.5 animate-in fade-in duration-300">
+                    <span className="text-xs font-semibold text-primary flex items-center gap-1.5">
                       <BarChart2 className="h-3.5 w-3.5" /> Poll Options
                     </span>
                     {pollOptions.map((opt, idx) => (
@@ -504,7 +486,7 @@ const CreatePost = () => {
                     {pollOptions.length < 5 && (
                       <button
                         onClick={() => setPollOptions([...pollOptions, ""])}
-                        className="text-xs font-medium text-purple-400 hover:underline flex items-center gap-1 pt-1"
+                        className="text-xs font-medium text-primary hover:underline flex items-center gap-1 pt-1"
                       >
                         <Plus className="h-3.5 w-3.5" /> Add Poll Option
                       </button>
@@ -519,7 +501,7 @@ const CreatePost = () => {
                     onClick={() => setPostType(postType === "poll" ? "discussion" : "poll")}
                     className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 border transition-all ${
                       postType === "poll"
-                        ? "bg-purple-500/20 border-purple-500/40 text-purple-300 shadow-sm"
+                        ? "bg-primary/20 border-primary/40 text-primary shadow-sm"
                         : "bg-muted/40 border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted"
                     }`}
                   >
@@ -532,7 +514,7 @@ const CreatePost = () => {
                     onClick={() => setPostType(postType === "question" ? "discussion" : "question")}
                     className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 border transition-all ${
                       postType === "question"
-                        ? "bg-purple-500/20 border-purple-500/40 text-purple-300 shadow-sm"
+                        ? "bg-primary/20 border-primary/40 text-primary shadow-sm"
                         : "bg-muted/40 border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted"
                     }`}
                   >
@@ -545,7 +527,7 @@ const CreatePost = () => {
                     onClick={() => setPostType(postType === "resource" ? "discussion" : "resource")}
                     className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 border transition-all ${
                       postType === "resource"
-                        ? "bg-purple-500/20 border-purple-500/40 text-purple-300 shadow-sm"
+                        ? "bg-primary/20 border-primary/40 text-primary shadow-sm"
                         : "bg-muted/40 border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted"
                     }`}
                   >
@@ -568,7 +550,7 @@ const CreatePost = () => {
               <div className="pt-1">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="w-full rounded-2xl border border-border/50 bg-card p-3.5 flex items-center justify-between hover:border-purple-500/40 transition-colors shadow-sm group">
+                    <button className="w-full rounded-2xl border border-border/50 bg-card p-3.5 flex items-center justify-between hover:border-primary/40 transition-colors shadow-sm group">
                       <div className="flex items-center gap-3">
                         <div className={`h-9 w-9 rounded-xl ${selectedSpace.color} flex items-center justify-center font-bold shrink-0`}>
                           <SpaceIcon className="h-4.5 w-4.5" />
@@ -578,7 +560,7 @@ const CreatePost = () => {
                             {selectedSpace.name}
                           </p>
                           <p className="text-[11px] font-mono text-muted-foreground">
-                            b/{selectedSpace.slug}
+                            {spaceHandle(selectedSpace)}
                           </p>
                         </div>
                       </div>
@@ -595,7 +577,7 @@ const CreatePost = () => {
                           key={sp.id}
                           onClick={() => setSelectedSpace(sp)}
                           className={`p-2.5 rounded-xl cursor-pointer flex items-center gap-3 ${
-                            isSelected ? "bg-purple-500/15 text-purple-300 font-semibold" : ""
+                            isSelected ? "bg-primary/15 text-primary font-semibold" : ""
                           }`}
                         >
                           <div className={`h-8 w-8 rounded-lg ${sp.color} flex items-center justify-center font-bold shrink-0`}>
@@ -603,7 +585,7 @@ const CreatePost = () => {
                           </div>
                           <div>
                             <p className="text-xs font-bold text-foreground">{sp.name}</p>
-                            <p className="text-[10px] font-mono text-muted-foreground">b/{sp.slug}</p>
+                            <p className="text-[10px] font-mono text-muted-foreground">{spaceHandle(sp)}</p>
                           </div>
                         </DropdownMenuItem>
                       );
@@ -627,12 +609,12 @@ const CreatePost = () => {
                   {tags.map((t) => (
                     <span
                       key={t}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs font-semibold text-purple-300"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 text-xs font-semibold text-primary"
                     >
                       #{t}
                       <button
                         onClick={() => removeTag(t)}
-                        className="text-purple-300/70 hover:text-purple-200 transition-colors"
+                        className="text-primary/70 hover:text-primary transition-colors"
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -659,7 +641,7 @@ const CreatePost = () => {
                         />
                         <button
                           onClick={() => addTag()}
-                          className="p-1 rounded bg-purple-600 text-white hover:bg-purple-500 text-xs font-bold"
+                          className="p-1 rounded bg-primary text-primary-foreground hover:bg-primary text-xs font-bold"
                         >
                           Add
                         </button>
@@ -695,9 +677,9 @@ const CreatePost = () => {
                   <button
                     type="button"
                     onClick={() => bodyImageInputRef.current?.click()}
-                    className="p-4 rounded-xl border border-border/50 bg-muted/20 hover:bg-purple-500/10 hover:border-purple-500/30 text-center space-y-2 transition-all group"
+                    className="p-4 rounded-xl border border-border/50 bg-muted/20 hover:bg-primary/10 hover:border-primary/30 text-center space-y-2 transition-all group"
                   >
-                    <div className="h-10 w-10 rounded-xl bg-purple-500/10 text-purple-400 mx-auto flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary mx-auto flex items-center justify-center group-hover:scale-105 transition-transform">
                       <ImageIcon className="h-5 w-5" />
                     </div>
                     <span className="block text-xs font-bold text-foreground">Image</span>
@@ -711,11 +693,11 @@ const CreatePost = () => {
                     }}
                     className={`p-4 rounded-xl border text-center space-y-2 transition-all group ${
                       showVideoInput 
-                        ? "bg-purple-500/15 border-purple-500/40" 
-                        : "border-border/50 bg-muted/20 hover:bg-purple-500/10 hover:border-purple-500/30"
+                        ? "bg-primary/15 border-primary/40" 
+                        : "border-border/50 bg-muted/20 hover:bg-primary/10 hover:border-primary/30"
                     }`}
                   >
-                    <div className="h-10 w-10 rounded-xl bg-purple-500/10 text-purple-400 mx-auto flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary mx-auto flex items-center justify-center group-hover:scale-105 transition-transform">
                       <Video className="h-5 w-5" />
                     </div>
                     <span className="block text-xs font-bold text-foreground">Video</span>
@@ -725,9 +707,9 @@ const CreatePost = () => {
                   <button
                     type="button"
                     onClick={handleInsertCodeSnippet}
-                    className="p-4 rounded-xl border border-border/50 bg-muted/20 hover:bg-purple-500/10 hover:border-purple-500/30 text-center space-y-2 transition-all group"
+                    className="p-4 rounded-xl border border-border/50 bg-muted/20 hover:bg-primary/10 hover:border-primary/30 text-center space-y-2 transition-all group"
                   >
-                    <div className="h-10 w-10 rounded-xl bg-purple-500/10 text-purple-400 mx-auto flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary mx-auto flex items-center justify-center group-hover:scale-105 transition-transform">
                       <Code2 className="h-5 w-5" />
                     </div>
                     <span className="block text-xs font-bold text-foreground">Code</span>
@@ -737,9 +719,9 @@ const CreatePost = () => {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="p-4 rounded-xl border border-border/50 bg-muted/20 hover:bg-purple-500/10 hover:border-purple-500/30 text-center space-y-2 transition-all group"
+                    className="p-4 rounded-xl border border-border/50 bg-muted/20 hover:bg-primary/10 hover:border-primary/30 text-center space-y-2 transition-all group"
                   >
-                    <div className="h-10 w-10 rounded-xl bg-purple-500/10 text-purple-400 mx-auto flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary mx-auto flex items-center justify-center group-hover:scale-105 transition-transform">
                       <FileUp className="h-5 w-5" />
                     </div>
                     <span className="block text-xs font-bold text-foreground">File</span>
@@ -814,43 +796,45 @@ const CreatePost = () => {
                     onClick={() => setVisibility("public")}
                     className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between transition-all ${
                       visibility === "public"
-                        ? "border-purple-500/50 bg-purple-500/10 shadow-[0_0_15px_rgba(168,85,247,0.1)]"
+                        ? "border-primary/50 bg-primary/10"
                         : "border-border/50 bg-muted/20 hover:border-border"
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <Globe className="h-4.5 w-4.5 text-purple-400 shrink-0" />
+                      <Globe className="h-4.5 w-4.5 text-primary shrink-0" />
                       <div>
                         <p className="font-heading text-xs font-bold text-foreground">Public</p>
-                        <p className="text-[11px] text-muted-foreground">Anyone in the B-Space can view and interact</p>
+                        <p className="text-[11px] text-muted-foreground">{isProfileTarget ? "Anyone can view and interact" : "Anyone in the B-Space can view and interact"}</p>
                       </div>
                     </div>
                     <div className={`h-4 w-4 rounded-full border flex items-center justify-center ${
-                      visibility === "public" ? "border-purple-400 bg-purple-500" : "border-border"
+                      visibility === "public" ? "border-primary bg-primary" : "border-border"
                     }`}>
                       {visibility === "public" && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
                     </div>
                   </button>
 
+                  {!isProfileTarget && (
+                    <>
                   {/* Option 2: Space Members Only */}
                   <button
                     type="button"
                     onClick={() => setVisibility("members")}
                     className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between transition-all ${
                       visibility === "members"
-                        ? "border-purple-500/50 bg-purple-500/10 shadow-[0_0_15px_rgba(168,85,247,0.1)]"
+                        ? "border-primary/50 bg-primary/10"
                         : "border-border/50 bg-muted/20 hover:border-border"
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <Users className="h-4.5 w-4.5 text-purple-400 shrink-0" />
+                      <Users className="h-4.5 w-4.5 text-primary shrink-0" />
                       <div>
                         <p className="font-heading text-xs font-bold text-foreground">Space Members Only</p>
                         <p className="text-[11px] text-muted-foreground">Only members of {selectedSpace.name} can see this</p>
                       </div>
                     </div>
                     <div className={`h-4 w-4 rounded-full border flex items-center justify-center ${
-                      visibility === "members" ? "border-purple-400 bg-purple-500" : "border-border"
+                      visibility === "members" ? "border-primary bg-primary" : "border-border"
                     }`}>
                       {visibility === "members" && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
                     </div>
@@ -862,23 +846,25 @@ const CreatePost = () => {
                     onClick={() => setVisibility("admins")}
                     className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between transition-all ${
                       visibility === "admins"
-                        ? "border-purple-500/50 bg-purple-500/10 shadow-[0_0_15px_rgba(168,85,247,0.1)]"
+                        ? "border-primary/50 bg-primary/10"
                         : "border-border/50 bg-muted/20 hover:border-border"
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <ShieldAlert className="h-4.5 w-4.5 text-purple-400 shrink-0" />
+                      <ShieldAlert className="h-4.5 w-4.5 text-primary shrink-0" />
                       <div>
                         <p className="font-heading text-xs font-bold text-foreground">Admins & Moderators Only</p>
                         <p className="text-[11px] text-muted-foreground">Only admins and moderators can see this</p>
                       </div>
                     </div>
                     <div className={`h-4 w-4 rounded-full border flex items-center justify-center ${
-                      visibility === "admins" ? "border-purple-400 bg-purple-500" : "border-border"
+                      visibility === "admins" ? "border-primary bg-primary" : "border-border"
                     }`}>
                       {visibility === "admins" && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
                     </div>
                   </button>
+                    </>
+                  )}
 
                 </div>
 
@@ -893,6 +879,7 @@ const CreatePost = () => {
                     <Switch checked={allowComments} onCheckedChange={setAllowComments} />
                   </div>
 
+                  {!isProfileTarget && (
                   <div className="flex items-center justify-between p-2 rounded-xl">
                     <div className="space-y-0.5">
                       <p className="font-heading text-xs font-bold text-foreground">Pin to B-Space</p>
@@ -900,6 +887,7 @@ const CreatePost = () => {
                     </div>
                     <Switch checked={pinToSpace} onCheckedChange={setPinToSpace} />
                   </div>
+                  )}
 
                 </div>
 
@@ -920,7 +908,7 @@ const CreatePost = () => {
                 type="button"
                 onClick={submit}
                 disabled={isSubmitting}
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-heading text-xs font-bold flex items-center gap-2 shadow-lg shadow-purple-600/25 transition-all disabled:opacity-50"
+                className="px-6 py-2.5 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground font-heading text-sm font-semibold flex items-center gap-2 transition-colors disabled:opacity-50"
               >
                 <Send className="h-3.5 w-3.5" />
                 <span>{isSubmitting ? "Publishing..." : selectedSpace.slug ? `Post to ${selectedSpace.name}` : "Post to Profile"}</span>
@@ -932,68 +920,22 @@ const CreatePost = () => {
           {/* Right Sidebar Column */}
           <div className="lg:col-span-4 space-y-5">
             
-            {/* Card 1: Posting Tips */}
-            <div className="rounded-2xl border border-border/50 bg-card p-5 space-y-4 shadow-sm">
-              <div className="flex items-center gap-2 font-heading font-bold text-sm text-foreground">
-                <Sparkles className="h-4 w-4 text-purple-400" />
-                <span>Posting Tips</span>
-              </div>
-
-              <div className="space-y-3.5 text-xs">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 shrink-0 mt-0.5">
-                    <Target className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-foreground">Be clear and specific</p>
-                    <p className="text-muted-foreground mt-0.5 leading-relaxed">
-                      Provide context to get better answers.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 shrink-0 mt-0.5">
-                    <Hash className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-foreground">Use relevant tags</p>
-                    <p className="text-muted-foreground mt-0.5 leading-relaxed">
-                      Helps the right people discover your post.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 shrink-0 mt-0.5">
-                    <Search className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-foreground">Search before posting</p>
-                    <p className="text-muted-foreground mt-0.5 leading-relaxed">
-                      Your question might have already been answered!
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 shrink-0 mt-0.5">
-                    <Paperclip className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-foreground">Share resources</p>
-                    <p className="text-muted-foreground mt-0.5 leading-relaxed">
-                      Add links, code, or files to provide more value.
-                    </p>
-                  </div>
-                </div>
-              </div>
+            {/* Posting tips */}
+            <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+              <h3 className="font-heading text-sm font-bold text-foreground">Before you post</h3>
+              <ul className="space-y-3 text-xs leading-relaxed">
+                <li><span className="font-semibold text-foreground">Say what you need.</span> <span className="text-muted-foreground">A specific title gets better answers than a broad one.</span></li>
+                <li><span className="font-semibold text-foreground">Tag it.</span> <span className="text-muted-foreground">Tags are how people in the right space find your post.</span></li>
+                <li><span className="font-semibold text-foreground">Search first.</span> <span className="text-muted-foreground">Your question may already have an answer in the space.</span></li>
+                <li><span className="font-semibold text-foreground">Show your work.</span> <span className="text-muted-foreground">Links, code and files make a post easier to help with.</span></li>
+              </ul>
             </div>
 
             {/* Card 2: Popular Tags in Selected Space */}
-            <div className="rounded-2xl border border-border/50 bg-card p-5 space-y-3.5 shadow-sm">
+            {selectedSpace.popularTags.length > 0 && (
+            <div className="rounded-xl border border-border bg-card p-5 space-y-3.5">
               <h3 className="font-heading text-sm font-bold text-foreground">
-                Popular Tags in {selectedSpace.name}
+                Popular tags in {selectedSpace.name}
               </h3>
 
               <div className="flex flex-wrap gap-2">
@@ -1002,33 +944,36 @@ const CreatePost = () => {
                     key={t}
                     type="button"
                     onClick={() => addTag(t)}
-                    className="px-2.5 py-1 rounded-lg bg-muted/60 hover:bg-purple-500/15 border border-border/40 hover:border-purple-500/30 text-xs font-mono text-muted-foreground hover:text-purple-300 transition-colors"
+                    className="px-2.5 py-1 rounded-lg bg-muted/60 hover:bg-primary/15 border border-border/40 hover:border-primary/30 text-xs font-mono text-muted-foreground hover:text-primary transition-colors"
                   >
                     #{t}
                   </button>
                 ))}
               </div>
             </div>
+            )}
 
             {/* Card 3: Posting as */}
-            <div className="rounded-2xl border border-border/50 bg-card p-5 space-y-4 shadow-sm">
+            <div className="rounded-xl border border-border bg-card p-5 space-y-4">
               <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                 Posting as
               </span>
 
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full border border-[var(--brand-primary)]/30 overflow-hidden shrink-0 bg-muted">
-                  <img
-                    src={profile?.avatarUrl || `https://api.dicebear.com/7.x/identicon/svg?seed=${user?.uid || "guest"}`}
-                    alt={profile?.username || "User"}
-                    className="h-full w-full object-cover"
-                  />
+                <div className="h-10 w-10 rounded-full border border-primary/30 overflow-hidden shrink-0 bg-muted">
+                  {profile?.avatarUrl ? (
+                    <img src={profile.avatarUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="flex h-full w-full items-center justify-center font-heading text-sm font-bold text-foreground">
+                      {(profile?.displayName || profile?.username || "?").charAt(0).toUpperCase()}
+                    </span>
+                  )}
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5 font-heading text-sm font-bold text-foreground">
                     <span>{profile?.username || "you"}</span>
                     {profile?.isVerifiedPro && (
-                      <CheckCircle2 className="h-4 w-4 text-[var(--brand-primary)] fill-[var(--brand-primary)]/20" />
+                      <CheckCircle2 className="h-4 w-4 text-primary fill-primary/20" />
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground font-mono">

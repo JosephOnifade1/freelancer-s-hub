@@ -50,11 +50,11 @@ const Popular = () => {
               </div>
             )}
           </div>
-          <aside className="hidden lg:block w-72 shrink-0 self-start sticky top-6">
-            <div className="max-h-[calc(100vh-6rem)] overflow-y-auto scrollbar-thin">
+          <div className="hidden lg:block w-72 shrink-0">
+            <div className="sticky top-20">
               <FeedSidebar posts={posts} currentUserUid={user?.uid} />
             </div>
-          </aside>
+          </div>
         </div>
       </div>
     </AppLayout>

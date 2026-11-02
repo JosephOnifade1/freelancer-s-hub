@@ -157,14 +157,14 @@ const Settings = () => {
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
                   {usernameStatus === "checking" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-                  {usernameStatus === "available" && <CheckCircle2 className="h-4 w-4 text-green-500" />}
-                  {usernameStatus === "taken" && <XCircle className="h-4 w-4 text-red-500" />}
-                  {usernameStatus === "invalid" && <XCircle className="h-4 w-4 text-red-500" />}
+                  {usernameStatus === "available" && <CheckCircle2 className="h-4 w-4 text-success" />}
+                  {usernameStatus === "taken" && <XCircle className="h-4 w-4 text-destructive" />}
+                  {usernameStatus === "invalid" && <XCircle className="h-4 w-4 text-destructive" />}
                 </div>
               </div>
-              {usernameStatus === "available" && <p className="text-xs text-green-500">Username is available!</p>}
-              {usernameStatus === "taken" && <p className="text-xs text-red-500">Username is already taken.</p>}
-              {usernameStatus === "invalid" && <p className="text-xs text-red-500">Must be 3-15 lowercase letters, numbers, or underscores.</p>}
+              {usernameStatus === "available" && <p className="text-xs text-success">Username is available!</p>}
+              {usernameStatus === "taken" && <p className="text-xs text-destructive">Username is already taken.</p>}
+              {usernameStatus === "invalid" && <p className="text-xs text-destructive">Must be 3-15 lowercase letters, numbers, or underscores.</p>}
             </div>
 
             <div className="grid gap-2">

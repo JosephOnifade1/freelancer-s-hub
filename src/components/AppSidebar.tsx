@@ -7,8 +7,6 @@ import {
   Plus,
   Briefcase,
   TrendingUp,
-  Sparkles,
-  Users,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -31,9 +29,7 @@ import { CreateCommunityModal } from "@/components/modals/CreateCommunityModal";
 
 const mainNav = [
   { title: "FEED", url: "/", icon: Home },
-  { title: "NEW", url: "/new", icon: Sparkles },
   { title: "POPULAR", url: "/popular", icon: TrendingUp },
-  { title: "FOLLOWING", url: "/following", icon: Users },
 ];
 
 const discover = [
@@ -72,7 +68,7 @@ export function AppSidebar() {
                       "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-all duration-300",
                       isActive 
                         ? "bg-accent text-foreground font-bold shadow-sm" 
-                        : "text-[var(--text-muted)] hover:bg-accent/50 hover:text-[var(--text-primary)]"
+                        : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                     )}>
                       <item.icon className="h-[17px] w-[17px] shrink-0" strokeWidth={isActive(item.url) ? 2.5 : 1.5} />
                       <span className="text-[13px] tracking-wide whitespace-nowrap transition-all duration-300 opacity-100">
@@ -100,7 +96,7 @@ export function AppSidebar() {
                         "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-all duration-300",
                         isActive 
                           ? "bg-accent text-foreground font-bold shadow-sm" 
-                          : "text-[var(--text-muted)] hover:bg-accent/50 hover:text-[var(--text-primary)]"
+                          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                       )}>
                         <item.icon className="h-[17px] w-[17px] shrink-0" strokeWidth={isActive(item.url) ? 2.5 : 1.5} />
                         <span className="text-[13px] tracking-wide whitespace-nowrap transition-all duration-300 opacity-100">
@@ -115,7 +111,7 @@ export function AppSidebar() {
                         <SidebarMenuButton variant="ghost" className="p-0 h-auto hover:bg-transparent overflow-hidden">
                           <div className={cn(
                             "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-all duration-300",
-                            "text-[var(--text-muted)] hover:bg-accent/50 hover:text-[var(--text-primary)] cursor-pointer"
+                            "text-muted-foreground hover:bg-accent/50 hover:text-foreground cursor-pointer"
                           )}>
                             <Plus className="h-[17px] w-[17px] shrink-0" strokeWidth={1.5} />
                             <span className="text-[13px] tracking-wide whitespace-nowrap transition-all duration-300 opacity-100">
@@ -145,7 +141,7 @@ export function AppSidebar() {
                       "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-all duration-300",
                       isActive 
                         ? "bg-accent text-foreground font-bold shadow-sm" 
-                        : "text-[var(--text-muted)] hover:bg-accent/50 hover:text-[var(--text-primary)]"
+                        : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                     )}>
                       <item.icon className="h-[17px] w-[17px] shrink-0" strokeWidth={isActive(item.url) ? 2.5 : 1.5} />
                       <span className="text-[13px] tracking-wide whitespace-nowrap transition-all duration-300 opacity-100">
@@ -162,7 +158,7 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4 transition-all duration-300 ease-in-out opacity-100">
         <div className="flex flex-col gap-2">
-          <div className="rounded-lg border border-[var(--border-main)] bg-[var(--bg-surface)]/50 p-3 text-center">
+          <div className="rounded-lg border border-border bg-card/50 p-3 text-center">
             <p className="font-body text-xs text-muted-foreground">
               // BUILT_FOR_FREELANCERS_BY_FREELANCERS
             </p>

@@ -185,7 +185,7 @@ const CreateLead = () => {
 
           <div className="pt-6 border-t border-border flex items-center justify-end gap-3">
              <Button type="button" variant="ghost" onClick={() => navigate(-1)}>Cancel</Button>
-             <Button type="submit" disabled={isSubmitting} className="glow-primary px-8">
+             <Button type="submit" disabled={isSubmitting} className="px-8">
                {isSubmitting ? "Posting..." : "Publish Opportunity"}
              </Button>
           </div>

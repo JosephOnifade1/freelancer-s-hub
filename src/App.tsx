@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate, useParams } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,7 +9,6 @@ import { SidebarProvider } from "@/components/ui/sidebar.tsx";
 import Index from "./pages/Index.tsx";
 import NewFeed from "./pages/NewFeed.tsx";
 import Popular from "./pages/Popular.tsx";
-import Following from "./pages/Following.tsx";
 import TagFeed from "./pages/TagFeed.tsx";
 import Communities from "./pages/Communities.tsx";
 import Bookmarks from "./pages/Bookmarks.tsx";
@@ -86,6 +85,11 @@ const StandaloneComingSoon = ({
 );
 
 // ─── App ─────────────────────────────────────────────────────────────────────
+const LegacyProfileRedirect = () => {
+  const { username } = useParams();
+  return <Navigate to={`/f/${username}`} replace />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -110,7 +114,6 @@ const App = () => (
               {/* ── Authenticated: feed views ───────────────────────────── */}
               <Route path="/new"       element={<ProtectedRoute><NewFeed /></ProtectedRoute>} />
               <Route path="/popular" element={<ProtectedRoute><Popular /></ProtectedRoute>} />
-              <Route path="/following" element={<ProtectedRoute><Following /></ProtectedRoute>} />
               <Route path="/submit"    element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
               <Route path="/tag/:tagName" element={<ProtectedRoute><TagFeed /></ProtectedRoute>} />
 
@@ -128,10 +131,12 @@ const App = () => (
 
               {/* ── Authenticated: Freelancer profiles ─────────────────── */}
               {/* /f and /u are prefix namespaces, not pages themselves */}
+              <Route path="/f"      element={<Navigate to="/" replace />} />
+              <Route path="/f/me"   element={<UserMeRedirect />} />
+              <Route path="/f/:username" element={<ProtectedRoute><ErrorBoundary><ProfileDetail /></ErrorBoundary></ProtectedRoute>} />
+              {/* legacy /u/... links keep working */}
               <Route path="/u"      element={<Navigate to="/" replace />} />
-              <Route path="/u/me"   element={<UserMeRedirect />} />
-              <Route path="/u/:uid" element={<ProtectedRoute><ErrorBoundary><ProfileDetail /></ErrorBoundary></ProtectedRoute>} />
-              <Route path="/u/:username" element={<ProtectedRoute><ErrorBoundary><ProfileDetail /></ErrorBoundary></ProtectedRoute>} />
+              <Route path="/u/:username" element={<LegacyProfileRedirect />} />
 
               {/* ── Authenticated: Leads ────────────────────────────────── */}
               <Route path="/l"         element={<ProtectedRoute><LeadsBoard /></ProtectedRoute>} />

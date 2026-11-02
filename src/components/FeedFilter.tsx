@@ -19,7 +19,7 @@ export function FeedFilter({ value, onChange }: FeedFilterProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-2 rounded-full bg-transparent border border-[var(--border-main)] px-4 py-1.5 font-body text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--text-muted)] hover:bg-[var(--bg-surface-hover)] transition-all">
+        <button className="flex items-center gap-2 rounded-full bg-transparent border border-border px-4 py-1.5 font-body text-xs font-medium text-muted-foreground hover:text-foreground hover:border-muted-foreground hover:bg-muted transition-all">
           <SortIcon className="h-3.5 w-3.5" />
           <span className="capitalize">{value}</span>
           <ChevronDown className="h-3.5 w-3.5" />
@@ -27,15 +27,15 @@ export function FeedFilter({ value, onChange }: FeedFilterProps) {
       </DropdownMenuTrigger>
       <DropdownMenuContent 
         align="end" 
-        className="w-32 bg-[var(--bg-surface)] border-[var(--border-main)] font-body shadow-md rounded-xl"
+        className="w-32 bg-card border-border font-body shadow-md rounded-xl"
       >
         <DropdownMenuItem 
           onClick={() => onChange("best")}
           className={cn(
             "cursor-pointer flex items-center gap-2 py-2 px-3 rounded-md transition-colors", 
             value === "best" 
-              ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] focus:bg-[var(--brand-primary)]/10 focus:text-[var(--brand-primary)]" 
-              : "text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] focus:bg-[var(--bg-surface-hover)]"
+              ? "bg-primary/10 text-primary focus:bg-primary/10 focus:text-primary" 
+              : "text-foreground hover:bg-muted focus:bg-muted"
           )}
         >
           <TrendingUp className="h-4 w-4" />
@@ -47,8 +47,8 @@ export function FeedFilter({ value, onChange }: FeedFilterProps) {
           className={cn(
             "cursor-pointer flex items-center gap-2 py-2 px-3 rounded-md transition-colors", 
             value === "hot" 
-              ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] focus:bg-[var(--brand-primary)]/10 focus:text-[var(--brand-primary)]" 
-              : "text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] focus:bg-[var(--bg-surface-hover)]"
+              ? "bg-primary/10 text-primary focus:bg-primary/10 focus:text-primary" 
+              : "text-foreground hover:bg-muted focus:bg-muted"
           )}
         >
           <Flame className="h-4 w-4" />
@@ -60,8 +60,8 @@ export function FeedFilter({ value, onChange }: FeedFilterProps) {
           className={cn(
             "cursor-pointer flex items-center gap-2 py-2 px-3 rounded-md transition-colors", 
             value === "new" 
-              ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] focus:bg-[var(--brand-primary)]/10 focus:text-[var(--brand-primary)]" 
-              : "text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] focus:bg-[var(--bg-surface-hover)]"
+              ? "bg-primary/10 text-primary focus:bg-primary/10 focus:text-primary" 
+              : "text-foreground hover:bg-muted focus:bg-muted"
           )}
         >
           <Clock className="h-4 w-4" />

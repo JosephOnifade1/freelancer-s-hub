@@ -6,26 +6,26 @@ type PostType = "discussion" | "question" | "resource" | "weekly" | "poll";
 const typeConfig: Record<PostType, { label: string; className: string; icon?: React.ReactNode }> = {
   discussion: {
     label: "Discussion",
-    className: "bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] border-[var(--brand-primary)]/30",
+    className: "bg-primary/10 text-primary border-primary/30",
     icon: <MessageSquare className="h-3.5 w-3.5" />
   },
   question: {
     label: "Question",
-    className: "bg-[var(--brand-info-soft)] text-[var(--brand-info)] border-[var(--brand-info)]/30",
+    className: "bg-info/10 text-info border-info/30",
     icon: <CircleHelp className="h-3.5 w-3.5" />
   },
   resource: {
     label: "Resource",
-    className: "bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] border-[var(--brand-primary)]/30",
+    className: "bg-primary/10 text-primary border-primary/30",
     icon: <Sparkles className="h-3.5 w-3.5" />
   },
   weekly: {
     label: "Weekly",
-    className: "bg-[var(--brand-warning-soft)] text-[var(--brand-warning)] border-[var(--brand-warning)]/30"
+    className: "bg-warning/10 text-warning border-warning/30"
   },
   poll: {
     label: "Poll",
-    className: "bg-[var(--brand-info-soft)] text-[var(--brand-info)] border-[var(--brand-info)]/30",
+    className: "bg-info/10 text-info border-info/30",
     icon: <BarChart2 className="h-3.5 w-3.5" />
   },
 };
