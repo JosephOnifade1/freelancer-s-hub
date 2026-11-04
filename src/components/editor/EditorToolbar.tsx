@@ -74,7 +74,7 @@ export const EditorToolbar = ({ editor, onSwitchMode, isMarkdown }: EditorToolba
         </div>
         <button
           onClick={onSwitchMode}
-          className="text-xs font-bold uppercase tracking-wider text-foreground hover:text-primary transition-colors"
+          className="text-xs font-bold uppercase tracking-wider text-foreground hover:text-brand transition-colors"
         >
           Switch to Rich Text Editor
         </button>
@@ -196,7 +196,7 @@ export const EditorToolbar = ({ editor, onSwitchMode, isMarkdown }: EditorToolba
 
       <button
         onClick={onSwitchMode}
-        className="ml-4 px-3 py-1 text-xs font-bold text-foreground hover:text-primary transition-colors whitespace-nowrap"
+        className="ml-4 px-3 py-1 text-xs font-bold text-foreground hover:text-brand transition-colors whitespace-nowrap"
       >
         Switch to Markdown
       </button>
@@ -217,7 +217,7 @@ const ToolbarButton = ({ onClick, active, icon: Icon, tooltip }: ToolbarButtonPr
     onClick={onClick}
     className={cn(
       "p-1.5 rounded-md hover:bg-muted transition-colors group relative",
-      active ? "text-primary bg-primary/10" : "text-muted-foreground"
+      active ? "text-brand bg-brand/10" : "text-muted-foreground"
     )}
     title={tooltip}
   >

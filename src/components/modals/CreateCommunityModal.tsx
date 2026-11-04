@@ -178,8 +178,8 @@ export function CreateCommunityModal({ children }: { children?: React.ReactNode 
                       className={cn(
                         "flex items-center gap-2 p-3 rounded-xl border transition-all duration-200 text-sm font-medium",
                         isSelected
-                          ? "border-primary bg-primary/5 text-primary"
-                          : "border-border bg-card text-foreground hover:border-primary/40 hover:bg-accent"
+                          ? "border-brand bg-brand/5 text-brand"
+                          : "border-border bg-card text-foreground hover:border-brand/40 hover:bg-accent"
                       )}
                     >
                       <topic.icon className="h-4 w-4 shrink-0" />

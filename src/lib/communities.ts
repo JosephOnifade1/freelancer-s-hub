@@ -43,39 +43,39 @@ const CATEGORY_STYLE: Record<
 > = {
   Development: {
     icon: Code2,
-    bgGradient: "from-[var(--brand-primary)]/20 via-black/40 to-background",
-    accentColor: "bg-[var(--brand-primary)]",
-    iconBg: "bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] border-[var(--brand-primary)]/30",
+    bgGradient: "",
+    accentColor: "bg-primary",
+    iconBg: "bg-muted text-foreground border-border",
   },
   Design: {
     icon: Palette,
-    bgGradient: "from-[var(--brand-info)]/20 via-black/40 to-background",
-    accentColor: "bg-[var(--brand-info)]",
-    iconBg: "bg-[var(--brand-info-soft)] text-[var(--brand-info)] border-[var(--brand-info)]/30",
+    bgGradient: "",
+    accentColor: "bg-primary",
+    iconBg: "bg-muted text-foreground border-border",
   },
   Business: {
     icon: Briefcase,
-    bgGradient: "from-[var(--brand-primary)]/20 via-black/40 to-background",
-    accentColor: "bg-[var(--brand-primary)]",
-    iconBg: "bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] border-[var(--brand-primary)]/30",
+    bgGradient: "",
+    accentColor: "bg-primary",
+    iconBg: "bg-muted text-foreground border-border",
   },
   Marketing: {
     icon: Megaphone,
-    bgGradient: "from-[var(--brand-warning)]/20 via-black/40 to-background",
-    accentColor: "bg-[var(--brand-warning)]",
-    iconBg: "bg-[var(--brand-warning-soft)] text-[var(--brand-warning)] border-[var(--brand-warning)]/30",
+    bgGradient: "",
+    accentColor: "bg-primary",
+    iconBg: "bg-muted text-foreground border-border",
   },
   Lifestyle: {
     icon: Leaf,
-    bgGradient: "from-[var(--brand-info)]/20 via-black/40 to-background",
-    accentColor: "bg-[var(--brand-info)]",
-    iconBg: "bg-[var(--brand-info-soft)] text-[var(--brand-info)] border-[var(--brand-info)]/30",
+    bgGradient: "",
+    accentColor: "bg-primary",
+    iconBg: "bg-muted text-foreground border-border",
   },
   Other: {
     icon: Globe,
-    bgGradient: "from-[var(--brand-primary)]/10 via-black/40 to-background",
-    accentColor: "bg-[var(--brand-primary)]",
-    iconBg: "bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] border-[var(--brand-primary)]/30",
+    bgGradient: "",
+    accentColor: "bg-primary",
+    iconBg: "bg-muted text-foreground border-border",
   },
 };
 
@@ -103,7 +103,6 @@ const dbRowToCommunity = (row: any): CommunityData => ({
   createdAt: row.createdAt,
   ownerId: row.ownerId,
   memberCount: row.memberCount || 0,
-  isVerified: true,
 });
 
 export const fetchAllCommunities = async (): Promise<CommunityData[]> => {
@@ -117,14 +116,7 @@ export const fetchAllCommunities = async (): Promise<CommunityData[]> => {
     return [];
   }
 
-  const communities = data.map(dbRowToCommunity);
-
-  // Badge the top 3 by member count as "Trending" so the UI has something
-  // to show without anyone hand-flagging communities.
-  return communities.map((c, idx) => ({
-    ...c,
-    badge: idx === 0 ? "Trending" : idx === 1 ? "Most Active" : undefined,
-  }));
+  return data.map(dbRowToCommunity);
 };
 
 export const fetchCommunity = async (slug: string): Promise<CommunityData | null> => {
@@ -194,4 +186,37 @@ export const getUserCommunities = async (uid: string): Promise<string[]> => {
 
   if (error || !data) return [];
   return data.map((row: any) => row.communitySlug);
+};
+
+// ─── Real member list for a B-Space ────────────────────────────────────────
+// Straight from community_members joined to profiles. No placeholder people.
+export interface CommunityMember {
+  uid: string;
+  username?: string;
+  displayName?: string;
+  avatarUrl?: string;
+  reputation: number;
+  isVerifiedPro?: boolean;
+}
+
+export const fetchCommunityMembers = async (slug: string): Promise<CommunityMember[]> => {
+  const { data, error } = await supabase
+    .from("community_members")
+    .select("userId, profiles(uid, username, displayName, avatarUrl, reputation, isVerifiedPro)")
+    .eq("communitySlug", slug);
+
+  if (error || !data) return [];
+
+  return data
+    .map((row: any) => row.profiles)
+    .filter(Boolean)
+    .map((p: any) => ({
+      uid: p.uid,
+      username: p.username,
+      displayName: p.displayName,
+      avatarUrl: p.avatarUrl,
+      reputation: p.reputation || 0,
+      isVerifiedPro: !!p.isVerifiedPro,
+    }))
+    .sort((a: CommunityMember, b: CommunityMember) => b.reputation - a.reputation);
 };

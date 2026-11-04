@@ -33,7 +33,7 @@ export function UserHoverCard({ handle, children }: UserHoverCardProps) {
       <HoverCardTrigger asChild>
         <Link 
           to={profile?.uid ? `/f/${profile.uid}` : `/f/${handle}`} 
-          className="text-primary hover:underline font-medium decoration-primary/30 underline-offset-2"
+          className="text-brand hover:underline font-medium decoration-brand/30 underline-offset-2"
         >
           {children}
         </Link>
@@ -52,23 +52,17 @@ export function UserHoverCard({ handle, children }: UserHoverCardProps) {
           </div>
         ) : profile ? (
           <div className="relative">
-            {/* Cover Decoration */}
-            <div className={cn(
-              "h-20 w-full bg-gradient-to-br",
-              veteranStatus 
-                ? "from-amber-400/20 via-orange-500/10 to-transparent" 
-                : "from-primary/20 via-purple-500/10 to-transparent"
-            )} />
+            <div className="h-16 w-full bg-muted" />
             
             <div className="px-5 pb-5 -mt-10">
               <div className="flex items-end justify-between mb-3">
                 <div className="relative group">
                   <Avatar className={cn(
                     "h-20 w-20 border-4 border-card ring-2 ring-border shadow-lg",
-                    veteranStatus && "ring-amber-500/30"
+                    veteranStatus && "ring-warning/30"
                   )}>
                     <AvatarImage src={profile.avatarUrl} />
-                    <AvatarFallback className="bg-primary/10 text-primary text-2xl font-heading">
+                    <AvatarFallback className="bg-muted text-foreground text-2xl font-heading">
                       {profile.initial}
                     </AvatarFallback>
                   </Avatar>
@@ -81,9 +75,9 @@ export function UserHoverCard({ handle, children }: UserHoverCardProps) {
                 
                 <div className="flex flex-col items-end gap-1 mb-1">
                   <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-secondary/50 border border-border/50">
-                    <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
+                    <Star className="h-3 w-3 text-warning fill-warning" />
                     <span className="text-xs font-bold text-foreground">
-                      {profile.reputation?.toLocaleString() || 0} <span className="text-muted-foreground font-medium uppercase tracking-tighter text-[9px]">Karma</span>
+                      {profile.reputation?.toLocaleString() || 0} <span className="text-muted-foreground font-medium tracking-tighter text-[9px]">Karma</span>
                     </span>
                   </div>
                 </div>
@@ -99,14 +93,14 @@ export function UserHoverCard({ handle, children }: UserHoverCardProps) {
               </div>
 
               {profile.bio && (
-                <p className="mt-3 font-body text-sm text-[var(--text-muted)] line-clamp-2 leading-relaxed">
+                <p className="mt-3 font-body text-sm text-muted-foreground line-clamp-2 leading-relaxed">
                   {profile.bio}
                 </p>
               )}
 
               <div className="mt-4 flex flex-wrap gap-1.5">
                 {profile.skills?.slice(0, 3).map((skill) => (
-                  <Badge key={skill} variant="secondary" className="bg-primary/5 hover:bg-primary/10 border-primary/10 text-[10px] py-0 px-2 rounded-md transition-colors">
+                  <Badge key={skill} variant="secondary" className="bg-brand/5 hover:bg-brand/10 border-brand/10 text-[10px] py-0 px-2 rounded-md transition-colors">
                     {skill}
                   </Badge>
                 ))}

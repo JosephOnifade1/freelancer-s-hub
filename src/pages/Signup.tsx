@@ -53,7 +53,11 @@ export default function Signup() {
         navigate("/");
       }
     } catch (error: any) {
-      toast.error(error.message || "Failed to create account.");
+      if (error?.message?.includes("Failed to fetch")) {
+        toast.error("Unable to connect to Supabase backend. Please check your connection or project status.");
+      } else {
+        toast.error(error.message || "Failed to create account.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -122,7 +126,7 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen w-full flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex items-center gap-2 mb-2">
@@ -191,7 +195,7 @@ export default function Signup() {
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t" />
               </div>
-              <div className="relative flex justify-center text-xs uppercase">
+              <div className="relative flex justify-center text-xs ">
                 <span className="bg-background px-2 text-muted-foreground">
                   Or continue with
                 </span>
@@ -216,7 +220,7 @@ export default function Signup() {
 
             <div className="text-sm text-center text-muted-foreground pt-2">
               Already have an account?{" "}
-              <Link to="/login" className="text-primary hover:underline font-medium">
+              <Link to="/login" className="text-brand hover:underline font-medium">
                 Log in
               </Link>
             </div>

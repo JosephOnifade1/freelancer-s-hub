@@ -24,8 +24,8 @@ export function UserBadges({ uid }: UserBadgesProps) {
       id: 'staff',
       label: 'Staff',
       icon: Shield,
-      color: 'text-[var(--brand-primary)]',
-      bgColor: 'bg-[var(--brand-primary)]/10',
+      color: 'text-primary',
+      bgColor: 'bg-primary/10',
       description: 'A verified staff member of Borynx.',
       active: false
     },
@@ -33,8 +33,8 @@ export function UserBadges({ uid }: UserBadgesProps) {
       id: 'early_adopter',
       label: 'Early Adopter',
       icon: Sparkles,
-      color: 'text-[var(--brand-accent)]',
-      bgColor: 'bg-[var(--brand-accent)]/10',
+      color: 'text-primary',
+      bgColor: 'bg-primary/10',
       description: 'An early adopter of Borynx.',
       active: true
     },
@@ -42,8 +42,8 @@ export function UserBadges({ uid }: UserBadgesProps) {
       id: 'resource-king',
       label: 'Resource King',
       icon: Trophy,
-      color: 'text-[#D1FF4A]',
-      bgColor: 'bg-[#D1FF4A]/10',
+      color: 'text-primary',
+      bgColor: 'bg-primary/10',
       description: 'Shared over 10 high-signal resources with the community.',
       active: resourceCount > 10
     }

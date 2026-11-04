@@ -1,25 +1,31 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import { getUserProfile } from "@/lib/users";
 
 const UserMeRedirect = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
+  const { data: profile } = useQuery({
+    queryKey: ["profile", user?.uid],
+    queryFn: () => (user ? getUserProfile(user.uid) : null),
+    enabled: !!user && !loading,
+  });
+
   useEffect(() => {
-    if (!loading) {
-      if (user) {
-        navigate(`/f/${user.uid}`);
-      } else {
-        navigate("/login");
-      }
+    if (!loading && user && (profile !== undefined)) {
+      navigate(`/f/${profile?.username || user.uid}`);
+    } else if (!loading && !user) {
+      navigate("/login");
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, profile, navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="min-h-screen w-full flex items-center justify-center">
       <div className="animate-pulse flex flex-col items-center gap-4">
-        <div className="h-10 w-10 rounded-full bg-primary/20" />
+        <div className="h-10 w-10 rounded-full bg-muted" />
         <p className="text-sm text-muted-foreground font-body">Redirecting to your profile...</p>
       </div>
     </div>

@@ -173,7 +173,7 @@ const CreateLead = () => {
             </div>
             <div className="flex flex-wrap gap-2">
               {skills.map(skill => (
-                <span key={skill} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10 text-primary text-xs font-medium">
+                <span key={skill} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted text-foreground text-xs font-medium">
                   {skill}
                   <button type="button" onClick={() => removeSkill(skill)} className="hover:text-foreground">
                     <X className="h-3 w-3" />
@@ -185,7 +185,7 @@ const CreateLead = () => {
 
           <div className="pt-6 border-t border-border flex items-center justify-end gap-3">
              <Button type="button" variant="ghost" onClick={() => navigate(-1)}>Cancel</Button>
-             <Button type="submit" disabled={isSubmitting} className="glow-primary px-8">
+             <Button type="submit" disabled={isSubmitting} className="px-8">
                {isSubmitting ? "Posting..." : "Publish Opportunity"}
              </Button>
           </div>

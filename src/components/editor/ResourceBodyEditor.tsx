@@ -120,7 +120,7 @@ export function ResourceBodyEditor({
       attributes: {
         class: cn(
           "prose prose-sm max-w-none px-5 py-4 focus:outline-none min-h-[220px] dark:prose-invert",
-          "prose-headings:font-heading prose-p:font-body prose-li:font-body prose-blockquote:border-primary/35",
+          "prose-headings:font-heading prose-p:font-body prose-li:font-body prose-blockquote:border-brand/35",
           "prose-pre:rounded-xl prose-pre:border prose-pre:border-border prose-pre:bg-muted",
           "prose-code:rounded prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:text-foreground",
           "prose-table:my-4 prose-table:w-full prose-th:bg-muted/70 prose-th:p-2 prose-td:p-2"
@@ -227,7 +227,7 @@ export function ResourceBodyEditor({
   return (
     <div
       className={cn(
-        "w-full max-w-[700px] overflow-hidden rounded-[28px] border border-border/80 bg-background shadow-sm transition-all focus-within:border-primary/35 focus-within:shadow-[0_0_0_3px_rgba(99,102,241,0.08)]",
+        "w-full max-w-[700px] overflow-hidden rounded-[28px] border border-border/80 bg-background shadow-sm transition-all focus-within:border-brand/50 focus-within:shadow-[0_0_0_3px_rgba(99,102,241,0.08)]",
         className
       )}
     >
@@ -459,7 +459,7 @@ export function ResourceBodyEditor({
           margin: 0;
         }
         .ProseMirror .selectedCell:after {
-          background: rgba(99, 102, 241, 0.12);
+          background: hsl(var(--primary) / 0.12);
           content: "";
           left: 0;
           right: 0;
@@ -633,9 +633,9 @@ function ToolbarButton({ onActivate, active, disabled, label, icon: Icon }: Tool
       }}
       disabled={disabled}
       className={cn(
-        "flex h-10 w-10 items-center justify-center rounded-xl border border-transparent text-[#586d7a] transition-all",
+        "flex h-10 w-10 items-center justify-center rounded-xl border border-transparent text-muted-foreground transition-all",
         active
-          ? "bg-primary/12 text-primary shadow-sm"
+          ? "bg-brand/12 text-brand shadow-sm"
           : "hover:bg-muted/70 hover:text-foreground",
         disabled && "cursor-not-allowed opacity-40"
       )}

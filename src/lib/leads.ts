@@ -35,6 +35,7 @@ export interface Lead {
   isVerified?: boolean;
   postedBy: {
     uid: string;
+    username?: string;
     name: string;
     avatar?: string;
     isVerified?: boolean;
@@ -429,6 +430,7 @@ export const fetchLeads = async (): Promise<Lead[]> => {
     applicantsCount: l.applicantsCount,
     postedBy: {
       uid: l.postedByUid,
+      username: l.profiles?.username,
       name: l.profiles?.displayName || l.profiles?.username || "Unknown",
       avatar: l.profiles?.avatarUrl,
       isVerified: l.profiles?.isVerifiedPro || false,
@@ -466,6 +468,7 @@ export const fetchLeadById = async (id: string): Promise<Lead | null> => {
       uid: data.postedByUid,
       name: (data as any).profiles?.displayName || (data as any).profiles?.username || "Unknown",
       avatar: (data as any).profiles?.avatarUrl,
+      username: (data as any).profiles?.username,
       isVerified: (data as any).profiles?.isVerifiedPro || false,
     },
   };

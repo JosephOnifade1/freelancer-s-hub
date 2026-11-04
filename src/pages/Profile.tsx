@@ -1,33 +1,14 @@
 import { useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { VoteControls } from "@/components/VoteControls";
-import { 
-  Link as LinkIcon, 
-  MapPin, 
-  Calendar, 
-  Zap, 
-  MessageSquare, 
-  Camera, 
-  Loader2, 
-  MoreHorizontal, 
-  Trash2, 
-  Edit2, 
-  Repeat, 
-  Bookmark, 
-  ArrowLeft,
-  Mail,
-  MoreVertical,
-  Plus,
-  PenSquare,
-  Check
-} from "lucide-react";
+import { MapPin, Calendar, MessageSquare, Camera, Loader2, MoreHorizontal, Trash2, Edit2, ArrowLeft, Check, Link as LinkIcon } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { PostCard, PostData } from "@/components/PostCard";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { getUserProfile, toggleFollow, updateUserAvatar, isVeteran } from "@/lib/users";
 import { fetchPosts } from "@/lib/posts";
-import { getUserCommunities } from "@/lib/communities";
+import { fetchAllCommunities, getUserCommunities } from "@/lib/communities";
 import { fetchCommentsByAuthor, updateComment, softDeleteComment } from "@/lib/comments";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatTimeAgo } from "@/lib/utils";
@@ -78,7 +59,7 @@ const ProfileCommentCard = ({ comment, isOwnProfile }: { comment: any, isOwnProf
         <div className="flex items-center justify-between mb-1">
           <div className="text-xs text-muted-foreground">
             Commented on{" "}
-            <Link to={`/p/${comment.postId}`} className="font-medium text-foreground hover:text-primary transition-colors">
+            <Link to={`/p/${comment.postId}`} className="font-medium text-foreground hover:text-brand transition-colors">
               a post
             </Link>{" "}
             • {formatTimeAgo(comment.createdAt)}
@@ -109,7 +90,7 @@ const ProfileCommentCard = ({ comment, isOwnProfile }: { comment: any, isOwnProf
             <textarea
               value={editBody}
               onChange={(e) => setEditBody(e.target.value)}
-              className="w-full resize-none rounded-md bg-background border border-border p-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+              className="w-full resize-none rounded-md bg-background border border-border p-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand/50"
               rows={3}
             />
             <div className="flex justify-end gap-2 mt-2">
@@ -167,6 +148,11 @@ export default function Profile() {
     queryKey: ['userComments', profile?.uid],
     queryFn: () => profile ? fetchCommentsByAuthor(profile) : [],
     enabled: !!profile
+  });
+
+  const { data: allCommunities = [] } = useQuery({
+    queryKey: ["communities"],
+    queryFn: fetchAllCommunities,
   });
 
   const { data: joinedCommunities = [] } = useQuery({
@@ -261,7 +247,7 @@ export default function Profile() {
     return (
       <AppLayout>
         <div className="flex h-[60vh] items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       </AppLayout>
     );
@@ -272,7 +258,7 @@ export default function Profile() {
       <AppLayout>
         <div className="mx-auto max-w-4xl px-4 py-16 text-center">
           <h2 className="font-heading text-2xl font-bold mb-2">Profile not found.</h2>
-          <Link to="/" className="text-primary hover:underline font-medium text-sm">Return to feed</Link>
+          <Link to="/" className="text-brand hover:underline font-medium text-sm">Return to feed</Link>
         </div>
       </AppLayout>
     );
@@ -285,21 +271,11 @@ export default function Profile() {
   const resourcesCount = resourcePosts.length;
   const spacesCount = joinedCommunities.length;
 
-  // Skills with percent
-  const defaultSkills = [
-    { name: "React", percent: 90 },
-    { name: "Next.js", percent: 85 },
-    { name: "TypeScript", percent: 80 },
-    { name: "UI/UX", percent: 75 },
-    { name: "Tailwind CSS", percent: 70 },
-  ];
-
-  const userSkillList = Array.isArray(profile.skills) && profile.skills.length > 0 
-    ? profile.skills.map((s, idx) => ({
-        name: typeof s === 'string' ? s : String(s),
-        percent: Math.max(60, 95 - idx * 6)
-      }))
-    : defaultSkills;
+  const skills = Array.isArray(profile.skills) ? profile.skills.map((x) => String(x)).filter(Boolean) : [];
+  const bio = profile.bio && profile.bio.trim() && profile.bio.trim() !== "New to Borynx!" ? profile.bio : "";
+  const location = profile.location && profile.location.trim() && profile.location.trim() !== "Earth" ? profile.location : "";
+  const website = profile.website?.trim() || "";
+  const joinedSpaces = allCommunities.filter((c) => joinedCommunities.includes(c.slug));
 
   return (
     <AppLayout>
@@ -321,15 +297,7 @@ export default function Profile() {
             {/* Header Banner & Profile Card */}
             <div className="rounded-2xl border border-border/50 bg-card overflow-hidden shadow-md">
               
-              {/* Cosmic Cosmic Banner */}
-              <div className="relative h-44 sm:h-52 w-full bg-slate-900 overflow-hidden">
-                <img 
-                  src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80" 
-                  alt="Profile Banner"
-                  className="h-full w-full object-cover object-center opacity-90"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent opacity-80" />
-              </div>
+              <div className="h-28 sm:h-36 w-full bg-muted" />
 
               {/* Avatar & Action Buttons Bar */}
               <div className="px-6 relative pb-6">
@@ -341,7 +309,7 @@ export default function Profile() {
                       {profile.avatarUrl ? (
                         <img src={profile.avatarUrl} alt={profile.displayName} className="h-full w-full object-cover" />
                       ) : (
-                        <div className="h-full w-full flex items-center justify-center font-heading text-3xl font-bold text-white bg-indigo-600">
+                        <div className="h-full w-full flex items-center justify-center font-heading text-3xl font-bold text-foreground bg-muted">
                           {profile.initial || profile.displayName?.charAt(0) || "M"}
                         </div>
                       )}
@@ -356,9 +324,6 @@ export default function Profile() {
                       )}
                     </div>
                     
-                    {/* Online status indicator dot */}
-                    <span className="absolute bottom-1 right-1 h-4 w-4 rounded-full bg-emerald-500 ring-4 ring-card" />
-
                     <input 
                       type="file" 
                       ref={fileInputRef} 
@@ -370,38 +335,21 @@ export default function Profile() {
 
                   {/* Actions Right */}
                   <div className="flex items-center gap-2.5 pt-4">
-                    <button 
-                      className="p-2.5 rounded-lg border border-border/60 bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-                      title="More options"
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </button>
-
-                    {!isOwnProfile && (
-                      <button 
-                        className="p-2.5 rounded-lg border border-border/60 bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-                        onClick={() => toast.success(`Message sent to @${profile.username}`)}
-                        title="Send message"
-                      >
-                        <Mail className="h-4 w-4" />
-                      </button>
-                    )}
-
                     {isOwnProfile ? (
-                      <Link 
+                      <Link
                         to="/settings"
-                        className="px-5 py-2 rounded-lg font-medium text-sm bg-primary hover:bg-primary/90 text-primary-foreground transition-all shadow"
+                        className="px-4 py-2 rounded-md font-medium text-sm border border-border text-foreground hover:bg-muted transition-colors"
                       >
-                        Edit Profile
+                        Edit profile
                       </Link>
                     ) : (
-                      <button 
+                      <button
                         onClick={() => followMutation.mutate()}
                         disabled={followMutation.isPending}
-                        className={`px-5 py-2 rounded-lg font-medium text-sm transition-all shadow ${
-                          isFollowing 
-                            ? 'bg-secondary text-foreground hover:bg-secondary/80 border border-border/60'
-                            : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                        className={`px-4 py-2 rounded-md font-medium text-sm transition-colors ${
+                          isFollowing
+                            ? 'border border-border text-foreground hover:bg-muted'
+                            : 'bg-primary hover:bg-primary/90 text-primary-foreground'
                         }`}
                       >
                         {followMutation.isPending ? "Updating..." : (isFollowing ? "Following" : "Follow")}
@@ -410,19 +358,15 @@ export default function Profile() {
                   </div>
                 </div>
 
-                {/* User Name, Handle, Online Status */}
+                {/* User Name and handle */}
                 <div className="space-y-1 mb-3">
                   <div className="flex items-center gap-2">
                     <h2 className="font-heading text-xl sm:text-2xl font-bold text-foreground">
                       {profile.displayName || profile.username || "User"}
                     </h2>
                     <VerifiedBadge isVerified={profile.isVerifiedPro ?? false} size={18} />
-                    <span className="flex items-center gap-1 text-xs text-emerald-400 font-medium">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                      Online
-                    </span>
                   </div>
-                  <p className="text-sm text-muted-foreground font-mono">
+                  <p className="text-sm text-muted-foreground tabular-nums ">
                     @{profile.username || "unknown"}
                   </p>
                 </div>
@@ -452,50 +396,57 @@ export default function Profile() {
                       </button>
                     </div>
                   </div>
-                ) : (
+                ) : (bio || isOwnProfile) ? (
                   <p 
-                    className={`text-sm text-foreground/90 leading-relaxed mb-4 ${isOwnProfile ? "cursor-pointer hover:text-primary transition-colors" : ""}`}
+                    className={`text-sm text-foreground/90 leading-relaxed mb-4 ${isOwnProfile ? "cursor-pointer hover:text-brand transition-colors" : ""}`}
                     onClick={() => isOwnProfile && setIsEditingBio(true)}
                   >
-                    {profile.bio || "Helping startups ship faster with modern frontend and AI tools. I share lessons on dev, freelancing, and building in public."}
+                    {bio || (isOwnProfile ? <span className="text-muted-foreground">Add a short bio so people know what you do.</span> : null)}
                     {isOwnProfile && <Edit2 className="h-3 w-3 inline ml-2 text-muted-foreground opacity-60" />}
                   </p>
-                )}
+                ) : null}
 
-                {/* Meta details row (location, website, joined) */}
+                {/* Meta details row (only what the user actually filled in) */}
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground mb-4">
-                  <div className="flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5" />
-                    <span>{profile.location || "Sao Paulo, Brazil"}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <LinkIcon className="h-3.5 w-3.5" />
-                    <a 
-                      href={profile.website ? (profile.website.startsWith('http') ? profile.website : `https://${profile.website}`) : "https://marcelo.dev"} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="hover:text-primary transition-colors"
-                    >
-                      {profile.website || "marcelo.dev"}
-                    </a>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="h-3.5 w-3.5" />
-                    <span>Joined {profile.joined || "Jan 2024"}</span>
-                  </div>
+                  {location && (
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5" />
+                      <span>{location}</span>
+                    </div>
+                  )}
+                  {website && (
+                    <div className="flex items-center gap-1.5">
+                      <LinkIcon className="h-3.5 w-3.5" />
+                      <a
+                        href={website.startsWith('http') ? website : `https://${website}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-foreground transition-colors"
+                      >
+                        {website.replace(/^https?:\/\//, '')}
+                      </a>
+                    </div>
+                  )}
+                  {profile.joined && (
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5" />
+                      <span>Joined {profile.joined}</span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Hashtags list */}
-                <div className="flex flex-wrap gap-2 mb-6">
-                  {["#webdev", "#react", "#freelancing", "#buildinpublic"].map((tag) => (
-                    <span 
-                      key={tag} 
-                      className="px-2.5 py-1 rounded-md bg-secondary/50 text-muted-foreground text-xs font-mono hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
+                {skills.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {skills.map((skill) => (
+                      <span
+                        key={skill}
+                        className="px-2.5 py-1 rounded-md border border-border bg-background text-muted-foreground text-xs"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 {/* Stats Summary Bar (5 Stats Columns) */}
                 <div className="grid grid-cols-5 gap-2 py-4 px-2 sm:px-6 rounded-xl border border-border/40 bg-secondary/30 text-center">
@@ -533,7 +484,7 @@ export default function Profile() {
                   onClick={() => setActiveTab(tab)}
                   className={`pb-3 font-semibold transition-all relative ${
                     activeTab === tab
-                      ? "text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-indigo-500"
+                      ? "text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-brand"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
@@ -547,7 +498,7 @@ export default function Profile() {
               {activeTab === "Threads" && (
                 userPosts.length === 0 ? (
                   <div className="rounded-2xl border border-border/40 bg-card p-10 text-center space-y-2">
-                    <p className="font-heading font-bold text-foreground uppercase tracking-wide">No posts yet</p>
+                    <p className="font-heading font-bold text-foreground ">No posts yet</p>
                     <p className="text-sm text-muted-foreground">
                       Posts this user publishes will show up here.
                     </p>
@@ -568,26 +519,34 @@ export default function Profile() {
               )}
 
               {activeTab === "B-Spaces" && (
-                <div className="rounded-xl border border-border/40 bg-card p-8 space-y-4 shadow-sm">
-                  <h3 className="font-heading text-sm font-bold text-foreground">Member of 3 B-Spaces</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {[
-                      { name: "SaaS Founders", members: "1.2K members", tag: "b/saas-founders" },
-                      { name: "AI Builders", members: "842 members", tag: "b/ai-builders" },
-                      { name: "Frontend Hub", members: "2.6K members", tag: "b/frontend-hub" },
-                    ].map((sp) => (
-                      <div key={sp.name} className="p-3 rounded-lg border border-border/40 bg-muted/50 flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-indigo-600/20 text-indigo-400 font-bold flex items-center justify-center text-sm">
-                          {sp.name.charAt(0)}
-                        </div>
-                        <div>
-                          <div className="text-sm font-bold text-foreground">{sp.name}</div>
-                          <div className="text-xs text-muted-foreground">{sp.members}</div>
-                        </div>
-                      </div>
-                    ))}
+                joinedSpaces.length === 0 ? (
+                  <div className="rounded-xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">
+                    {isOwnProfile ? "You haven't joined any spaces yet." : "Not a member of any spaces yet."}
                   </div>
-                </div>
+                ) : (
+                  <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+                    <h3 className="font-heading text-sm font-bold text-foreground">
+                      Member of {joinedSpaces.length} {joinedSpaces.length === 1 ? "B-Space" : "B-Spaces"}
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {joinedSpaces.map((sp) => (
+                        <Link
+                          key={sp.slug}
+                          to={`/b/${sp.slug}`}
+                          className="p-3 rounded-lg border border-border bg-background flex items-center gap-3 transition-colors hover:border-foreground/30"
+                        >
+                          <div className="h-10 w-10 rounded-lg bg-muted text-foreground font-bold flex items-center justify-center text-sm">
+                            {sp.name.charAt(0)}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-semibold text-foreground">{sp.name}</div>
+                            <div className="text-xs text-muted-foreground">{sp.memberCount.toLocaleString()} {sp.memberCount === 1 ? "member" : "members"}</div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )
               )}
 
               {activeTab === "Bookmarks" && (
@@ -606,124 +565,53 @@ export default function Profile() {
           {/* Right Sidebar Column (4 Cards) */}
           <div className="lg:col-span-4 space-y-5">
             
-            {/* Card 1: About */}
-            <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-4 shadow-sm">
-              <h3 className="font-heading text-base font-bold text-foreground">About</h3>
-              
-              <div className="space-y-1.5 text-sm text-foreground/90">
-                <p>Frontend Developer & Freelancer</p>
-                <p className="text-muted-foreground">Next.js • React • TypeScript</p>
-                <p className="text-muted-foreground">Lover of clean UI and good UX.</p>
-              </div>
-
-              <div className="space-y-3 pt-2 border-t border-border/30 text-sm">
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Work</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">Available for projects</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Rate</span>
-                  <span className="font-medium text-foreground">$75 / hr</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Location</span>
-                  <span className="font-medium text-foreground">{profile.location || "Sao Paulo, Brazil"}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Languages</span>
-                  <span className="font-medium text-foreground">English, Portuguese</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 2: Top Skills */}
-            <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-4 shadow-sm">
-              <h3 className="font-heading text-base font-bold text-foreground">Top Skills</h3>
-              
-              <div className="space-y-3.5">
-                {userSkillList.map((sk) => (
-                  <div key={sk.name} className="space-y-1.5">
-                    <div className="flex justify-between text-xs">
-                      <span className="font-medium text-foreground">{sk.name}</span>
-                      <span className="text-muted-foreground font-mono">{sk.percent}%</span>
+            {/* About: only fields that exist on the profile */}
+            {(profile.status || location || website || profile.joined) && (
+              <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+                <h3 className="font-heading text-sm font-bold text-foreground">About</h3>
+                <dl className="space-y-2.5 text-sm">
+                  {profile.status && (
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-muted-foreground">Work</dt>
+                      <dd className="font-medium text-foreground">{profile.status}</dd>
                     </div>
-                    <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-indigo-500 rounded-full transition-all duration-500" 
-                        style={{ width: `${sk.percent}%` }}
-                      />
+                  )}
+                  {location && (
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-muted-foreground">Location</dt>
+                      <dd className="font-medium text-foreground">{location}</dd>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Card 3: ⚡ Top Contributor */}
-            <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-4 shadow-sm">
-              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-heading font-bold text-base">
-                <Zap className="h-4 w-4 fill-emerald-500" />
-                <span>Top Contributor</span>
-              </div>
-
-              <div className="space-y-3 text-sm">
-                {[
-                  { rank: 1, name: "Borynx Team", initial: "B", points: "9,999", color: "bg-indigo-600" },
-                  { rank: 2, name: "Design Kara", initial: "D", points: "4,210", color: "bg-purple-600" },
-                  { rank: 3, name: "Marcelo Dev", initial: "M", points: "2,340", color: "bg-slate-700", isOnline: true },
-                  { rank: 4, name: "Freelance Mike", initial: "F", points: "1,560", color: "bg-blue-600" },
-                  { rank: 5, name: "Sarah Writes", initial: "S", points: "890", color: "bg-pink-600" },
-                ].map((c) => (
-                  <div key={c.rank} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-muted-foreground w-3 font-mono">{c.rank}</span>
-                      <div className={`h-7 w-7 rounded-full ${c.color || 'bg-primary'} flex items-center justify-center font-bold text-xs text-white relative border border-border/40`}>
-                        {c.initial}
-                        {c.isOnline && (
-                          <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-card" />
-                        )}
-                      </div>
-                      <span className="font-medium text-foreground text-xs">{c.name}</span>
+                  )}
+                  {profile.joined && (
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-muted-foreground">Joined</dt>
+                      <dd className="font-medium text-foreground">{profile.joined}</dd>
                     </div>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
-                      <Zap className="h-3 w-3 text-amber-500 fill-amber-500" />
-                      <span>{c.points}</span>
-                    </div>
-                  </div>
-                ))}
+                  )}
+                </dl>
               </div>
+            )}
 
-              <div className="pt-2">
-                <Link to="/achievements" className="text-xs text-indigo-500 hover:underline font-medium">
-                  View leaderboard
-                </Link>
-              </div>
-            </div>
-
-            {/* Card 4: Recently Joined Spaces */}
-            <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-4 shadow-sm">
-              <h3 className="font-heading text-base font-bold text-foreground">Recently Joined Spaces</h3>
-
-              <div className="space-y-3">
-                {[
-                  { name: "SaaS Founders", members: "1.2K members", img: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=100&q=80" },
-                  { name: "AI Builders", members: "842 members", img: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=100&q=80" },
-                  { name: "Frontend Hub", members: "2.6K members", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80" },
-                ].map((s) => (
-                  <div key={s.name} className="flex items-center gap-3">
-                    <img src={s.img} alt={s.name} className="h-8 w-8 rounded-full object-cover shrink-0" />
-                    <div>
-                      <div className="text-xs font-bold text-foreground">{s.name}</div>
-                      <div className="text-[11px] text-muted-foreground">{s.members}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="pt-2">
-                <Link to="/communities" className="text-xs text-indigo-400 hover:underline font-medium">
-                  View all spaces
-                </Link>
-              </div>
+            {/* Spaces */}
+            <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+              <h3 className="font-heading text-sm font-bold text-foreground">Spaces</h3>
+              {joinedSpaces.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No spaces joined yet.</p>
+              ) : (
+                <ul className="space-y-2.5">
+                  {joinedSpaces.slice(0, 5).map((sp) => (
+                    <li key={sp.slug}>
+                      <Link to={`/b/${sp.slug}`} className="flex items-center justify-between text-sm hover:opacity-80">
+                        <span className="font-medium text-foreground">{sp.name}</span>
+                        <span className="tabular-nums text-xs text-muted-foreground">b/{sp.slug}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <Link to="/communities" className="inline-block text-xs text-muted-foreground hover:text-foreground">
+                Browse all spaces
+              </Link>
             </div>
 
           </div>
@@ -732,14 +620,6 @@ export default function Profile() {
 
       </div>
 
-      {/* Floating Action Button (FAB) Bottom Right */}
-      <Link 
-        to="/submit"
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-2xl flex items-center justify-center transition-all hover:scale-105 z-50 border border-indigo-400/30"
-        title="Create new post"
-      >
-        <PenSquare className="h-6 w-6" />
-      </Link>
     </AppLayout>
   );
 }

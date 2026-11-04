@@ -3,6 +3,9 @@ import type { Config } from "tailwindcss";
 export default {
   darkMode: ["class"],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  // The theme classes are applied dynamically (`theme-${mode}`), so Tailwind never sees
+  // them in the source and would purge their CSS variables from the build.
+  safelist: ["theme-light", "theme-dark"],
   prefix: "",
   theme: {
     container: {
@@ -14,9 +17,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        heading: ["Syne", "sans-serif"],
-        body: ["Geist Mono", "monospace"],
-        mono: ["Geist Mono", "monospace"],
+        heading: ["Inter", "system-ui", "sans-serif"],
+        body: ["Inter", "system-ui", "sans-serif"],
+        mono: ["JetBrains Mono", "ui-monospace", "monospace"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -39,6 +42,18 @@ export default {
         warning: {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
+        },
+        brand: {
+          DEFAULT: "hsl(var(--brand))",
+          foreground: "hsl(var(--brand-foreground))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        info: {
+          DEFAULT: "hsl(var(--info))",
+          foreground: "hsl(var(--info-foreground))",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",
@@ -75,6 +90,7 @@ export default {
         "badge-weekly": "hsl(var(--badge-weekly))",
       },
       borderRadius: {
+        xl: "1rem",
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",

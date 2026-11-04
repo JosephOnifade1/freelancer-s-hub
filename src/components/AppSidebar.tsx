@@ -6,7 +6,7 @@ import {
   Trophy,
   Plus,
   Briefcase,
-  UserCheck,
+  TrendingUp,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -21,26 +21,24 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarFooter,
-  SidebarHeader,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { CreateCommunityModal } from "@/components/modals/CreateCommunityModal";
 
 const mainNav = [
-  { title: "FEED", url: "/", icon: Home },
-  { title: "FOLLOWING", url: "/following", icon: UserCheck },
+  { title: "Feed", url: "/", icon: Home },
+  { title: "Popular", url: "/popular", icon: TrendingUp },
 ];
 
 const discover = [
-  { title: "NODE_SPACES", url: "/communities", icon: Compass },
-  { title: "LEADS", url: "/l", icon: Briefcase },
-  { title: "SAVED", url: "/bookmarks", icon: Bookmark },
-  { title: "ACHV", url: "/achievements", icon: Trophy },
+  { title: "Spaces", url: "/communities", icon: Compass },
+  { title: "Leads", url: "/l", icon: Briefcase },
+  { title: "Saved", url: "/bookmarks", icon: Bookmark },
+  { title: "Achievements", url: "/achievements", icon: Trophy },
 ];
 
 const personal = [
-  { title: "CONFIG", url: "/settings", icon: Settings },
+  { title: "Settings", url: "/settings", icon: Settings },
 ];
 
 export function AppSidebar() {
@@ -56,8 +54,8 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="overflow-hidden">
       <SidebarContent className="pt-6">
         <SidebarGroup className="px-0">
-          <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 px-8 h-10 transition-all duration-300 ease-in-out opacity-100">
-            SYS::FEED
+          <SidebarGroupLabel className="text-xs font-medium text-muted-foreground/70 px-8 h-10 transition-all duration-300 ease-in-out opacity-100">
+            Browse
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -65,13 +63,13 @@ export function AppSidebar() {
                 <SidebarMenuItem key={item.title} className="px-8">
                   <SidebarMenuButton asChild isActive={isActive(item.url)} variant="ghost" className="p-0 h-auto hover:bg-transparent overflow-hidden">
                     <NavLink to={item.url} end className={({ isActive }: { isActive: boolean }) => cn(
-                      "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-all duration-300",
+                      "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-colors",
                       isActive 
-                        ? "bg-accent text-foreground font-bold shadow-sm" 
-                        : "text-[var(--text-muted)] hover:bg-accent/50 hover:text-[var(--text-primary)]"
+                        ? "bg-accent text-foreground font-medium" 
+                        : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                     )}>
                       <item.icon className="h-[17px] w-[17px] shrink-0" strokeWidth={isActive(item.url) ? 2.5 : 1.5} />
-                      <span className="text-[13px] tracking-wide whitespace-nowrap transition-all duration-300 opacity-100">
+                      <span className="text-sm whitespace-nowrap transition-all duration-300 opacity-100">
                         {item.title}
                       </span>
                     </NavLink>
@@ -83,8 +81,8 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup className="px-0">
-          <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 px-8 h-10 transition-all duration-300 ease-in-out opacity-100">
-            SYS::SPACES
+          <SidebarGroupLabel className="text-xs font-medium text-muted-foreground/70 px-8 h-10 transition-all duration-300 ease-in-out opacity-100">
+            Community
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -93,29 +91,29 @@ export function AppSidebar() {
                   <SidebarMenuItem className="px-8">
                     <SidebarMenuButton asChild isActive={isActive(item.url)} variant="ghost" className="p-0 h-auto hover:bg-transparent overflow-hidden">
                       <NavLink to={item.url} end className={({ isActive }: { isActive: boolean }) => cn(
-                        "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-all duration-300",
+                        "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-colors",
                         isActive 
-                          ? "bg-accent text-foreground font-bold shadow-sm" 
-                          : "text-[var(--text-muted)] hover:bg-accent/50 hover:text-[var(--text-primary)]"
+                          ? "bg-accent text-foreground font-medium" 
+                          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                       )}>
                         <item.icon className="h-[17px] w-[17px] shrink-0" strokeWidth={isActive(item.url) ? 2.5 : 1.5} />
-                        <span className="text-[13px] tracking-wide whitespace-nowrap transition-all duration-300 opacity-100">
+                        <span className="text-sm whitespace-nowrap transition-all duration-300 opacity-100">
                           {item.title}
                         </span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  {item.title === "NODE_SPACES" && (
+                  {item.title === "Spaces" && (
                     <SidebarMenuItem className="px-8 mt-1 mb-1">
                       <CreateCommunityModal>
                         <SidebarMenuButton variant="ghost" className="p-0 h-auto hover:bg-transparent overflow-hidden">
                           <div className={cn(
-                            "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-all duration-300",
-                            "text-[var(--text-muted)] hover:bg-accent/50 hover:text-[var(--text-primary)] cursor-pointer"
+                            "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-colors",
+                            "text-muted-foreground hover:bg-accent/50 hover:text-foreground cursor-pointer"
                           )}>
                             <Plus className="h-[17px] w-[17px] shrink-0" strokeWidth={1.5} />
-                            <span className="text-[13px] tracking-wide whitespace-nowrap transition-all duration-300 opacity-100">
-                              + NEW_SPACE
+                            <span className="text-sm whitespace-nowrap transition-all duration-300 opacity-100">
+                              New space
                             </span>
                           </div>
                         </SidebarMenuButton>
@@ -129,8 +127,8 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup className="px-0">
-          <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 px-8 h-10 transition-all duration-300 ease-in-out opacity-100">
-            SYS::USER
+          <SidebarGroupLabel className="text-xs font-medium text-muted-foreground/70 px-8 h-10 transition-all duration-300 ease-in-out opacity-100">
+            Account
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -138,13 +136,13 @@ export function AppSidebar() {
                 <SidebarMenuItem key={item.title} className="px-8">
                   <SidebarMenuButton asChild isActive={isActive(item.url)} variant="ghost" className="p-0 h-auto hover:bg-transparent overflow-hidden">
                     <NavLink to={item.url} end className={({ isActive }: { isActive: boolean }) => cn(
-                      "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-all duration-300",
+                      "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-colors",
                       isActive 
-                        ? "bg-accent text-foreground font-bold shadow-sm" 
-                        : "text-[var(--text-muted)] hover:bg-accent/50 hover:text-[var(--text-primary)]"
+                        ? "bg-accent text-foreground font-medium" 
+                        : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                     )}>
                       <item.icon className="h-[17px] w-[17px] shrink-0" strokeWidth={isActive(item.url) ? 2.5 : 1.5} />
-                      <span className="text-[13px] tracking-wide whitespace-nowrap transition-all duration-300 opacity-100">
+                      <span className="text-sm whitespace-nowrap transition-all duration-300 opacity-100">
                         {item.title}
                       </span>
                     </NavLink>
@@ -156,15 +154,6 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 transition-all duration-300 ease-in-out opacity-100">
-        <div className="flex flex-col gap-2">
-          <div className="rounded-lg border border-[var(--border-main)] bg-[var(--bg-surface)]/50 p-3 text-center">
-            <p className="font-body text-xs text-muted-foreground">
-              // BUILT_FOR_FREELANCERS_BY_FREELANCERS
-            </p>
-          </div>
-        </div>
-      </SidebarFooter>
     </Sidebar>
   );
 }

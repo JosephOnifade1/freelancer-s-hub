@@ -1,176 +1,105 @@
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Geist+Mono:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   Design tokens. Every color is an HSL channel triplet so Tailwind
+   opacity modifiers (bg-primary/10) work. Components never use raw
+   colors, only these semantic tokens. Change the look here.
+
+   Roles
+   - background / card / muted / border : neutral surfaces (most of the UI)
+   - primary                            : the filled action button
+   - brand                              : the single accent (selected tab,
+                                          active nav, focus ring, links)
+   - success / warning / info / destructive : meaning only (votes, saved,
+                                          comments, errors), never decoration
+   ============================================================ */
 @layer base {
-  :root {
-    --font-heading: 'Syne', sans-serif;
-    --font-body: 'Geist Mono', monospace;
-
-    /* ============================================================
-       DARK TERMINAL (default) — Neo-Brutalist Cyber-Industrial
-       Pitch-black backdrop, acid-green accent, zero radius.
-       ============================================================ */
-    --background: 0 0% 4%;
-    --foreground: 80 15% 92%;
-    --card: 0 0% 6%;
-    --card-foreground: 80 15% 92%;
-    --popover: 0 0% 6%;
-    --popover-foreground: 80 15% 92%;
-    --primary: 75 100% 65%;
-    --primary-foreground: 0 0% 5%;
-    --secondary: 0 0% 10%;
-    --secondary-foreground: 80 10% 85%;
-    --muted: 0 0% 10%;
-    --muted-foreground: 0 0% 52%;
-    --accent: 75 100% 65%;
-    --accent-foreground: 0 0% 5%;
-    --destructive: 4 90% 58%;
-    --destructive-foreground: 0 0% 100%;
-    --warning: 42 100% 56%;
-    --warning-foreground: 0 0% 5%;
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 75 100% 65%;
-    --radius: 0px;
-
-    --sidebar-background: 0 0% 3%;
-    --sidebar-foreground: 0 0% 65%;
-    --sidebar-primary: 75 100% 65%;
-    --sidebar-primary-foreground: 0 0% 5%;
-    --sidebar-accent: 0 0% 9%;
-    --sidebar-accent-foreground: 80 15% 92%;
-    --sidebar-border: 0 0% 14%;
-    --sidebar-ring: 75 100% 65%;
-
-    /* Custom tokens (still referenced directly via var() in some components) */
-    --bg-app: #0A0A0A;
-    --bg-surface: #0F0F0F;
-    --bg-sidebar: #070707;
-    --text-primary: #ECECEC;
-    --text-muted: #8A8A8A;
-    --brand-primary: #D1FF4A;
-    --brand-accent: #D1FF4A;
-    --brand-danger: #EF4444;
-    --brand-warning: #FFB020;
-    --brand-info: #4AE8FF;
-    --border-main: rgba(209, 255, 74, 0.14);
-    --border-strong: rgba(209, 255, 74, 0.32);
-    --glow-primary: 75 100% 65%;
-
-    /* Proper translucent tints — computed once here so components never
-       have to rely on Tailwind's /NN opacity modifier against a hex-string
-       custom property (that combination silently fails and renders solid). */
-    --brand-primary-soft: rgba(209, 255, 74, 0.12);
-    --brand-info-soft: rgba(74, 232, 255, 0.12);
-    --brand-warning-soft: rgba(255, 176, 32, 0.12);
-    --brand-danger-soft: rgba(239, 68, 68, 0.12);
-
-    /* Blueprint dot-matrix grid */
-    --grid-dot-color: rgba(209, 255, 74, 0.16);
-    --grid-line-color: rgba(255, 255, 255, 0.035);
-  }
-
-  .theme-dark {
-    --background: 0 0% 4%;
-    --foreground: 80 15% 92%;
-    --card: 0 0% 6%;
-    --bg-app: #0A0A0A;
-    --bg-surface: #0F0F0F;
-    --bg-sidebar: #070707;
-    --text-primary: #ECECEC;
-    --text-muted: #8A8A8A;
-    --brand-primary: #D1FF4A;
-    --brand-accent: #D1FF4A;
-    --border-main: rgba(209, 255, 74, 0.14);
-    --border-strong: rgba(209, 255, 74, 0.32);
-    --grid-dot-color: rgba(209, 255, 74, 0.16);
-    --grid-line-color: rgba(255, 255, 255, 0.035);
-  }
-
-  /* ============================================================
-     LIGHT BLUEPRINT — same system, inverted onto white "paper"
-     with black ink and a darker green for legible text/links.
-     ============================================================ */
-  .theme-light {
-    --background: 60 20% 97%;
-    --foreground: 0 0% 8%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 8%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 8%;
-    --primary: 82 88% 30%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 60 15% 94%;
-    --secondary-foreground: 0 0% 8%;
-    --muted: 60 15% 93%;
-    --muted-foreground: 0 0% 38%;
-    --accent: 82 88% 30%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 4 80% 45%;
-    --destructive-foreground: 0 0% 100%;
-    --warning: 38 95% 42%;
-    --warning-foreground: 0 0% 100%;
-    --border: 0 0% 10%;
-    --input: 0 0% 10%;
-    --ring: 82 88% 30%;
-
-    --sidebar-background: 60 20% 98%;
-    --sidebar-foreground: 0 0% 25%;
-    --sidebar-primary: 82 88% 30%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 60 15% 93%;
-    --sidebar-accent-foreground: 0 0% 8%;
-    --sidebar-border: 0 0% 10%;
-    --sidebar-ring: 82 88% 30%;
-
-    --bg-app: #FAFAF5;
-    --bg-surface: #FFFFFF;
-    --bg-sidebar: #F7F7F0;
-    --text-primary: #141414;
-    --text-muted: #5C5C54;
-    --brand-primary: #4C7A0F;
-    --brand-accent: #D1FF4A;
-    --brand-danger: #C0362C;
-    --brand-warning: #B8790A;
-    --brand-info: #0E7490;
-    --border-main: rgba(0, 0, 0, 0.14);
-    --border-strong: rgba(0, 0, 0, 0.4);
-    --soft-shadow: none;
-
-    --brand-primary-soft: rgba(76, 122, 15, 0.10);
-    --brand-info-soft: rgba(14, 116, 144, 0.10);
-    --brand-warning-soft: rgba(184, 121, 10, 0.10);
-    --brand-danger-soft: rgba(192, 54, 44, 0.10);
-
-    --grid-dot-color: rgba(0, 0, 0, 0.1);
-    --grid-line-color: rgba(0, 0, 0, 0.05);
-  }
-
+  :root,
+  .theme-dark,
   .landing-theme {
-    --font-heading: 'Syne', sans-serif;
-    --font-body: 'Geist Mono', monospace;
+    --font-heading: 'Inter', system-ui, sans-serif;
+    --font-body: 'Inter', system-ui, sans-serif;
 
-    --background: 0 0% 4%;
-    --foreground: 80 15% 92%;
-    --card: 0 0% 6%;
-    --card-foreground: 80 15% 92%;
-    --popover: 0 0% 6%;
-    --popover-foreground: 80 15% 92%;
-    --primary: 75 100% 65%;
-    --primary-foreground: 0 0% 5%;
-    --accent: 75 100% 65%;
-    --accent-foreground: 0 0% 5%;
-    --secondary: 0 0% 10%;
-    --secondary-foreground: 80 15% 92%;
-    --muted: 0 0% 10%;
-    --muted-foreground: 0 0% 55%;
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 75 100% 65%;
-    --glow-primary: 75 100% 65%;
+    --background: 213 24% 7%;
+    --foreground: 0 0% 98%;
+    --card: 221 15% 12%;
+    --card-foreground: 0 0% 98%;
+    --popover: 221 15% 13%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 213 24% 7%;
+    --secondary: 220 14% 18%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 220 14% 17%;
+    --muted-foreground: 220 20% 68%;
+    --accent: 220 14% 17%;
+    --accent-foreground: 0 0% 98%;
+    --brand: 286 89% 62%;
+    --brand-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --warning: 26 100% 62%;
+    --warning-foreground: 213 24% 7%;
+    --success: 148 77% 56%;
+    --success-foreground: 213 24% 7%;
+    --info: 183 78% 54%;
+    --info-foreground: 213 24% 7%;
+    --border: 220 14% 20%;
+    --input: 220 14% 22%;
+    --ring: 286 89% 62%;
+    --radius: 0.75rem;
+
+    --sidebar-background: 213 24% 8%;
+    --sidebar-foreground: 220 20% 68%;
+    --sidebar-primary: 286 89% 62%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 15%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 220 14% 16%;
+    --sidebar-ring: 286 89% 62%;
+  }
+
+  .theme-light {
+    --background: 220 18% 97%;
+    --foreground: 213 24% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 213 24% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 213 24% 8%;
+    --primary: 213 24% 9%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 16% 94%;
+    --secondary-foreground: 213 24% 9%;
+    --muted: 220 16% 94%;
+    --muted-foreground: 220 10% 38%;
+    --accent: 220 16% 93%;
+    --accent-foreground: 213 24% 9%;
+    --brand: 286 72% 46%;
+    --brand-foreground: 0 0% 100%;
+    --destructive: 0 72% 46%;
+    --destructive-foreground: 0 0% 100%;
+    --warning: 26 90% 40%;
+    --warning-foreground: 0 0% 100%;
+    --success: 148 72% 28%;
+    --success-foreground: 0 0% 100%;
+    --info: 190 85% 30%;
+    --info-foreground: 0 0% 100%;
+    --border: 220 14% 88%;
+    --input: 220 14% 86%;
+    --ring: 286 72% 46%;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 10% 38%;
+    --sidebar-primary: 286 72% 46%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 16% 94%;
+    --sidebar-accent-foreground: 213 24% 9%;
+    --sidebar-border: 220 14% 90%;
+    --sidebar-ring: 286 72% 46%;
   }
 }
 
@@ -179,32 +108,19 @@
     @apply border-border;
   }
 
+  html {
+    -webkit-font-smoothing: antialiased;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-body);
     transition: background-color 0.25s ease, color 0.25s ease;
-    background-image:
-      radial-gradient(var(--grid-dot-color) 1px, transparent 1px),
-      linear-gradient(var(--grid-line-color) 1px, transparent 1px),
-      linear-gradient(90deg, var(--grid-line-color) 1px, transparent 1px);
-    background-size: 22px 22px, 88px 88px, 88px 88px;
-    background-attachment: fixed;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-heading);
   }
 
   h1, h2, h3, h4, h5, h6, .font-heading {
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-  }
-
-  /* Zero-radius, industrial-edge override. Targets every Tailwind
-     rounded-* utility in the app (cards, buttons, avatars, modals,
-     inputs) without needing to hand-edit each component. */
-  [class*="rounded"] {
-    border-radius: 0 !important;
+    font-family: var(--font-heading);
+    letter-spacing: -0.01em;
   }
 }
 
@@ -212,73 +128,4 @@
   .theme-transition {
     transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   }
-
-  .glow-primary {
-    box-shadow: 0 0 24px -4px hsl(var(--glow-primary) / 0.55);
-  }
-
-  .text-gradient-primary {
-    background: linear-gradient(135deg, hsl(var(--primary)), var(--brand-info));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .font-mono-tag {
-    font-family: var(--font-body);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-}
-
-/* ============================================================
-   COLOR SAFETY NET
-   Several pages still have Tailwind decorative color utilities
-   hardcoded (purple-500, indigo-600, etc.) left over from the old
-   theme. Rather than hunting every className string by hand, this
-   remaps the whole "cool decorative" family into the terminal's
-   two functional accents at the CSS layer, so nothing is left
-   showing the old palette. "Warm" (amber/orange) and "success"
-   (emerald/green/teal) families are left alone since they already
-   read correctly as warning/positive status colors in this theme.
-   ============================================================ */
-:is([class*="text-purple-"], [class*="text-indigo-"], [class*="text-violet-"],
-    [class*="text-fuchsia-"], [class*="text-pink-"], [class*="text-rose-"],
-    [class*="text-blue-"], [class*="text-sky-"], [class*="text-cyan-"]) {
-  color: var(--brand-info) !important;
-}
-:is([class*="bg-purple-"], [class*="bg-indigo-"], [class*="bg-violet-"],
-    [class*="bg-fuchsia-"], [class*="bg-pink-"], [class*="bg-rose-"],
-    [class*="bg-blue-"], [class*="bg-sky-"], [class*="bg-cyan-"]) {
-  /* Always a translucent wash — never solid. A solid override here is what
-     caused text to render invisible (text + background resolving to the
-     exact same color) and stomped existing /10, /20 opacity tints into
-     opaque blocks. color-mix keeps it a subtle tint regardless of what
-     opacity suffix (if any) the original class had. */
-  background-color: color-mix(in srgb, var(--brand-info) 24%, transparent) !important;
-}
-:is([class*="border-purple-"], [class*="border-indigo-"], [class*="border-violet-"],
-    [class*="border-fuchsia-"], [class*="border-pink-"], [class*="border-rose-"],
-    [class*="border-blue-"], [class*="border-sky-"], [class*="border-cyan-"]) {
-  border-color: var(--brand-info) !important;
-}
-:is([class*="ring-purple-"], [class*="ring-indigo-"], [class*="ring-violet-"],
-    [class*="ring-blue-"], [class*="ring-cyan-"]) {
-  --tw-ring-color: var(--brand-info) !important;
-}
-:is([class*="fill-purple-"], [class*="fill-indigo-"], [class*="fill-blue-"],
-    [class*="fill-cyan-"]) {
-  fill: var(--brand-info) !important;
-}
-:is([class*="from-purple-"], [class*="from-indigo-"], [class*="from-violet-"],
-    [class*="from-blue-"], [class*="from-cyan-"]) {
-  --tw-gradient-from: var(--brand-info) var(--tw-gradient-from-position) !important;
-}
-:is([class*="via-purple-"], [class*="via-indigo-"], [class*="via-violet-"],
-    [class*="via-blue-"], [class*="via-cyan-"]) {
-  --tw-gradient-via: var(--brand-info) var(--tw-gradient-via-position) !important;
-}
-:is([class*="to-purple-"], [class*="to-indigo-"], [class*="to-violet-"],
-    [class*="to-blue-"], [class*="to-cyan-"]) {
-  --tw-gradient-to: var(--brand-info) var(--tw-gradient-to-position) !important;
 }

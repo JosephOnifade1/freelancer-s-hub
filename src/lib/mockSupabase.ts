@@ -334,7 +334,7 @@ export const seedMockData = () => {
 class MockQueryBuilder {
   private tableName: string;
   private selectFields: string = "*";
-  private filters: { type: "eq" | "or"; column?: string; value?: any; orString?: string }[] = [];
+  private filters: { type: "eq" | "or" | "ilike"; column?: string; value?: any; orString?: string }[] = [];
   private orderField?: string;
   private orderAscending?: boolean;
   private limitCount?: number;
@@ -360,6 +360,11 @@ class MockQueryBuilder {
 
   eq(column: string, value: any) {
     this.filters.push({ type: "eq", column, value });
+    return this;
+  }
+
+  ilike(column: string, value: any) {
+    this.filters.push({ type: "ilike", column, value });
     return this;
   }
 
@@ -434,6 +439,9 @@ class MockQueryBuilder {
       for (const filter of this.filters) {
         if (filter.type === "eq") {
           filtered = filtered.filter(row => row[filter.column!] == filter.value);
+        } else if (filter.type === "ilike") {
+          const needle = String(filter.value).replace(/\\/g, "").toLowerCase();
+          filtered = filtered.filter(row => String(row[filter.column!] ?? "").toLowerCase() === needle);
         } else if (filter.type === "or") {
           const parts = filter.orString!.split(",");
           filtered = filtered.filter(row => {

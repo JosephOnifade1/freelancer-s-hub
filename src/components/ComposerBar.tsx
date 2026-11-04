@@ -1,0 +1,74 @@
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { PenTool, HelpCircle, FileText, BarChart2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { getUserProfile } from "@/lib/users";
+
+type ComposerType = "discussion" | "question" | "resource" | "poll";
+
+interface ComposerBarProps {
+  /** Pre-selects this B-Space on /submit. Omit on the main feed. */
+  spaceSlug?: string;
+  placeholder?: string;
+}
+
+const ACTIONS: { type: ComposerType; label: string; icon: typeof PenTool }[] = [
+  { type: "discussion", label: "Post", icon: PenTool },
+  { type: "question", label: "Question", icon: HelpCircle },
+  { type: "resource", label: "Resource", icon: FileText },
+  { type: "poll", label: "Poll", icon: BarChart2 },
+];
+
+// The one entry point for starting a post from a feed. Every feed-style page
+// (home, B-Space) renders this instead of carrying its own copy.
+export function ComposerBar({ spaceSlug, placeholder = "Start a post" }: ComposerBarProps) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const { data: profile } = useQuery({
+    queryKey: ["profile", user?.uid],
+    queryFn: () => (user ? getUserProfile(user.uid) : null),
+    enabled: !!user,
+  });
+
+  const go = (type: ComposerType) => {
+    const params = new URLSearchParams({ type });
+    if (spaceSlug) params.set("space", spaceSlug);
+    navigate(`/submit?${params.toString()}`);
+  };
+
+  const avatar = user?.photoURL || profile?.avatarUrl;
+  const initial = (profile?.displayName || profile?.username || user?.displayName || "?").charAt(0).toUpperCase();
+
+  return (
+    <div className="rounded-xl border border-border bg-card">
+      <div className="flex items-center gap-3 p-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted font-heading text-sm font-bold text-foreground">
+          {avatar ? <img src={avatar} alt="" className="h-full w-full object-cover" /> : initial}
+        </div>
+        <button
+          type="button"
+          onClick={() => go("discussion")}
+          className="h-9 flex-1 truncate rounded-lg border border-border bg-background px-3 text-left font-body text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {placeholder}
+        </button>
+      </div>
+      <div className="grid grid-cols-4 border-t border-border">
+        {ACTIONS.map(({ type, label, icon: Icon }) => (
+          <button
+            key={type}
+            type="button"
+            aria-label={label}
+            title={label}
+            onClick={() => go(type)}
+            className="flex min-w-0 items-center justify-center gap-1.5 px-1 py-2.5 font-body text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+          >
+            <Icon className="h-4 w-4 shrink-0" />
+            <span className="hidden truncate min-[420px]:inline">{label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}

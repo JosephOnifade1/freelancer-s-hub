@@ -48,23 +48,23 @@ export function PollWidget({ postId }: PollWidgetProps) {
           >
             {hasVoted && (
               <div
-                className="absolute inset-y-0 left-0 bg-[var(--brand-primary-soft)]"
+                className="absolute inset-y-0 left-0 bg-muted"
                 style={{ width: `${pct}%` }}
               />
             )}
             <div className="relative flex items-center justify-between px-3 py-2 font-body text-xs">
-              <span className="flex items-center gap-1.5 text-[var(--text-primary)]">
-                {isSelected && <Check className="h-3.5 w-3.5 text-[var(--brand-primary)]" />}
+              <span className="flex items-center gap-1.5 text-foreground">
+                {isSelected && <Check className="h-3.5 w-3.5 text-muted-foreground" />}
                 {option.label}
               </span>
               {hasVoted && (
-                <span className="text-[var(--text-muted)] tabular-nums">{pct}%</span>
+                <span className="text-muted-foreground tabular-nums">{pct}%</span>
               )}
             </div>
           </button>
         );
       })}
-      <p className="pt-1 font-body text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
+      <p className="pt-1 font-body text-[10px] text-muted-foreground">
         {poll.totalVotes} {poll.totalVotes === 1 ? "vote" : "votes"}
         {!hasVoted && !!user?.uid && " · tap to vote"}
       </p>

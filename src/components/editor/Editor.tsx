@@ -150,7 +150,7 @@ export const Editor = ({
 
   return (
     <div className={cn(
-      "w-full border rounded-xl overflow-hidden bg-card flex flex-col focus-within:ring-1 focus-within:ring-primary/20 transition-all",
+      "w-full border rounded-xl overflow-hidden bg-card flex flex-col focus-within:ring-1 focus-within:ring-brand/20 transition-all",
       className
     )}>
       <EditorToolbar 

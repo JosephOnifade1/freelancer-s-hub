@@ -21,7 +21,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   // Real navigable segments
   l: "Leads",
   new: "New Posts",
-  following: "Following",
+  popular: "Popular",
   tag: "Tag",
   submit: "Create Post",
   settings: "Settings",
@@ -62,12 +62,29 @@ export function Breadcrumbs() {
 
   // Build breadcrumb items: each item knows its display label, its target
   // href, and whether it's actually navigable.
-  const items = segments.map((seg, index) => {
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const items: { seg: string; href: string; label: string; isNavigable: boolean }[] = [];
+
+  for (let index = 0; index < segments.length; index++) {
+    const seg = segments[index];
+
+    // Namespace prefix + its value collapse into one crumb: b/dev, f/joseph, Post.
+    if (NON_NAVIGABLE_PREFIXES.has(seg) && segments[index + 1]) {
+      const value = segments[index + 1];
+      const href = "/" + segments.slice(0, index + 2).join("/");
+      let label: string;
+      if (seg === "p") label = "Post";
+      else if (UUID.test(value)) label = seg === "b" ? "Space" : "Profile";
+      else label = `${seg === "u" ? "f" : seg}/${decodeURIComponent(value)}`;
+      items.push({ seg: value, href, label, isNavigable: true });
+      index += 1;
+      continue;
+    }
+
     const href = "/" + segments.slice(0, index + 1).join("/");
-    const isPrefix = NON_NAVIGABLE_PREFIXES.has(seg);
     const label = SEGMENT_LABELS[seg] ?? seg.charAt(0).toUpperCase() + seg.slice(1);
-    return { seg, href, label, isNavigable: !isPrefix };
-  });
+    items.push({ seg, href, label, isNavigable: !NON_NAVIGABLE_PREFIXES.has(seg) });
+  }
 
   return (
     <div className="mb-6 px-1">
@@ -81,7 +98,7 @@ export function Breadcrumbs() {
                 className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
               >
                 <Home className="h-3.5 w-3.5" />
-                <span className="text-[12px] font-medium font-body tracking-wide">
+                <span className="text-[12px] font-medium font-body ">
                   Borynx
                 </span>
               </Link>

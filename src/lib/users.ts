@@ -103,36 +103,41 @@ export const createUserProfile = async (uid: string, name: string, email: string
   return ensureUserProfile({ id: uid, email, user_metadata: { display_name: name } });
 };
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Looks a profile up by uid or username. Returns null when nobody matches, so
+// the UI can say "not found" instead of inventing a person.
 export const getUserProfile = async (identifier: string) => {
   if (!identifier) return null;
-  
+
   const clean = identifier.startsWith("@") ? identifier.substring(1).trim() : identifier.trim();
   if (!clean) return null;
 
   try {
-    // 1. Check if identifier matches a profile's UID directly
-    const { data: byUid } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("uid", clean)
-      .maybeSingle();
+    // 1. UID (only query the uuid column with something shaped like a uuid)
+    if (UUID_RE.test(clean)) {
+      const { data: byUid } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("uid", clean)
+        .maybeSingle();
+      if (byUid) return byUid as UserProfile;
+    }
 
-    if (byUid) return byUid as UserProfile;
-
-    // 2. Check if identifier matches a profile's username (case-insensitive)
+    // 2. Username, case-insensitive. ilike treats _ and % as wildcards, so escape them.
+    const escaped = clean.replace(/[\\%_]/g, "\\$&");
     const { data: byUsername } = await supabase
       .from("profiles")
       .select("*")
-      .ilike("username", clean)
+      .ilike("username", escaped)
       .maybeSingle();
-
     if (byUsername) return byUsername as UserProfile;
 
-    // 3. Check mapping in usernames table
+    // 3. Username registry
     const { data: userRow } = await supabase
       .from("usernames")
       .select("uid")
-      .ilike("username", clean)
+      .ilike("username", escaped)
       .maybeSingle();
 
     if (userRow?.uid) {
@@ -141,44 +146,18 @@ export const getUserProfile = async (identifier: string) => {
         .select("*")
         .eq("uid", userRow.uid)
         .maybeSingle();
-
       if (profileByUid) return profileByUid as UserProfile;
     }
 
-    // 4. Check if current user session matches
+    // 4. The signed-in user's own profile (covers "me" and a missing profile row)
     const { data: sessionData } = await supabase.auth.getSession();
     const sessionUser = sessionData?.session?.user;
     if (sessionUser) {
-      const sessionUid = sessionUser.id;
       const sessionEmailName = sessionUser.email?.split("@")[0];
-      if (clean === "me" || clean === sessionUid || clean.toLowerCase() === sessionEmailName?.toLowerCase()) {
+      if (clean === "me" || clean === sessionUser.id || clean.toLowerCase() === sessionEmailName?.toLowerCase()) {
         const ensured = await ensureUserProfile(sessionUser);
         if (ensured) return ensured;
       }
-    }
-
-    // 5. Fallback: create dynamic profile so user is never stranded
-    if (clean.length > 0) {
-      const fallbackName = clean.charAt(0).toUpperCase() + clean.slice(1);
-      return {
-        uid: clean,
-        username: clean.toLowerCase(),
-        displayName: fallbackName,
-        initial: fallbackName.charAt(0).toUpperCase(),
-        bio: "Freelancer on Borynx",
-        location: "Earth",
-        website: "",
-        joined: new Date().getFullYear().toString(),
-        status: "Available",
-        skills: [],
-        reputation: 10,
-        followers: 0,
-        following: 0,
-        avatarUrl: "",
-        isVerifiedPro: false,
-        hasSeenVeteranCelebration: false,
-        createdAt: new Date().toISOString(),
-      } as UserProfile;
     }
   } catch (err) {
     console.warn("getUserProfile exception:", err);

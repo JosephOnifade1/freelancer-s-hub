@@ -18,7 +18,7 @@ export class ErrorBoundary extends React.Component<{children: React.ReactNode}, 
     if (this.state.hasError) {
       return (
         <div className="flex min-h-[50vh] flex-col items-center justify-center p-8 text-center">
-          <h2 className="mb-4 text-2xl font-bold font-heading text-red-500">Something went wrong</h2>
+          <h2 className="mb-4 text-2xl font-bold font-heading text-destructive">Something went wrong</h2>
           <p className="text-muted-foreground font-body max-w-xl">
             A rendering error occurred in this component. Please try refreshing the page.
           </p>
