@@ -41,7 +41,11 @@ export default function Login() {
       toast.success("Logged in successfully!");
       navigate("/");
     } catch (error: any) {
-      toast.error(error.message || "Failed to log in.");
+      if (error?.message?.includes("Failed to fetch")) {
+        toast.error("Unable to connect to Supabase backend. Please check your connection or project status.");
+      } else {
+        toast.error(error.message || "Failed to log in.");
+      }
     } finally {
       setIsLoading(false);
     }

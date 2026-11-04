@@ -53,7 +53,11 @@ export default function Signup() {
         navigate("/");
       }
     } catch (error: any) {
-      toast.error(error.message || "Failed to create account.");
+      if (error?.message?.includes("Failed to fetch")) {
+        toast.error("Unable to connect to Supabase backend. Please check your connection or project status.");
+      } else {
+        toast.error(error.message || "Failed to create account.");
+      }
     } finally {
       setIsLoading(false);
     }
