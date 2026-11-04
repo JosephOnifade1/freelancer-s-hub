@@ -51,7 +51,7 @@ const Index = () => {
                   >
                     {tab}
                     {isActive && (
-                      <motion.div layoutId="activeHomeTab" className="absolute inset-x-0 bottom-0 h-0.5 bg-primary" />
+                      <motion.div layoutId="activeHomeTab" className="absolute inset-x-0 bottom-0 h-0.5 bg-brand" />
                     )}
                   </button>
                 );

@@ -68,7 +68,7 @@ const LeadDetail = () => {
             {/* Main Header Info */}
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
+                <Badge variant="outline" className="bg-muted text-muted-foreground border-border">
                   {lead.type}
                 </Badge>
                 <span className="text-xs text-muted-foreground font-body">
@@ -81,17 +81,17 @@ const LeadDetail = () => {
               {lead.isVerified && (
                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-success/10 border border-success/25 w-fit">
                   <BadgeCheck className="h-4 w-4 text-success" />
-                  <span className="font-heading text-sm font-bold text-success tracking-wide">Verified Opportunity</span>
+                  <span className="font-heading text-sm font-bold text-success ">Verified Opportunity</span>
                   <span className="font-body text-xs text-success/70">— vetted by a Borynx moderator</span>
                 </div>
               )}
               <div className="flex flex-wrap items-center gap-x-6 gap-y-3 font-body text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-primary" />
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
                   {lead.location}
                 </div>
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-primary" />
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
                   Apply by: Flexible
                 </div>
                 <div className="flex items-center gap-2 text-success font-bold">
@@ -122,12 +122,12 @@ const LeadDetail = () => {
 
           {/* Right Sidebar: Apply & Author */}
           <div className="space-y-6">
-            <div className="rounded-2xl border border-primary/30 bg-primary/5 p-6 shadow-lg shadow-primary/5 sticky top-24">
+            <div className="rounded-2xl border border-brand/30 bg-brand/5 p-6 shadow-lg shadow-brand/5 sticky top-24">
               <div className="mb-6">
                 <p className="text-xs text-muted-foreground font-body mb-1">Opportunity Status</p>
                 <div className="flex items-center gap-2">
                   <div className="h-2 w-2 rounded-full bg-success" />
-                  <span className="text-sm font-bold font-heading text-foreground uppercase tracking-wide">Accepting Proposals</span>
+                  <span className="text-sm font-bold font-heading text-foreground ">Accepting Proposals</span>
                 </div>
               </div>
 
@@ -153,7 +153,7 @@ const LeadDetail = () => {
                     )}
                   </div>
                   <div>
-                    <Link to={`/f/${lead.postedBy.username || lead.postedBy.uid}`} className="font-heading font-bold text-sm hover:text-primary transition-colors flex items-center gap-1">
+                    <Link to={`/f/${lead.postedBy.username || lead.postedBy.uid}`} className="font-heading font-bold text-sm hover:text-brand transition-colors flex items-center gap-1">
                       {lead.postedBy.name}
                       <VerifiedBadge isVerified={!!lead.postedBy.isVerified} size={12} showTooltip={false} />
                     </Link>

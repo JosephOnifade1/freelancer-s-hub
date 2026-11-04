@@ -11,7 +11,7 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
+    <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center px-4">
       <div className="relative z-10 text-center max-w-lg">
         <p className="mb-6 select-none font-heading text-[8rem] font-black leading-none text-muted-foreground/20">404</p>
 
@@ -19,7 +19,7 @@ const NotFound = () => {
           Page not found
         </h1>
         <p className="font-body text-muted-foreground mb-2 text-sm leading-relaxed">
-          The page <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">{location.pathname}</code> doesn't exist.
+          The page <code className="bg-muted px-1.5 py-0.5 rounded text-xs tabular-nums ">{location.pathname}</code> doesn't exist.
         </p>
         <p className="font-body text-sm text-muted-foreground/70 mb-8">
           It may have been moved, deleted, or you may have typed the URL incorrectly.

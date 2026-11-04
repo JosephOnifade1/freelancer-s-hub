@@ -34,7 +34,7 @@ export function FeedFilter({ value, onChange }: FeedFilterProps) {
           className={cn(
             "cursor-pointer flex items-center gap-2 py-2 px-3 rounded-md transition-colors", 
             value === "best" 
-              ? "bg-primary/10 text-primary focus:bg-primary/10 focus:text-primary" 
+              ? "bg-muted text-foreground focus:bg-brand/10 focus:text-brand" 
               : "text-foreground hover:bg-muted focus:bg-muted"
           )}
         >
@@ -47,7 +47,7 @@ export function FeedFilter({ value, onChange }: FeedFilterProps) {
           className={cn(
             "cursor-pointer flex items-center gap-2 py-2 px-3 rounded-md transition-colors", 
             value === "hot" 
-              ? "bg-primary/10 text-primary focus:bg-primary/10 focus:text-primary" 
+              ? "bg-muted text-foreground focus:bg-brand/10 focus:text-brand" 
               : "text-foreground hover:bg-muted focus:bg-muted"
           )}
         >
@@ -60,7 +60,7 @@ export function FeedFilter({ value, onChange }: FeedFilterProps) {
           className={cn(
             "cursor-pointer flex items-center gap-2 py-2 px-3 rounded-md transition-colors", 
             value === "new" 
-              ? "bg-primary/10 text-primary focus:bg-primary/10 focus:text-primary" 
+              ? "bg-muted text-foreground focus:bg-brand/10 focus:text-brand" 
               : "text-foreground hover:bg-muted focus:bg-muted"
           )}
         >

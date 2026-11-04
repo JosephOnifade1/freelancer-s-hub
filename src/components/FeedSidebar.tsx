@@ -115,7 +115,7 @@ export function FeedSidebar({ posts = [], currentUserUid }: { posts?: PostData[]
                 className="flex items-center gap-2 group hover:opacity-80 transition-opacity"
               >
                 <span className="font-heading text-xs font-bold text-muted-foreground w-4">{i + 1}</span>
-                <div className="flex h-6 w-6 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-primary/20 text-primary group-hover:opacity-90">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-muted text-foreground group-hover:opacity-90">
                   {user.avatarUrl ? (
                     <img src={user.avatarUrl} alt={user.displayName} className="h-full w-full object-cover" />
                   ) : (
@@ -192,8 +192,8 @@ export function FeedSidebar({ posts = [], currentUserUid }: { posts?: PostData[]
                 className="flex items-center justify-between p-1.5 rounded-xl hover:bg-muted/50 transition-colors"
               >
                 <div className="flex items-center gap-2.5">
-                  <span className="font-mono text-xs font-bold text-muted-foreground/60 w-3">{i + 1}</span>
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg overflow-hidden bg-primary/20 text-primary font-heading text-[10px] font-bold">
+                  <span className="tabular-nums text-xs font-bold text-muted-foreground/60 w-3">{i + 1}</span>
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg overflow-hidden bg-muted text-foreground font-heading text-[10px] font-bold">
                     {c.avatarUrl ? (
                       <img src={c.avatarUrl} alt={c.displayName} className="h-full w-full object-cover" />
                     ) : (
@@ -205,7 +205,7 @@ export function FeedSidebar({ posts = [], currentUserUid }: { posts?: PostData[]
                     <VerifiedBadge isVerified={c.isVerifiedPro} size={10} showTooltip={false} />
                   </div>
                 </div>
-                <span className="font-mono text-xs font-bold text-foreground">
+                <span className="tabular-nums text-xs font-bold text-foreground">
                   {c.contributions} {c.contributions === 1 ? "post" : "posts"}
                 </span>
               </Link>
@@ -237,7 +237,7 @@ export function FeedSidebar({ posts = [], currentUserUid }: { posts?: PostData[]
               return (
                 <div
                   key={idx}
-                  className={`flex h-7 w-7 items-center justify-center rounded-full font-mono text-[11px] font-bold ${
+                  className={`flex h-7 w-7 items-center justify-center rounded-full tabular-nums text-[11px] font-bold ${
                     isActive
                       ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
                       : "bg-muted/50 text-muted-foreground"

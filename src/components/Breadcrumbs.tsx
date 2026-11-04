@@ -98,7 +98,7 @@ export function Breadcrumbs() {
                 className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
               >
                 <Home className="h-3.5 w-3.5" />
-                <span className="text-[12px] font-medium font-body tracking-wide">
+                <span className="text-[12px] font-medium font-body ">
                   Borynx
                 </span>
               </Link>

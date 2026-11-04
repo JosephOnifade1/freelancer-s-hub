@@ -84,7 +84,7 @@ const CreatePost = () => {
         name: "Your profile",
         slug: "", // profile posts have no community slug
         icon: User,
-        color: "text-primary bg-primary/10",
+        color: "text-foreground bg-muted",
         popularTags: [],
       });
     }
@@ -437,7 +437,7 @@ const CreatePost = () => {
                       maxLength={1500}
                       className="min-h-[160px] resize-y border-none bg-transparent px-0 text-sm text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-0 focus-visible:ring-offset-0 leading-relaxed"
                     />
-                    <div className="text-[11px] font-mono text-muted-foreground text-right pt-2">
+                    <div className="text-[11px] tabular-nums text-muted-foreground text-right pt-2">
                       {(title.length + body.length)}/1500
                     </div>
                   </div>
@@ -457,8 +457,8 @@ const CreatePost = () => {
 
                 {/* Poll Options Input (if Poll selected) */}
                 {postType === "poll" && (
-                  <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 space-y-2.5 animate-in fade-in duration-300">
-                    <span className="text-xs font-semibold text-primary flex items-center gap-1.5">
+                  <div className="p-3 rounded-xl bg-brand/5 border border-brand/20 space-y-2.5 animate-in fade-in duration-300">
+                    <span className="text-xs font-semibold text-brand flex items-center gap-1.5">
                       <BarChart2 className="h-3.5 w-3.5" /> Poll Options
                     </span>
                     {pollOptions.map((opt, idx) => (
@@ -486,7 +486,7 @@ const CreatePost = () => {
                     {pollOptions.length < 5 && (
                       <button
                         onClick={() => setPollOptions([...pollOptions, ""])}
-                        className="text-xs font-medium text-primary hover:underline flex items-center gap-1 pt-1"
+                        className="text-xs font-medium text-brand hover:underline flex items-center gap-1 pt-1"
                       >
                         <Plus className="h-3.5 w-3.5" /> Add Poll Option
                       </button>
@@ -501,7 +501,7 @@ const CreatePost = () => {
                     onClick={() => setPostType(postType === "poll" ? "discussion" : "poll")}
                     className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 border transition-all ${
                       postType === "poll"
-                        ? "bg-primary/20 border-primary/40 text-primary shadow-sm"
+                        ? "bg-brand/20 border-brand/40 text-brand shadow-sm"
                         : "bg-muted/40 border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted"
                     }`}
                   >
@@ -514,7 +514,7 @@ const CreatePost = () => {
                     onClick={() => setPostType(postType === "question" ? "discussion" : "question")}
                     className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 border transition-all ${
                       postType === "question"
-                        ? "bg-primary/20 border-primary/40 text-primary shadow-sm"
+                        ? "bg-brand/20 border-brand/40 text-brand shadow-sm"
                         : "bg-muted/40 border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted"
                     }`}
                   >
@@ -527,7 +527,7 @@ const CreatePost = () => {
                     onClick={() => setPostType(postType === "resource" ? "discussion" : "resource")}
                     className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 border transition-all ${
                       postType === "resource"
-                        ? "bg-primary/20 border-primary/40 text-primary shadow-sm"
+                        ? "bg-brand/20 border-brand/40 text-brand shadow-sm"
                         : "bg-muted/40 border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted"
                     }`}
                   >
@@ -550,7 +550,7 @@ const CreatePost = () => {
               <div className="pt-1">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="w-full rounded-2xl border border-border/50 bg-card p-3.5 flex items-center justify-between hover:border-primary/40 transition-colors shadow-sm group">
+                    <button className="w-full rounded-2xl border border-border/50 bg-card p-3.5 flex items-center justify-between hover:border-brand/40 transition-colors shadow-sm group">
                       <div className="flex items-center gap-3">
                         <div className={`h-9 w-9 rounded-xl ${selectedSpace.color} flex items-center justify-center font-bold shrink-0`}>
                           <SpaceIcon className="h-4.5 w-4.5" />
@@ -559,7 +559,7 @@ const CreatePost = () => {
                           <p className="font-heading text-sm font-bold text-foreground">
                             {selectedSpace.name}
                           </p>
-                          <p className="text-[11px] font-mono text-muted-foreground">
+                          <p className="text-[11px] tabular-nums text-muted-foreground">
                             {spaceHandle(selectedSpace)}
                           </p>
                         </div>
@@ -577,7 +577,7 @@ const CreatePost = () => {
                           key={sp.id}
                           onClick={() => setSelectedSpace(sp)}
                           className={`p-2.5 rounded-xl cursor-pointer flex items-center gap-3 ${
-                            isSelected ? "bg-primary/15 text-primary font-semibold" : ""
+                            isSelected ? "bg-muted text-foreground font-semibold" : ""
                           }`}
                         >
                           <div className={`h-8 w-8 rounded-lg ${sp.color} flex items-center justify-center font-bold shrink-0`}>
@@ -585,7 +585,7 @@ const CreatePost = () => {
                           </div>
                           <div>
                             <p className="text-xs font-bold text-foreground">{sp.name}</p>
-                            <p className="text-[10px] font-mono text-muted-foreground">{spaceHandle(sp)}</p>
+                            <p className="text-[10px] tabular-nums text-muted-foreground">{spaceHandle(sp)}</p>
                           </div>
                         </DropdownMenuItem>
                       );
@@ -609,12 +609,12 @@ const CreatePost = () => {
                   {tags.map((t) => (
                     <span
                       key={t}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 text-xs font-semibold text-primary"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand/10 border border-brand/20 text-xs font-semibold text-brand"
                     >
                       #{t}
                       <button
                         onClick={() => removeTag(t)}
-                        className="text-primary/70 hover:text-primary transition-colors"
+                        className="text-brand/70 hover:text-brand transition-colors"
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -677,9 +677,9 @@ const CreatePost = () => {
                   <button
                     type="button"
                     onClick={() => bodyImageInputRef.current?.click()}
-                    className="p-4 rounded-xl border border-border/50 bg-muted/20 hover:bg-primary/10 hover:border-primary/30 text-center space-y-2 transition-all group"
+                    className="p-4 rounded-xl border border-border/50 bg-muted/20 hover:bg-brand/10 hover:border-brand/30 text-center space-y-2 transition-all group"
                   >
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary mx-auto flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <div className="h-10 w-10 rounded-xl bg-muted text-foreground mx-auto flex items-center justify-center group-hover:scale-105 transition-transform">
                       <ImageIcon className="h-5 w-5" />
                     </div>
                     <span className="block text-xs font-bold text-foreground">Image</span>
@@ -693,11 +693,11 @@ const CreatePost = () => {
                     }}
                     className={`p-4 rounded-xl border text-center space-y-2 transition-all group ${
                       showVideoInput 
-                        ? "bg-primary/15 border-primary/40" 
-                        : "border-border/50 bg-muted/20 hover:bg-primary/10 hover:border-primary/30"
+                        ? "bg-brand/15 border-brand/40" 
+                        : "border-border/50 bg-muted/20 hover:bg-brand/10 hover:border-brand/30"
                     }`}
                   >
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary mx-auto flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <div className="h-10 w-10 rounded-xl bg-muted text-foreground mx-auto flex items-center justify-center group-hover:scale-105 transition-transform">
                       <Video className="h-5 w-5" />
                     </div>
                     <span className="block text-xs font-bold text-foreground">Video</span>
@@ -707,9 +707,9 @@ const CreatePost = () => {
                   <button
                     type="button"
                     onClick={handleInsertCodeSnippet}
-                    className="p-4 rounded-xl border border-border/50 bg-muted/20 hover:bg-primary/10 hover:border-primary/30 text-center space-y-2 transition-all group"
+                    className="p-4 rounded-xl border border-border/50 bg-muted/20 hover:bg-brand/10 hover:border-brand/30 text-center space-y-2 transition-all group"
                   >
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary mx-auto flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <div className="h-10 w-10 rounded-xl bg-muted text-foreground mx-auto flex items-center justify-center group-hover:scale-105 transition-transform">
                       <Code2 className="h-5 w-5" />
                     </div>
                     <span className="block text-xs font-bold text-foreground">Code</span>
@@ -719,9 +719,9 @@ const CreatePost = () => {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="p-4 rounded-xl border border-border/50 bg-muted/20 hover:bg-primary/10 hover:border-primary/30 text-center space-y-2 transition-all group"
+                    className="p-4 rounded-xl border border-border/50 bg-muted/20 hover:bg-brand/10 hover:border-brand/30 text-center space-y-2 transition-all group"
                   >
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary mx-auto flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <div className="h-10 w-10 rounded-xl bg-muted text-foreground mx-auto flex items-center justify-center group-hover:scale-105 transition-transform">
                       <FileUp className="h-5 w-5" />
                     </div>
                     <span className="block text-xs font-bold text-foreground">File</span>
@@ -764,7 +764,7 @@ const CreatePost = () => {
                   <div className="space-y-1.5 pt-1">
                     {attachedFiles.map((fn, idx) => (
                       <div key={idx} className="flex items-center justify-between text-xs p-2 rounded-lg bg-muted/40 border border-border/40">
-                        <span className="font-mono truncate">{fn}</span>
+                        <span className="tabular-nums truncate">{fn}</span>
                         <button onClick={() => setAttachedFiles(attachedFiles.filter((_, i) => i !== idx))} className="text-muted-foreground hover:text-foreground">
                           <X className="h-3.5 w-3.5" />
                         </button>
@@ -796,19 +796,19 @@ const CreatePost = () => {
                     onClick={() => setVisibility("public")}
                     className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between transition-all ${
                       visibility === "public"
-                        ? "border-primary/50 bg-primary/10"
+                        ? "border-brand/50 bg-brand/10"
                         : "border-border/50 bg-muted/20 hover:border-border"
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <Globe className="h-4.5 w-4.5 text-primary shrink-0" />
+                      <Globe className="h-4.5 w-4.5 text-muted-foreground shrink-0" />
                       <div>
                         <p className="font-heading text-xs font-bold text-foreground">Public</p>
                         <p className="text-[11px] text-muted-foreground">{isProfileTarget ? "Anyone can view and interact" : "Anyone in the B-Space can view and interact"}</p>
                       </div>
                     </div>
                     <div className={`h-4 w-4 rounded-full border flex items-center justify-center ${
-                      visibility === "public" ? "border-primary bg-primary" : "border-border"
+                      visibility === "public" ? "border-brand bg-brand" : "border-border"
                     }`}>
                       {visibility === "public" && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
                     </div>
@@ -822,19 +822,19 @@ const CreatePost = () => {
                     onClick={() => setVisibility("members")}
                     className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between transition-all ${
                       visibility === "members"
-                        ? "border-primary/50 bg-primary/10"
+                        ? "border-brand/50 bg-brand/10"
                         : "border-border/50 bg-muted/20 hover:border-border"
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <Users className="h-4.5 w-4.5 text-primary shrink-0" />
+                      <Users className="h-4.5 w-4.5 text-muted-foreground shrink-0" />
                       <div>
                         <p className="font-heading text-xs font-bold text-foreground">Space Members Only</p>
                         <p className="text-[11px] text-muted-foreground">Only members of {selectedSpace.name} can see this</p>
                       </div>
                     </div>
                     <div className={`h-4 w-4 rounded-full border flex items-center justify-center ${
-                      visibility === "members" ? "border-primary bg-primary" : "border-border"
+                      visibility === "members" ? "border-brand bg-brand" : "border-border"
                     }`}>
                       {visibility === "members" && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
                     </div>
@@ -846,19 +846,19 @@ const CreatePost = () => {
                     onClick={() => setVisibility("admins")}
                     className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between transition-all ${
                       visibility === "admins"
-                        ? "border-primary/50 bg-primary/10"
+                        ? "border-brand/50 bg-brand/10"
                         : "border-border/50 bg-muted/20 hover:border-border"
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <ShieldAlert className="h-4.5 w-4.5 text-primary shrink-0" />
+                      <ShieldAlert className="h-4.5 w-4.5 text-muted-foreground shrink-0" />
                       <div>
                         <p className="font-heading text-xs font-bold text-foreground">Admins & Moderators Only</p>
                         <p className="text-[11px] text-muted-foreground">Only admins and moderators can see this</p>
                       </div>
                     </div>
                     <div className={`h-4 w-4 rounded-full border flex items-center justify-center ${
-                      visibility === "admins" ? "border-primary bg-primary" : "border-border"
+                      visibility === "admins" ? "border-brand bg-brand" : "border-border"
                     }`}>
                       {visibility === "admins" && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
                     </div>
@@ -944,7 +944,7 @@ const CreatePost = () => {
                     key={t}
                     type="button"
                     onClick={() => addTag(t)}
-                    className="px-2.5 py-1 rounded-lg bg-muted/60 hover:bg-primary/15 border border-border/40 hover:border-primary/30 text-xs font-mono text-muted-foreground hover:text-primary transition-colors"
+                    className="px-2.5 py-1 rounded-lg bg-muted/60 hover:bg-brand/15 border border-border/40 hover:border-brand/30 text-xs tabular-nums text-muted-foreground hover:text-brand transition-colors"
                   >
                     #{t}
                   </button>
@@ -955,12 +955,12 @@ const CreatePost = () => {
 
             {/* Card 3: Posting as */}
             <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-              <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              <span className="tabular-nums text-[10px] font-bold text-muted-foreground">
                 Posting as
               </span>
 
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full border border-primary/30 overflow-hidden shrink-0 bg-muted">
+                <div className="h-10 w-10 rounded-full border border-brand/30 overflow-hidden shrink-0 bg-muted">
                   {profile?.avatarUrl ? (
                     <img src={profile.avatarUrl} alt="" className="h-full w-full object-cover" />
                   ) : (
@@ -973,10 +973,10 @@ const CreatePost = () => {
                   <div className="flex items-center gap-1.5 font-heading text-sm font-bold text-foreground">
                     <span>{profile?.username || "you"}</span>
                     {profile?.isVerifiedPro && (
-                      <CheckCircle2 className="h-4 w-4 text-primary fill-primary/20" />
+                      <CheckCircle2 className="h-4 w-4 text-muted-foreground fill-brand/20" />
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground font-mono">
+                  <p className="text-xs text-muted-foreground tabular-nums ">
                     {(profile?.reputation ?? 0).toLocaleString()} reputation
                   </p>
                 </div>

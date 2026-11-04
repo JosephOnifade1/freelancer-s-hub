@@ -120,7 +120,7 @@ const Achievements = () => {
               className={`relative pb-3 text-sm font-semibold transition-colors ${tab === t ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
             >
               {t}
-              {tab === t && <motion.div layoutId="achTab" className="absolute inset-x-0 bottom-0 h-0.5 bg-primary" />}
+              {tab === t && <motion.div layoutId="achTab" className="absolute inset-x-0 bottom-0 h-0.5 bg-brand" />}
             </button>
           ))}
         </div>
@@ -134,7 +134,7 @@ const Achievements = () => {
                   const Icon = b.icon;
                   const pct = Math.min(100, Math.round((b.current / b.target) * 100));
                   return (
-                    <div key={b.id} className={`rounded-xl border bg-card p-4 ${done ? "border-primary/40" : "border-border"}`}>
+                    <div key={b.id} className={`rounded-xl border bg-card p-4 ${done ? "border-brand/40" : "border-border"}`}>
                       <div className="flex items-start gap-3">
                         <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${done ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
                           {done ? <Icon className="h-5 w-5" /> : <Lock className="h-4 w-4" />}
@@ -146,7 +146,7 @@ const Achievements = () => {
                       </div>
                       <div className="mt-3">
                         <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                          <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
+                          <div className="h-full rounded-full bg-brand" style={{ width: `${pct}%` }} />
                         </div>
                         <p className="mt-1.5 text-[11px] text-muted-foreground">
                           {done ? "Unlocked" : `${Math.min(b.current, b.target).toLocaleString()} / ${b.target.toLocaleString()}`}
@@ -185,7 +185,7 @@ const Achievements = () => {
                 <>
                   <p className="mt-2 text-sm text-muted-foreground">Earn Trusted Voice and Generous to get verified.</p>
                   <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
-                    <div className="h-full rounded-full bg-primary" style={{ width: `${pathPercent}%` }} />
+                    <div className="h-full rounded-full bg-brand" style={{ width: `${pathPercent}%` }} />
                   </div>
                   <p className="mt-1.5 text-[11px] text-muted-foreground">{pathDone} of {pathBadges.length} badges earned</p>
                 </>

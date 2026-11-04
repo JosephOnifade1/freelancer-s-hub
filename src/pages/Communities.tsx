@@ -140,7 +140,7 @@ const Communities = () => {
                         : "border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground"
                     }`}
                   >
-                    {cat.id === "All" ? "All spaces" : cat.id} <span className="ml-1 font-mono opacity-60">{cat.count}</span>
+                    {cat.id === "All" ? "All spaces" : cat.id} <span className="ml-1 tabular-nums opacity-60">{cat.count}</span>
                   </button>
                 );
               })}
@@ -170,7 +170,7 @@ const Communities = () => {
                       </div>
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-foreground">
-                          {space.name} <span className="ml-1 font-mono text-xs font-normal text-muted-foreground">b/{space.slug}</span>
+                          {space.name} <span className="ml-1 tabular-nums text-xs font-normal text-muted-foreground">b/{space.slug}</span>
                         </p>
                         <p className="truncate text-xs text-muted-foreground">{space.description}</p>
                         <p className="mt-0.5 text-xs text-muted-foreground">
@@ -226,7 +226,7 @@ const Communities = () => {
                     <li key={s.slug}>
                       <Link to={`/b/${s.slug}`} className="flex items-center justify-between text-sm hover:opacity-80">
                         <span className="font-medium text-foreground">{s.name}</span>
-                        <span className="font-mono text-xs text-muted-foreground">b/{s.slug}</span>
+                        <span className="tabular-nums text-xs text-muted-foreground">b/{s.slug}</span>
                       </Link>
                     </li>
                   ))}
@@ -245,9 +245,9 @@ const Communities = () => {
                   {topSpaces.map((s, i) => (
                     <li key={s.slug}>
                       <Link to={`/b/${s.slug}`} className="flex items-center gap-3 text-sm hover:opacity-80">
-                        <span className="w-3 font-mono text-xs text-muted-foreground">{i + 1}</span>
+                        <span className="w-3 tabular-nums text-xs text-muted-foreground">{i + 1}</span>
                         <span className="flex-1 truncate font-medium text-foreground">{s.name}</span>
-                        <span className="font-mono text-xs text-muted-foreground">{s.memberCount.toLocaleString()}</span>
+                        <span className="tabular-nums text-xs text-muted-foreground">{s.memberCount.toLocaleString()}</span>
                       </Link>
                     </li>
                   ))}

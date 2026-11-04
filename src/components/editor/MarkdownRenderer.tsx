@@ -80,7 +80,7 @@ export const MarkdownRenderer = ({ content, className }: MarkdownRendererProps) 
             return (
               <a 
                 {...props} 
-                className="text-primary hover:underline transition-all" 
+                className="text-brand hover:underline transition-all" 
                 target={href.startsWith("http") ? "_blank" : undefined}
                 rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
               />
@@ -95,7 +95,7 @@ export const MarkdownRenderer = ({ content, className }: MarkdownRendererProps) 
             <pre {...props} className="bg-muted p-4 rounded-lg overflow-x-auto my-4 border border-border" />
           ),
           blockquote: ({ node, ...props }) => (
-            <blockquote {...props} className="border-l-4 border-primary/40 pl-4 italic my-4 text-muted-foreground" />
+            <blockquote {...props} className="border-l-4 border-brand/40 pl-4 italic my-4 text-muted-foreground" />
           ),
           span: ({ node, ...props }: any) => {
             if (props['data-spoiler']) {

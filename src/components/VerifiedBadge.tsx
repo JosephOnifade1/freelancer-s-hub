@@ -22,7 +22,7 @@ export function VerifiedBadge({ isVerified, size = 14 }: VerifiedBadgeProps) {
         <TooltipTrigger asChild>
           <BadgeCheck 
             size={size} 
-            className="text-primary" 
+            className="text-brand" 
           />
         </TooltipTrigger>
         <TooltipContent className="font-body text-[11px] bg-primary border-none text-primary-foreground p-2">

@@ -38,9 +38,9 @@ type ViewMode = "Board" | "List" | "Calendar";
 
 const STAGES: { id: BoardStage; label: string; dotColor: string; badgeColor: string }[] = [
   { id: "new", label: "New Leads", dotColor: "bg-info", badgeColor: "text-info" },
-  { id: "conversation", label: "In Conversation", dotColor: "bg-primary", badgeColor: "text-primary" },
+  { id: "conversation", label: "In Conversation", dotColor: "bg-brand", badgeColor: "text-brand" },
   { id: "proposal", label: "Proposal Sent", dotColor: "bg-warning", badgeColor: "text-warning" },
-  { id: "negotiation", label: "Negotiation", dotColor: "bg-primary", badgeColor: "text-primary" },
+  { id: "negotiation", label: "Negotiation", dotColor: "bg-foreground", badgeColor: "text-foreground" },
   { id: "won", label: "Closed Won", dotColor: "bg-success", badgeColor: "text-success" },
 ];
 
@@ -206,7 +206,7 @@ export default function LeadsBoard() {
               onClick={() => setViewMode("Board")}
               className={`pb-3 flex items-center gap-2 transition-all relative ${
                 viewMode === "Board"
-                  ? "text-foreground font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary"
+                  ? "text-foreground font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-brand"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -216,7 +216,7 @@ export default function LeadsBoard() {
               onClick={() => setViewMode("List")}
               className={`pb-3 flex items-center gap-2 transition-all relative ${
                 viewMode === "List"
-                  ? "text-foreground font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary"
+                  ? "text-foreground font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-brand"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -226,7 +226,7 @@ export default function LeadsBoard() {
               onClick={() => setViewMode("Calendar")}
               className={`pb-3 flex items-center gap-2 transition-all relative ${
                 viewMode === "Calendar"
-                  ? "text-foreground font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary"
+                  ? "text-foreground font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-brand"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -249,7 +249,7 @@ export default function LeadsBoard() {
               <DropdownMenuContent align="start" className="w-44 text-xs">
                 {CATEGORIES.map((cat) => (
                   <DropdownMenuItem key={cat} onClick={() => setCategoryFilter(cat)}>
-                    {categoryFilter === cat && <Check className="h-3.5 w-3.5 mr-2 text-primary" />}
+                    {categoryFilter === cat && <Check className="h-3.5 w-3.5 mr-2 text-brand" />}
                     <span className={categoryFilter === cat ? "font-bold text-foreground" : ""}>{cat === "All" ? "All Leads" : cat}</span>
                   </DropdownMenuItem>
                 ))}
@@ -269,7 +269,7 @@ export default function LeadsBoard() {
                 <DropdownMenuContent align="end" className="w-48 text-xs">
                   {["Last Updated", "Value: High to Low", "Value: Low to High", "Newest First"].map((s) => (
                     <DropdownMenuItem key={s} onClick={() => setSortBy(s)}>
-                      {sortBy === s && <Check className="h-3.5 w-3.5 mr-2 text-primary" />}
+                      {sortBy === s && <Check className="h-3.5 w-3.5 mr-2 text-brand" />}
                       <span>{s}</span>
                     </DropdownMenuItem>
                   ))}
@@ -310,7 +310,7 @@ export default function LeadsBoard() {
                         <div className="flex items-center gap-2">
                           <span className={`h-2 w-2 rounded-full ${stage.dotColor}`} />
                           <h3 className="font-heading text-xs font-bold text-foreground whitespace-nowrap">{stage.label}</h3>
-                          <span className="text-[11px] font-mono text-muted-foreground">{stageLeads.length}</span>
+                          <span className="text-[11px] tabular-nums text-muted-foreground">{stageLeads.length}</span>
                         </div>
                         <button 
                           onClick={() => handleOpenAddLead(stage.id)}
@@ -338,7 +338,7 @@ export default function LeadsBoard() {
                                     className="h-6 w-6 rounded-full object-cover shrink-0" 
                                   />
                                 ) : (
-                                  <div className={`h-6 w-6 rounded-full ${lead.avatarColor || "bg-primary"} text-white font-bold text-[10px] flex items-center justify-center shrink-0`}>
+                                  <div className={`h-6 w-6 rounded-full ${lead.avatarColor || "bg-brand"} text-white font-bold text-[10px] flex items-center justify-center shrink-0`}>
                                     {lead.initials || lead.company.charAt(0)}
                                   </div>
                                 )}
@@ -385,31 +385,31 @@ export default function LeadsBoard() {
 
                             {/* Value and Time row */}
                             <div className="flex items-center justify-between text-[11px] pt-0.5">
-                              <span className="font-mono font-bold text-foreground/90">{lead.budget}</span>
-                              <span className="text-muted-foreground/70 font-mono">{lead.timeAgo}</span>
+                              <span className="tabular-nums font-bold text-foreground/90">{lead.budget}</span>
+                              <span className="text-muted-foreground/70 tabular-nums ">{lead.timeAgo}</span>
                             </div>
 
                             {/* Tags & Badges */}
                             <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                              <span className="px-2 py-0.5 rounded bg-secondary/50 text-[10px] font-mono text-muted-foreground">
+                              <span className="px-2 py-0.5 rounded bg-secondary/50 text-[10px] tabular-nums text-muted-foreground">
                                 {lead.category}
                               </span>
 
                               {/* Special Status Badges matching screenshot */}
                               {lead.statusBadge === "Paid" && (
-                                <span className="px-1.5 py-0.5 rounded bg-success/10 text-success text-[10px] font-mono font-bold flex items-center gap-1 border border-success/20 ml-auto">
+                                <span className="px-1.5 py-0.5 rounded bg-success/10 text-success text-[10px] tabular-nums font-bold flex items-center gap-1 border border-success/20 ml-auto">
                                   <Check className="h-2.5 w-2.5" /> Paid
                                 </span>
                               )}
 
                               {lead.statusBadge && lead.statusBadge.startsWith("Sent") && (
-                                <span className="text-[10px] text-warning font-mono flex items-center gap-1 ml-auto">
+                                <span className="text-[10px] text-warning tabular-nums flex items-center gap-1 ml-auto">
                                   <Check className="h-2.5 w-2.5" /> {lead.statusBadge}
                                 </span>
                               )}
 
                               {lead.statusBadge && lead.statusBadge.startsWith("Last reply") && (
-                                <span className="text-[10px] text-primary font-mono flex items-center gap-1 ml-auto">
+                                <span className="text-[10px] text-brand tabular-nums flex items-center gap-1 ml-auto">
                                   <Check className="h-2.5 w-2.5" /> {lead.statusBadge}
                                 </span>
                               )}
@@ -438,7 +438,7 @@ export default function LeadsBoard() {
               <div className="rounded-2xl border border-border/40 bg-card overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
-                    <thead className="bg-muted/60 border-b border-border/40 text-muted-foreground font-mono uppercase tracking-wider">
+                    <thead className="bg-muted/60 border-b border-border/40 text-muted-foreground tabular-nums ">
                       <tr>
                         <th className="p-3.5 font-semibold">Client / Company</th>
                         <th className="p-3.5 font-semibold">Project Summary</th>
@@ -459,7 +459,7 @@ export default function LeadsBoard() {
                                 {lead.avatarUrl ? (
                                   <img src={lead.avatarUrl} alt={lead.company} className="h-6 w-6 rounded-full object-cover" />
                                 ) : (
-                                  <div className={`h-6 w-6 rounded-full ${lead.avatarColor || "bg-primary"} text-white font-bold text-[10px] flex items-center justify-center`}>
+                                  <div className={`h-6 w-6 rounded-full ${lead.avatarColor || "bg-brand"} text-white font-bold text-[10px] flex items-center justify-center`}>
                                     {lead.initials || lead.company.charAt(0)}
                                   </div>
                                 )}
@@ -473,9 +473,9 @@ export default function LeadsBoard() {
                                 {stageInfo?.label}
                               </span>
                             </td>
-                            <td className="p-3.5 font-mono font-bold text-foreground">{lead.budget}</td>
-                            <td className="p-3.5 font-mono text-muted-foreground">{lead.category}</td>
-                            <td className="p-3.5 font-mono text-muted-foreground">{lead.statusBadge || lead.timeAgo}</td>
+                            <td className="p-3.5 tabular-nums font-bold text-foreground">{lead.budget}</td>
+                            <td className="p-3.5 tabular-nums text-muted-foreground">{lead.category}</td>
+                            <td className="p-3.5 tabular-nums text-muted-foreground">{lead.statusBadge || lead.timeAgo}</td>
                             <td className="p-3.5 text-right">
                               <button 
                                 onClick={() => handleDeleteLead(lead.id)}
@@ -496,12 +496,12 @@ export default function LeadsBoard() {
             {/* Calendar View */}
             {viewMode === "Calendar" && (
               <div className="rounded-2xl border border-border/40 bg-card p-6 text-center space-y-4 shadow-sm">
-                <CalendarIcon className="h-10 w-10 text-primary mx-auto opacity-80" />
+                <CalendarIcon className="h-10 w-10 text-muted-foreground mx-auto opacity-80" />
                 <h3 className="font-heading text-base font-bold text-foreground">Leads Calendar & Follow-up Milestones</h3>
                 <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">
                   Upcoming follow-up dates, proposal expiry windows, and deal closing deadlines will be scheduled on your connected calendar.
                 </p>
-                <div className="grid grid-cols-7 gap-2 max-w-xl mx-auto pt-4 text-xs font-mono">
+                <div className="grid grid-cols-7 gap-2 max-w-xl mx-auto pt-4 text-xs tabular-nums ">
                   {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
                     <div key={day} className="p-2 border border-border/30 rounded bg-muted/40 text-muted-foreground font-bold">
                       {day}
@@ -510,7 +510,7 @@ export default function LeadsBoard() {
                   {Array.from({ length: 28 }).map((_, idx) => (
                     <div key={idx} className="h-12 border border-border/30 rounded p-1 text-[10px] text-muted-foreground/60 flex flex-col justify-between">
                       <span>{idx + 1}</span>
-                      {idx === 14 && <span className="bg-primary/20 text-primary rounded px-1 truncate">Acme Proposal</span>}
+                      {idx === 14 && <span className="bg-muted text-foreground rounded px-1 truncate">Acme Proposal</span>}
                       {idx === 20 && <span className="bg-success/20 text-success rounded px-1 truncate">BrightKey Call</span>}
                     </div>
                   ))}
@@ -531,7 +531,7 @@ export default function LeadsBoard() {
 
               <div>
                 <div className="font-heading text-3xl font-bold text-foreground">{totalLeadsCount}</div>
-                <div className="text-xs text-muted-foreground font-mono mt-0.5">total leads</div>
+                <div className="text-xs text-muted-foreground tabular-nums mt-0.5">total leads</div>
               </div>
 
               {/* Status Dot Breakdown */}
@@ -544,7 +544,7 @@ export default function LeadsBoard() {
                         <span className={`h-2 w-2 rounded-full ${s.dotColor}`} />
                         <span className="text-foreground/90">{s.label}</span>
                       </div>
-                      <span className="font-mono font-bold text-foreground">{count}</span>
+                      <span className="tabular-nums font-bold text-foreground">{count}</span>
                     </div>
                   );
                 })}
@@ -557,7 +557,7 @@ export default function LeadsBoard() {
               
               <div>
                 <div className="font-heading text-3xl font-bold text-foreground">{conversionRate}%</div>
-                <div className="text-xs text-muted-foreground font-mono mt-0.5">
+                <div className="text-xs text-muted-foreground tabular-nums mt-0.5">
                   {wonCount} won / {totalLeadsCount} total
                 </div>
               </div>
@@ -580,11 +580,11 @@ export default function LeadsBoard() {
                     <div key={src.label} className="space-y-1">
                       <div className="flex justify-between">
                         <span className="text-foreground/90">{src.label}</span>
-                        <span className="font-mono text-muted-foreground">{src.count}</span>
+                        <span className="tabular-nums text-muted-foreground">{src.count}</span>
                       </div>
                       <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
                         <div 
-                          className="h-full bg-primary rounded-full transition-all duration-500" 
+                          className="h-full bg-brand rounded-full transition-all duration-500" 
                           style={{ width: `${widthPct}%` }}
                         />
                       </div>
@@ -602,9 +602,9 @@ export default function LeadsBoard() {
                 {[
                   { icon: Plus, title: "Acme Corporation", action: "added as new lead", time: "2h ago", color: "text-info bg-info/10" },
                   { icon: Send, title: "You", action: "sent a proposal to TechStart Inc.", time: "1d ago", color: "text-warning bg-warning/10" },
-                  { icon: MessageSquare, title: "BrightKey", action: "replied to your message", time: "1d ago", color: "text-primary bg-primary/10" },
+                  { icon: MessageSquare, title: "BrightKey", action: "replied to your message", time: "1d ago", color: "text-foreground bg-muted" },
                   { icon: CheckCircle2, title: "You", action: "won FlowCraft project", time: "4d ago", color: "text-success bg-success/10" },
-                  { icon: ArrowUpRight, title: "Inova Agency", action: "moved to Negotiation", time: "2d ago", color: "text-primary bg-primary/10" },
+                  { icon: ArrowUpRight, title: "Inova Agency", action: "moved to Negotiation", time: "2d ago", color: "text-foreground bg-muted" },
                 ].map((act, idx) => {
                   const IconComp = act.icon;
                   return (
@@ -616,7 +616,7 @@ export default function LeadsBoard() {
                         <p className="text-foreground/90 leading-tight">
                           <span className="font-bold text-foreground">{act.title}</span> {act.action}
                         </p>
-                        <span className="text-[10px] text-muted-foreground font-mono">{act.time}</span>
+                        <span className="text-[10px] text-muted-foreground tabular-nums ">{act.time}</span>
                       </div>
                     </div>
                   );
@@ -625,8 +625,8 @@ export default function LeadsBoard() {
             </div>
 
             {/* Card 5: Automate your follow-ups */}
-            <div className="rounded-2xl border border-primary/20 bg-primary/10 p-5 space-y-3 shadow-sm">
-              <div className="h-8 w-8 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center text-primary">
+            <div className="rounded-2xl border border-brand/20 bg-brand/10 p-5 space-y-3 shadow-sm">
+              <div className="h-8 w-8 rounded-lg bg-brand/20 border border-brand/30 flex items-center justify-center text-muted-foreground">
                 <Wand2 className="h-4 w-4" />
               </div>
               <div className="space-y-1">
@@ -637,7 +637,7 @@ export default function LeadsBoard() {
               </div>
               <button 
                 onClick={() => setRemindersModalOpen(true)}
-                className="text-xs text-primary hover:text-primary font-medium font-mono hover:underline flex items-center gap-1"
+                className="text-xs text-brand hover:text-brand font-medium tabular-nums hover:underline flex items-center gap-1"
               >
                 Enable Reminders →
               </button>
@@ -782,7 +782,7 @@ export default function LeadsBoard() {
         <DialogContent className="sm:max-w-md border-border/60 bg-card text-foreground">
           <DialogHeader>
             <DialogTitle className="font-heading text-lg font-bold flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" /> Follow-up Reminders Enabled
+              <Sparkles className="h-5 w-5 text-muted-foreground" /> Follow-up Reminders Enabled
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground leading-relaxed pt-2">
               Borynx will automatically check your proposal status and trigger browser notifications when leads have not replied within 48 hours.

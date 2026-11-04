@@ -175,7 +175,7 @@ const CommunityDetail = () => {
               <div className="min-w-0 space-y-1.5">
                 <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">{community.name}</h1>
                 <p className="flex flex-wrap items-center gap-x-2 text-xs font-medium text-muted-foreground">
-                  <span className="font-mono">b/{community.slug}</span>
+                  <span className="tabular-nums ">b/{community.slug}</span>
                   <span aria-hidden>·</span>
                   <span className="inline-flex items-center gap-1"><Globe className="h-3.5 w-3.5" /> Public</span>
                   <span aria-hidden>·</span>
@@ -227,7 +227,7 @@ const CommunityDetail = () => {
                 }`}
               >
                 {tab}
-                {isActive && <motion.div layoutId="activeSpaceTab" className="absolute inset-x-0 bottom-0 h-0.5 bg-primary" />}
+                {isActive && <motion.div layoutId="activeSpaceTab" className="absolute inset-x-0 bottom-0 h-0.5 bg-brand" />}
               </button>
             );
           })}
@@ -265,9 +265,9 @@ const CommunityDetail = () => {
                       <p className="flex items-center gap-1 text-sm font-semibold text-foreground">
                         {memberName(m)} <VerifiedBadge isVerified={m.isVerifiedPro} size={12} showTooltip={false} />
                       </p>
-                      <p className="font-mono text-xs text-muted-foreground">f/{m.username || m.uid.slice(0, 8)}</p>
+                      <p className="tabular-nums text-xs text-muted-foreground">f/{m.username || m.uid.slice(0, 8)}</p>
                     </div>
-                    <span className="font-mono text-xs text-muted-foreground">{m.reputation.toLocaleString()} rep</span>
+                    <span className="tabular-nums text-xs text-muted-foreground">{m.reputation.toLocaleString()} rep</span>
                   </Link>
                 ))}
               </div>
@@ -335,12 +335,12 @@ const CommunityDetail = () => {
                   {topMembers.map((m, i) => (
                     <li key={m.uid}>
                       <Link to={memberLink(m)} className="flex items-center gap-2.5 hover:opacity-80">
-                        <span className="w-3 font-mono text-xs text-muted-foreground">{i + 1}</span>
+                        <span className="w-3 tabular-nums text-xs text-muted-foreground">{i + 1}</span>
                         <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-muted font-heading text-[11px] font-bold">
                           {m.avatarUrl ? <img src={m.avatarUrl} alt="" className="h-full w-full object-cover" /> : memberName(m).charAt(0).toUpperCase()}
                         </div>
                         <span className="flex-1 truncate text-sm font-medium text-foreground">{memberName(m)}</span>
-                        <span className="font-mono text-[11px] text-muted-foreground">{m.reputation.toLocaleString()}</span>
+                        <span className="tabular-nums text-[11px] text-muted-foreground">{m.reputation.toLocaleString()}</span>
                       </Link>
                     </li>
                   ))}

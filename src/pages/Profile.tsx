@@ -59,7 +59,7 @@ const ProfileCommentCard = ({ comment, isOwnProfile }: { comment: any, isOwnProf
         <div className="flex items-center justify-between mb-1">
           <div className="text-xs text-muted-foreground">
             Commented on{" "}
-            <Link to={`/p/${comment.postId}`} className="font-medium text-foreground hover:text-primary transition-colors">
+            <Link to={`/p/${comment.postId}`} className="font-medium text-foreground hover:text-brand transition-colors">
               a post
             </Link>{" "}
             • {formatTimeAgo(comment.createdAt)}
@@ -90,7 +90,7 @@ const ProfileCommentCard = ({ comment, isOwnProfile }: { comment: any, isOwnProf
             <textarea
               value={editBody}
               onChange={(e) => setEditBody(e.target.value)}
-              className="w-full resize-none rounded-md bg-background border border-border p-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+              className="w-full resize-none rounded-md bg-background border border-border p-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand/50"
               rows={3}
             />
             <div className="flex justify-end gap-2 mt-2">
@@ -247,7 +247,7 @@ export default function Profile() {
     return (
       <AppLayout>
         <div className="flex h-[60vh] items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       </AppLayout>
     );
@@ -258,7 +258,7 @@ export default function Profile() {
       <AppLayout>
         <div className="mx-auto max-w-4xl px-4 py-16 text-center">
           <h2 className="font-heading text-2xl font-bold mb-2">Profile not found.</h2>
-          <Link to="/" className="text-primary hover:underline font-medium text-sm">Return to feed</Link>
+          <Link to="/" className="text-brand hover:underline font-medium text-sm">Return to feed</Link>
         </div>
       </AppLayout>
     );
@@ -366,7 +366,7 @@ export default function Profile() {
                     </h2>
                     <VerifiedBadge isVerified={profile.isVerifiedPro ?? false} size={18} />
                   </div>
-                  <p className="text-sm text-muted-foreground font-mono">
+                  <p className="text-sm text-muted-foreground tabular-nums ">
                     @{profile.username || "unknown"}
                   </p>
                 </div>
@@ -398,7 +398,7 @@ export default function Profile() {
                   </div>
                 ) : (bio || isOwnProfile) ? (
                   <p 
-                    className={`text-sm text-foreground/90 leading-relaxed mb-4 ${isOwnProfile ? "cursor-pointer hover:text-primary transition-colors" : ""}`}
+                    className={`text-sm text-foreground/90 leading-relaxed mb-4 ${isOwnProfile ? "cursor-pointer hover:text-brand transition-colors" : ""}`}
                     onClick={() => isOwnProfile && setIsEditingBio(true)}
                   >
                     {bio || (isOwnProfile ? <span className="text-muted-foreground">Add a short bio so people know what you do.</span> : null)}
@@ -484,7 +484,7 @@ export default function Profile() {
                   onClick={() => setActiveTab(tab)}
                   className={`pb-3 font-semibold transition-all relative ${
                     activeTab === tab
-                      ? "text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary"
+                      ? "text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-brand"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
@@ -498,7 +498,7 @@ export default function Profile() {
               {activeTab === "Threads" && (
                 userPosts.length === 0 ? (
                   <div className="rounded-2xl border border-border/40 bg-card p-10 text-center space-y-2">
-                    <p className="font-heading font-bold text-foreground uppercase tracking-wide">No posts yet</p>
+                    <p className="font-heading font-bold text-foreground ">No posts yet</p>
                     <p className="text-sm text-muted-foreground">
                       Posts this user publishes will show up here.
                     </p>
@@ -603,7 +603,7 @@ export default function Profile() {
                     <li key={sp.slug}>
                       <Link to={`/b/${sp.slug}`} className="flex items-center justify-between text-sm hover:opacity-80">
                         <span className="font-medium text-foreground">{sp.name}</span>
-                        <span className="font-mono text-xs text-muted-foreground">b/{sp.slug}</span>
+                        <span className="tabular-nums text-xs text-muted-foreground">b/{sp.slug}</span>
                       </Link>
                     </li>
                   ))}

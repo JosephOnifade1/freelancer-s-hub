@@ -57,7 +57,7 @@ const CommentTextarea = ({
     onChange={(e) => onChange(e.target.value)}
     placeholder={placeholder}
     rows={minRows}
-    className="w-full resize-none rounded-lg border border-border bg-card px-3 py-2.5 font-body text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all"
+    className="w-full resize-none rounded-lg border border-border bg-card px-3 py-2.5 font-body text-sm text-foreground placeholder:text-muted-foreground focus:border-brand/50 focus:outline-none focus:ring-1 focus:ring-brand/20 transition-all"
   />
 );
 
@@ -119,8 +119,8 @@ const CommentThread = ({ comment, postId, depth = 0 }: { comment: CommentData; p
 
   if (comment.isDeleted) {
     return (
-      <div className={`${depth > 0 ? "ml-4 sm:ml-8 pl-4 border-l-2 border-dashed border-primary/20 relative" : ""}`}>
-        {depth > 0 && <div className="absolute -left-[2px] top-4 h-4 w-4 border-l-2 border-b-2 border-primary/20 rounded-bl-lg" />}
+      <div className={`${depth > 0 ? "ml-4 sm:ml-8 pl-4 border-l-2 border-dashed border-brand/20 relative" : ""}`}>
+        {depth > 0 && <div className="absolute -left-[2px] top-4 h-4 w-4 border-l-2 border-b-2 border-brand/20 rounded-bl-lg" />}
         <div className="flex gap-3 py-3 opacity-60">
           <div className="w-10 shrink-0" />
           <div className="flex-1 min-w-0">
@@ -142,8 +142,8 @@ const CommentThread = ({ comment, postId, depth = 0 }: { comment: CommentData; p
   }
 
   return (
-    <div className={`${depth > 0 ? "ml-4 sm:ml-8 pl-4 border-l-2 border-primary/40 relative" : ""}`}>
-      {depth > 0 && <div className="absolute -left-[2px] top-4 h-4 w-4 border-l-2 border-b-2 border-primary/40 rounded-bl-lg" />}
+    <div className={`${depth > 0 ? "ml-4 sm:ml-8 pl-4 border-l-2 border-brand/40 relative" : ""}`}>
+      {depth > 0 && <div className="absolute -left-[2px] top-4 h-4 w-4 border-l-2 border-b-2 border-brand/40 rounded-bl-lg" />}
       <div className="flex gap-3 py-3">
         <VoteControls score={comment.score || 0} entityId={comment.id} authorUid={comment.authorUid} type="comment" postIdForComment={postId} />
         
@@ -151,7 +151,7 @@ const CommentThread = ({ comment, postId, depth = 0 }: { comment: CommentData; p
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
               <Link to={comment.authorUid ? `/f/${comment.author || comment.authorUid}` : "#"} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                <div className="flex h-5 w-5 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-primary/20 text-primary">
+                <div className="flex h-5 w-5 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-muted text-foreground">
                   {comment.author ? comment.author.charAt(0).toUpperCase() : '?'}
                 </div>
                 <span className="font-body text-xs font-semibold text-foreground flex items-center gap-1">
@@ -212,13 +212,13 @@ const CommentThread = ({ comment, postId, depth = 0 }: { comment: CommentData; p
           
           <button 
             onClick={() => setIsReplying(!isReplying)}
-            className="font-body text-[11px] font-medium text-muted-foreground hover:text-primary transition-colors mt-1"
+            className="font-body text-[11px] font-medium text-muted-foreground hover:text-brand transition-colors mt-1"
           >
             {isReplying ? "Cancel" : "Reply"}
           </button>
 
           {isReplying && (
-            <div className="mt-3 bg-card rounded-lg p-3 border border-primary/20 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="mt-3 bg-card rounded-lg p-3 border border-brand/20 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
               <CommentTextarea value={replyBody} onChange={setReplyBody} placeholder="Write your reply..." minRows={2} />
               <div className="flex justify-end gap-2 mt-2">
                 <button 
@@ -348,7 +348,7 @@ const PostDetail = () => {
     return (
       <AppLayout>
         <div className="flex h-[50vh] items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       </AppLayout>
     );
@@ -359,7 +359,7 @@ const PostDetail = () => {
       <AppLayout>
         <div className="mx-auto max-w-3xl px-4 py-12 text-center">
           <h2 className="font-heading text-2xl font-bold mb-2">Post not found</h2>
-          <Link to="/" className="text-primary hover:underline">Return to feed</Link>
+          <Link to="/" className="text-brand hover:underline">Return to feed</Link>
         </div>
       </AppLayout>
     );
@@ -376,7 +376,7 @@ const PostDetail = () => {
         </button>
 
         {post.isDeleted ? (
-          <div className="rounded-xl border border-dashed border-primary/50 bg-card p-5 mb-6 shadow-sm opacity-80">
+          <div className="rounded-xl border border-dashed border-brand/50 bg-card p-5 mb-6 shadow-sm opacity-80">
             <div className="flex gap-4">
               <div className="w-8" />
               <div className="flex-1 min-w-0">
@@ -430,7 +430,7 @@ const PostDetail = () => {
                     href={post.externalLink.startsWith('http') ? post.externalLink : `https://${post.externalLink}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 font-body text-sm text-primary hover:underline mb-4"
+                    className="inline-flex items-center gap-2 font-body text-sm text-brand hover:underline mb-4"
                   >
                     <ExternalLink className="h-4 w-4" />
                     Visit External Resource
@@ -465,7 +465,7 @@ const PostDetail = () => {
                 
                 <div className="flex flex-wrap gap-1.5 mb-4">
                   {(post.tags || []).map((tag) => (
-                    <Link key={tag} to={`/tag/${tag}`} className="rounded-md bg-secondary px-2 py-0.5 font-body text-[11px] font-medium text-secondary-foreground hover:bg-primary/15 hover:text-primary transition-colors">
+                    <Link key={tag} to={`/tag/${tag}`} className="rounded-md bg-secondary px-2 py-0.5 font-body text-[11px] font-medium text-secondary-foreground hover:bg-brand/15 hover:text-brand transition-colors">
                       #{tag}
                     </Link>
                   ))}
@@ -473,7 +473,7 @@ const PostDetail = () => {
                 
                 <div className="flex items-center justify-between pt-3 border-t border-border/50">
                   <Link to={post.author?.uid ? `/f/${post.author.uid}` : "#"} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full font-heading text-xs font-bold overflow-hidden bg-primary/20 text-primary">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full font-heading text-xs font-bold overflow-hidden bg-muted text-foreground">
                       {post.author?.avatar ? (
                         <img src={post.author.avatar} alt={post.author.name} className="h-full w-full object-cover" />
                       ) : (
@@ -527,7 +527,7 @@ const PostDetail = () => {
         {/* Comment compose — plain textarea, no rich text toolbar */}
         {!post.isDeleted && (
           <div className="rounded-xl border border-border bg-card p-4 mb-6 shadow-sm">
-            <p className="font-body text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Leave a comment</p>
+            <p className="font-body text-xs font-semibold text-muted-foreground mb-2 ">Leave a comment</p>
             <CommentTextarea
               value={newComment}
               onChange={setNewComment}

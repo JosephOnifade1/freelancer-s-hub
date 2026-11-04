@@ -43,7 +43,7 @@ const TagFeed = () => {
           <div className="flex-1 min-w-0">
             <div className="mb-5">
               <div className="flex items-center gap-2 mb-1">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-foreground">
                   <Hash className="h-4 w-4" />
                 </span>
                 <h1 className="font-heading text-2xl font-bold text-foreground">#{tagName}</h1>

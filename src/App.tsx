@@ -51,7 +51,7 @@ const RootRoute = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse h-8 w-8 rounded-full bg-primary/30" />
+        <div className="animate-pulse h-8 w-8 rounded-full bg-brand/30" />
       </div>
     );
   }

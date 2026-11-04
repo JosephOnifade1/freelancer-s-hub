@@ -33,7 +33,7 @@ export function UserHoverCard({ handle, children }: UserHoverCardProps) {
       <HoverCardTrigger asChild>
         <Link 
           to={profile?.uid ? `/f/${profile.uid}` : `/f/${handle}`} 
-          className="text-primary hover:underline font-medium decoration-primary/30 underline-offset-2"
+          className="text-brand hover:underline font-medium decoration-brand/30 underline-offset-2"
         >
           {children}
         </Link>
@@ -62,7 +62,7 @@ export function UserHoverCard({ handle, children }: UserHoverCardProps) {
                     veteranStatus && "ring-warning/30"
                   )}>
                     <AvatarImage src={profile.avatarUrl} />
-                    <AvatarFallback className="bg-primary/10 text-primary text-2xl font-heading">
+                    <AvatarFallback className="bg-muted text-foreground text-2xl font-heading">
                       {profile.initial}
                     </AvatarFallback>
                   </Avatar>
@@ -77,7 +77,7 @@ export function UserHoverCard({ handle, children }: UserHoverCardProps) {
                   <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-secondary/50 border border-border/50">
                     <Star className="h-3 w-3 text-warning fill-warning" />
                     <span className="text-xs font-bold text-foreground">
-                      {profile.reputation?.toLocaleString() || 0} <span className="text-muted-foreground font-medium uppercase tracking-tighter text-[9px]">Karma</span>
+                      {profile.reputation?.toLocaleString() || 0} <span className="text-muted-foreground font-medium tracking-tighter text-[9px]">Karma</span>
                     </span>
                   </div>
                 </div>
@@ -100,7 +100,7 @@ export function UserHoverCard({ handle, children }: UserHoverCardProps) {
 
               <div className="mt-4 flex flex-wrap gap-1.5">
                 {profile.skills?.slice(0, 3).map((skill) => (
-                  <Badge key={skill} variant="secondary" className="bg-primary/5 hover:bg-primary/10 border-primary/10 text-[10px] py-0 px-2 rounded-md transition-colors">
+                  <Badge key={skill} variant="secondary" className="bg-brand/5 hover:bg-brand/10 border-brand/10 text-[10px] py-0 px-2 rounded-md transition-colors">
                     {skill}
                   </Badge>
                 ))}

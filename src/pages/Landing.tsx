@@ -3,7 +3,7 @@ import { ArrowRight, Flame, Hash, Users, Zap, TrendingUp, DollarSign, Layout } f
 
 const Landing = () => {
   return (
-    <div className="landing-theme min-h-screen bg-background text-foreground font-body">
+    <div className="landing-theme min-h-screen w-full bg-background text-foreground font-body">
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 py-4 bg-background/80 backdrop-blur-md border-b border-border/50">
         <Link to="/" className="flex items-center gap-2 group">
@@ -35,7 +35,7 @@ const Landing = () => {
             A high-signal community to share insights, track trends, and grow your solo business. No race-to-the-bottom bidding, just elite peers.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link to="/signup" className="w-full sm:w-auto bg-primary text-primary-foreground px-8 py-4 rounded-full font-medium flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-[0_0_20px_rgba(99,102,241,0.3)]">
+            <Link to="/signup" className="w-full sm:w-auto bg-primary text-primary-foreground px-8 py-4 rounded-full font-medium flex items-center justify-center gap-2 hover:bg-primary/90 transition-all">
               Join the Community <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
@@ -50,7 +50,7 @@ const Landing = () => {
             {/* Mock Post 1 */}
             <div className="bg-card p-5 rounded-xl border border-border transition-all hover:border-foreground/30">
               <div className="flex gap-4">
-                <div className="w-10 h-10 rounded flex-shrink-0 bg-primary/10 flex items-center justify-center text-primary font-bold">M</div>
+                <div className="w-10 h-10 rounded flex-shrink-0 bg-muted flex items-center justify-center text-foreground font-bold">M</div>
                 <div className="flex-1">
                   <h3 className="font-bold text-foreground text-lg">I tripled my freelance rate in 6 months — here's exactly how</h3>
                   <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">Last year I was charging $40/hr for React development. After repositioning myself as a specialist in fintech dashboards, I'm now at $120/hr. The key was changing how I pitched to clients...</p>
@@ -65,7 +65,7 @@ const Landing = () => {
             {/* Mock Post 2 */}
             <div className="bg-card p-5 rounded-xl border border-border transition-all hover:border-foreground/30">
               <div className="flex gap-4">
-                <div className="w-10 h-10 rounded flex-shrink-0 bg-primary/20 flex items-center justify-center text-foreground font-bold">S</div>
+                <div className="w-10 h-10 rounded flex-shrink-0 bg-muted flex items-center justify-center text-foreground font-bold">S</div>
                 <div className="flex-1">
                   <h3 className="font-bold text-foreground text-lg">How do you handle clients who ghost after the discovery call?</h3>
                   <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">Had 4 discovery calls this month. All went great, everyone seemed excited. Then... silence. Is this normal? What's your follow-up cadence for high-ticket clients?</p>
@@ -79,7 +79,7 @@ const Landing = () => {
             {/* Mock Post 3 */}
             <div className="bg-card p-5 rounded-xl border border-border transition-all hover:border-foreground/30">
               <div className="flex gap-4">
-                <div className="w-10 h-10 rounded flex-shrink-0 bg-primary/10 flex items-center justify-center text-primary font-bold">A</div>
+                <div className="w-10 h-10 rounded flex-shrink-0 bg-muted flex items-center justify-center text-foreground font-bold">A</div>
                 <div className="flex-1">
                   <h3 className="font-bold text-foreground text-lg">The 3 tools that actually save me time (not just look pretty)</h3>
                   <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">I've tried every project management tool out there. Here's my minimalist stack that actually keeps me organized without creating more work for me or my clients.</p>
@@ -95,7 +95,7 @@ const Landing = () => {
           {/* Conversion Wall (Fade-to-Join) */}
           <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-background via-background/80 to-transparent flex items-end justify-center pb-8 z-20">
             <Link to="/signup" className="bg-foreground text-background px-8 py-4 rounded-full font-medium flex items-center justify-center gap-2 hover:bg-foreground/90 transition-all shadow-xl hover:scale-105 active:scale-95">
-              Sign up to unlock the full Board <Zap className="w-4 h-4 text-primary" />
+              Sign up to unlock the full Board <Zap className="w-4 h-4 text-muted-foreground" />
             </Link>
           </div>
         </div>
@@ -106,7 +106,7 @@ const Landing = () => {
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             <div className="space-y-3">
-              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+              <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center text-foreground">
                 <Flame className="h-5 w-5" />
               </div>
               <h3 className="font-heading text-lg font-bold text-foreground">Hot Feed</h3>
@@ -114,7 +114,7 @@ const Landing = () => {
             </div>
             
             <div className="space-y-3">
-              <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center text-foreground">
+              <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center text-foreground">
                 <Hash className="h-5 w-5" />
               </div>
               <h3 className="font-heading text-lg font-bold text-foreground">Trending Tags</h3>
