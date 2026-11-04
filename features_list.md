@@ -1,43 +1,87 @@
 # Freelancer's Hub: Features List
 
-Here is a detailed breakdown of all the features currently available in the app, along with their functional status.
+> Last updated: 2026-11-05 — Backend is **Supabase** (not Firebase). Firebase keys in `.env.local` are legacy/unused.
+
+---
 
 ## 1. Authentication & User Management
 
-* **Login & Signup Flows**: Email/Password and potentially Google sign-in (via Firebase Auth). Includes a custom Landing Page for unauthenticated users.
-* **User Profiles (`/u/:uid` or `/u/:handle`)**: Displays user information, reputation, achievements, and posts authored by the user. Includes Follow/Unfollow logic.
-* **Settings (`/settings`)**: A dedicated page for users to manage their account details and preferences.
-* **Status**: **Working**. Data is actively fetched and managed through Firebase.
+* **Login & Signup Flows**: Email/Password via Supabase Auth. Friendly error messages for network failures ("Failed to fetch").
+* **User Profiles (`/f/:handle`)**: Displays user info, reputation, achievements, posts, and follow/unfollow. Online status dot reflects `profiles.status`.
+* **Online Status Toggle**: Available from the avatar dropdown menu — toggles between "Available" and "Appear Offline" and updates `profiles.status` in Supabase.
+* **Settings (`/settings`)**: Manage account details and preferences.
+* **Status**: ✅ **Working** — Supabase Auth + Supabase `profiles` table.
+
+---
 
 ## 2. Feed & Post System
 
-* **Main Feed (`/`)**: Displays posts. Users can toggle between an "All Feed" and a "Following Feed" (posts only from users they follow).
-* **New Feed (`/new`)**: Dedicated feed for the latest posts.
-* **Tag Feed (`/tag/:tagName`)**: Filter feeds based on specific tags.
-* **Create Post (`/submit`)**: A rich-text editor (using TipTap) allowing users to write posts, format text, and upload images.
-* **Post Detail (`/p/:id`)**: View a single post, its comments, and engage in discussion.
-* **Reddit-Style Sorting**: Feeds can be sorted by "Hot", "Best", and "New" using a custom `FeedFilter` algorithm.
-* **Bookmarks (`/bookmarks`)**: Functionality to save posts for later viewing.
-* **Status**: **Working**. Posts and comments are stored in and retrieved from the Firebase real-time database. Sorting and caching are optimized using TanStack Query.
+* **Main Feed (`/`)**: Hot/Best/New sorting. Fetches posts from Supabase.
+* **New Feed (`/new`)**: Posts sorted by `createdAt` descending. Linked from sidebar.
+* **Following Feed (`/following`)**: Shows posts only from users you follow. Fully routed + in sidebar.
+* **Tag Feed (`/t/:tagName`)**: Filter posts by tag.
+* **Create Post (`/submit`)**: Rich editor with image upload, code snippets, polls, visibility controls, community selector.
+* **Save Draft**: "Save Draft" button on CreatePost saves to `localStorage`. Viewable/resumable at `/drafts`.
+* **Drafts (`/drafts`)**: Lists your locally saved draft. Resume or delete from this page.
+* **Post Detail (`/p/:id` or `/b/:slug/p/:id`)**: View post, comments, and vote.
+* **Bookmarks (`/bookmarks`)**: Save/unsave posts. Bookmark state persisted in Supabase `saved_posts` table.
+* **Voting**: Upvote/downvote on posts and comments. Updates author reputation reactively mid-session.
+* **Status**: ✅ **Working** — posts, votes, and bookmarks all backed by Supabase.
 
-## 3. Communities (Borynx / Styvix)
+---
 
-* **Communities Directory (`/communities`)**: A directory of niche spaces (e.g., Design, Freelance Dev, Writing). Users can "Join" or "Leave" these communities.
-* **Community Detail (`/b/:slug`)**: A dedicated feed for posts scoped to a specific community.
-* **Status**: **Partially Working / UI Only**. The directory list is currently hardcoded. While you can toggle the "Join" button in the UI, this state is local and not yet persisted to the backend database.
+## 3. Communities (B-Spaces)
 
-## 4. Leads Board (Bounties & Opportunities)
+* **Communities Directory (`/communities`)**: Directory of niche spaces. Join/Leave persisted to Supabase.
+* **Community Detail (`/b/:slug`)**: Posts scoped to a specific community.
+* **Create Community**: Modal available from sidebar.
+* **Status**: ✅ **Working** — communities loaded from Supabase `communities` table.
 
-* **Leads Directory (`/l`)**: A job/bounty board for professional opportunities. Includes a search bar and category filters (All, Bounties, Projects, Retainers, Full-time).
-* **Create Lead (`/l/post`)**: A form to post a new job or bounty.
-* **Lead Detail (`/l/:leadId`)**: Detailed view of a specific opportunity.
-* **Status**: **Working**. Integrates directly with Firebase (`fetchLeads`, `createLead`, etc.).
+---
+
+## 4. Leads Board
+
+* **Leads Directory (`/l`)**: Job/bounty board with Kanban and list views. Syncs remote Supabase leads into local board on load. Search + category filters.
+* **Create Lead (`/l/post`)**: Form to post a new opportunity — saved to Supabase and immediately mirrored to the local board.
+* **Lead Detail (`/l/:leadId`)**: Full detail view with working "Apply Now" (dialog + proposal), "Share" (clipboard), and "Report" (toast) actions.
+* **Status**: ✅ **Working** — Supabase `leads` table + local Kanban state unified.
+
+---
 
 ## 5. Gamification & Achievements
 
-* **Achievements Dashboard (`/achievements`)**: Displays a list of unlockable badges (e.g., First Post, Rising Voice, Trusted Voice) and tracks the user's progress toward "Verification".
-* **Status**: **Working**. Achievements are dynamically calculated based on the user's real data (reputation, post count, upvotes received on comments) fetched from the backend.
+* **Achievements Dashboard (`/achievements`)**: Unlockable badges based on reputation, post count, upvotes.
+* **Reputation**: Updated on vote; `VeteranCelebration` fires reactively mid-session when reputation crosses 1000.
+* **Verified Pro badge**: Shown on profiles and post cards.
+* **Status**: ✅ **Working**.
+
+---
+
+## 6. Search
+
+* **Global Search**: Available in the top nav (Cmd/Ctrl+K). Searches posts and users from Supabase with debounce. Results shown in a dropdown with keyboard navigation.
+* **Status**: ✅ **Working** — minor edge cases in routing (see `abandoned_features.md`).
+
+---
+
+## 7. Premium
+
+* **Status**: ❌ **Stub** — `/premium` shows a ComingSoon page. No payment integration yet.
+
+---
 
 ## Summary
 
-The core infrastructure (Auth, Posting, Leads, and Gamification) is functional and connected to Firebase. The primary area requiring backend integration is the **Communities** joining logic, which is currently just a mocked UI.
+| Area | Status |
+|---|---|
+| Auth (Login/Signup) | ✅ Working |
+| Profiles + Online Status | ✅ Working |
+| Main / New / Following / Tag Feeds | ✅ Working |
+| Drafts | ✅ Working (localStorage) |
+| Bookmarks | ✅ Working (Supabase) |
+| Voting + Reputation | ✅ Working |
+| Communities | ✅ Working |
+| Leads Board | ✅ Working |
+| Achievements | ✅ Working |
+| Global Search | ✅ Working |
+| Premium | ❌ Stub only |

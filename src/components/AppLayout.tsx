@@ -1,7 +1,7 @@
 import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { VeteranCelebration } from "./VeteranCelebration";
-import { Plus, User, LogOut, Settings, Search, X, FileText, Sparkles, Monitor, Sun, Moon, Shield, Check } from "lucide-react";
+import { Plus, User, LogOut, Settings, Search, X, FileText, Sparkles, Monitor, Sun, Moon, Shield, Check, Wifi, WifiOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { getUserProfile, UserProfile } from "@/lib/users";
@@ -471,6 +471,22 @@ export function AppLayout({ children }: AppLayoutProps) {
                 >
                   <User className="h-4 w-4 shrink-0" />
                   <span className="flex items-center">View Profile</span>
+                </button>
+
+                {/* Online Status Toggle */}
+                <button 
+                  onClick={() => { toggleOnlineStatus(); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground transition-all hover:bg-white/5 hover:text-foreground group"
+                >
+                  {isOnline ? (
+                    <Wifi className="h-4 w-4 shrink-0 text-success" />
+                  ) : (
+                    <WifiOff className="h-4 w-4 shrink-0" />
+                  )}
+                  <span className="flex items-center gap-2">
+                    {isOnline ? "Available" : "Appear Offline"}
+                    <span className={`h-1.5 w-1.5 rounded-full ${isOnline ? "bg-success" : "bg-muted-foreground"}`} />
+                  </span>
                 </button>
 
                 <button 

@@ -5,25 +5,25 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { useQuery } from "@tanstack/react-query";
 import { fetchPosts } from "@/lib/posts";
-import { getUserProfile } from "@/lib/users";
+import { getSavedPostIds } from "@/lib/users";
 import { useAuth } from "@/hooks/useAuth";
 
 const Bookmarks = () => {
   const { user } = useAuth();
 
-  const { data: profile } = useQuery({
-    queryKey: ['profile', user?.uid],
-    queryFn: () => user?.uid ? getUserProfile(user.uid) : null,
+  const { data: savedPostIds = {}, isLoading: isSavedLoading } = useQuery({
+    queryKey: ['savedPosts', user?.uid],
+    queryFn: () => user?.uid ? getSavedPostIds(user.uid) : {},
     enabled: !!user?.uid,
   });
 
-  const { data: posts = [], isLoading } = useQuery({
+  const { data: posts = [], isLoading: isPostsLoading } = useQuery({
     queryKey: ['posts'],
     queryFn: fetchPosts,
   });
 
-  const savedPostIds = profile?.savedPosts || {};
   const bookmarked = posts.filter(p => savedPostIds[p.id] === true);
+  const isLoading = isSavedLoading || isPostsLoading;
 
   return (
     <AppLayout>

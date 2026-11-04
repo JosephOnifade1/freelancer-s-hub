@@ -298,7 +298,8 @@ const PostDetail = () => {
     },
     onSuccess: (nowSaved) => {
       queryClient.invalidateQueries({ queryKey: ['profile', user?.uid] });
-      toast.success(nowSaved ? "Saved to your profile" : "Removed from saved posts");
+      queryClient.invalidateQueries({ queryKey: ['savedPosts', user?.uid] });
+      toast.success(nowSaved ? "Saved to your bookmarks" : "Removed from bookmarks");
     }
   });
 

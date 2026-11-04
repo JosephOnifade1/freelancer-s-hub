@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchUserVote, handleVote as rtdbHandleVote } from "@/lib/votes";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface VoteControlsProps {
   entityId?: string;
@@ -16,6 +17,7 @@ interface VoteControlsProps {
 
 export function VoteControls({ entityId, authorUid, score, type = "post", postIdForComment, orientation = "vertical" }: VoteControlsProps) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [vote, setVote] = useState<"up" | "down" | null>(null);
   const [displayScore, setDisplayScore] = useState(score);
 
@@ -62,6 +64,12 @@ export function VoteControls({ entityId, authorUid, score, type = "post", postId
     // Fire mutation in background
     try {
       await rtdbHandleVote(entityId, authorUid, user.uid, numericVote, type, postIdForComment);
+      // Invalidate author's profile so VeteranCelebration fires reactively on rep gain
+      if (authorUid) {
+        queryClient.invalidateQueries({ queryKey: ['profile', authorUid] });
+      }
+      // Refresh posts so vote scores stay in sync across the feed
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
     } catch (e: any) {
       console.error(e);
       toast.error(e.message || "Failed to vote");

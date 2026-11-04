@@ -438,40 +438,104 @@ export const fetchLeads = async (): Promise<Lead[]> => {
   }));
 };
 
+export const syncSupabaseLeadsToBoard = (remoteLeads: Lead[]): BoardLead[] => {
+  const current = getBoardLeads();
+  const currentIds = new Set(current.map(l => l.id));
+  let added = false;
+
+  remoteLeads.forEach(sl => {
+    if (!currentIds.has(sl.id)) {
+      current.unshift({
+        id: sl.id,
+        company: sl.postedBy?.name || "Client Opportunity",
+        title: sl.title,
+        description: sl.description,
+        budget: `${sl.budget} ${sl.currency || "USD"}`,
+        stage: "new",
+        category: sl.type === "Bounty" ? "Bounty" : "Development",
+        avatarUrl: sl.postedBy?.avatar,
+        isVerified: sl.isVerified,
+        timeAgo: "Recently",
+        source: "Borynx Spaces",
+        createdAt: sl.postedAt || Date.now(),
+      });
+      added = true;
+    }
+  });
+
+  if (added) {
+    localStorage.setItem(BOARD_LEADS_STORAGE_KEY, JSON.stringify(current));
+  }
+  return current;
+};
+
 export const fetchLeadById = async (id: string): Promise<Lead | null> => {
-  const { data, error } = await supabase
-    .from("leads")
-    .select(`
-      id, title, description, budget, currency, location, type, status,
-      skills, isVerified, postedAt, applicantsCount, postedByUid,
-      profiles!leads_postedByUid_fkey (username, displayName, avatarUrl, isVerifiedPro)
-    `)
-    .eq("id", id)
-    .single();
+  try {
+    const { data } = await supabase
+      .from("leads")
+      .select(`
+        id, title, description, budget, currency, location, type, status,
+        skills, isVerified, postedAt, applicantsCount, postedByUid,
+        profiles!leads_postedByUid_fkey (username, displayName, avatarUrl, isVerifiedPro)
+      `)
+      .eq("id", id)
+      .maybeSingle();
 
-  if (error || !data) return null;
+    if (data) {
+      return {
+        id: data.id,
+        title: data.title,
+        description: data.description,
+        budget: data.budget,
+        currency: data.currency,
+        location: data.location,
+        type: data.type,
+        status: data.status,
+        skills: data.skills || [],
+        isVerified: data.isVerified,
+        postedAt: new Date(data.postedAt).getTime(),
+        applicantsCount: data.applicantsCount,
+        postedBy: {
+          uid: data.postedByUid,
+          name: (data as any).profiles?.displayName || (data as any).profiles?.username || "Unknown",
+          avatar: (data as any).profiles?.avatarUrl,
+          username: (data as any).profiles?.username,
+          isVerified: (data as any).profiles?.isVerifiedPro || false,
+        },
+      };
+    }
+  } catch (err) {
+    console.warn("fetchLeadById Supabase error, falling back to board leads:", err);
+  }
 
-  return {
-    id: data.id,
-    title: data.title,
-    description: data.description,
-    budget: data.budget,
-    currency: data.currency,
-    location: data.location,
-    type: data.type,
-    status: data.status,
-    skills: data.skills || [],
-    isVerified: data.isVerified,
-    postedAt: new Date(data.postedAt).getTime(),
-    applicantsCount: data.applicantsCount,
-    postedBy: {
-      uid: data.postedByUid,
-      name: (data as any).profiles?.displayName || (data as any).profiles?.username || "Unknown",
-      avatar: (data as any).profiles?.avatarUrl,
-      username: (data as any).profiles?.username,
-      isVerified: (data as any).profiles?.isVerifiedPro || false,
-    },
-  };
+  // Fallback to local board leads so demo/mock opportunities don't 404
+  const boardLeads = getBoardLeads();
+  const boardMatch = boardLeads.find(l => l.id === id);
+  if (boardMatch) {
+    return {
+      id: boardMatch.id,
+      title: boardMatch.title,
+      description: boardMatch.description || `Opportunity from ${boardMatch.company} in category ${boardMatch.category}. Looking for experienced freelancers.`,
+      budget: boardMatch.budget,
+      currency: "USD",
+      location: "Remote",
+      type: "Project",
+      status: "open",
+      skills: [boardMatch.category, "Design", "Development"],
+      isVerified: boardMatch.isVerified,
+      postedAt: boardMatch.createdAt || Date.now() - 3600000,
+      applicantsCount: 3,
+      postedBy: {
+        uid: "client-lead",
+        name: boardMatch.company,
+        avatar: boardMatch.avatarUrl,
+        username: boardMatch.company.toLowerCase().replace(/[^a-z0-9]/g, ""),
+        isVerified: boardMatch.isVerified,
+      },
+    };
+  }
+
+  return null;
 };
 
 export const createLead = async (
@@ -496,6 +560,23 @@ export const createLead = async (
     .single();
 
   if (error) throw new Error(error.message);
-  return data?.id as string;
+
+  const createdId = (data?.id as string) || `lead-${Date.now()}`;
+
+  // Mirror into the Board Leads so the Kanban board displays it immediately
+  saveBoardLead({
+    id: createdId,
+    company: leadData.postedBy?.name || "Client Opportunity",
+    title: leadData.title,
+    description: leadData.description,
+    budget: `${leadData.budget} ${leadData.currency || "USD"}`,
+    stage: "new",
+    category: leadData.type === "Bounty" ? "Bounty" : "Development",
+    avatarUrl: leadData.postedBy?.avatar,
+    isVerified: leadData.postedBy?.isVerified,
+    source: "Borynx Spaces",
+  });
+
+  return createdId;
 };
 

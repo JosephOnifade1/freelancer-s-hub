@@ -8,6 +8,7 @@ import { SidebarProvider } from "@/components/ui/sidebar.tsx";
 // Page imports
 import Index from "./pages/Index.tsx";
 import NewFeed from "./pages/NewFeed.tsx";
+import Following from "./pages/Following.tsx";
 import Popular from "./pages/Popular.tsx";
 import TagFeed from "./pages/TagFeed.tsx";
 import Communities from "./pages/Communities.tsx";
@@ -26,6 +27,7 @@ import NotFound from "./pages/NotFound.tsx";
 import Login from "./pages/Login.tsx";
 import Signup from "./pages/Signup.tsx";
 import Landing from "./pages/Landing.tsx";
+import Drafts from "./pages/Drafts.tsx";
 
 // Component imports
 import { ProtectedRoute } from "./components/ProtectedRoute.tsx";
@@ -112,9 +114,10 @@ const App = () => (
               <Route path="/terms"   element={<StandaloneComingSoon title="Terms of Service" description="Our terms of service are currently being drafted." />} />
 
               {/* ── Authenticated: feed views ───────────────────────────── */}
-              <Route path="/new"       element={<ProtectedRoute><NewFeed /></ProtectedRoute>} />
-              <Route path="/popular" element={<ProtectedRoute><Popular /></ProtectedRoute>} />
-              <Route path="/submit"    element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
+              <Route path="/new"          element={<ProtectedRoute><NewFeed /></ProtectedRoute>} />
+              <Route path="/following"    element={<ProtectedRoute><Following /></ProtectedRoute>} />
+              <Route path="/popular"      element={<ProtectedRoute><Popular /></ProtectedRoute>} />
+              <Route path="/submit"       element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
               <Route path="/tag/:tagName" element={<ProtectedRoute><TagFeed /></ProtectedRoute>} />
 
               {/* ── Authenticated: Borynx Spaces (communities) ─────────── */}
@@ -149,7 +152,7 @@ const App = () => (
               <Route path="/settings"     element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
               {/* ── Authenticated: coming-soon stubs ───────────────────── */}
-              <Route path="/drafts"  element={<ProtectedRoute><ComingSoonPage title="Drafts" description="Your post drafts will appear here soon." /></ProtectedRoute>} />
+              <Route path="/drafts"  element={<ProtectedRoute><Drafts /></ProtectedRoute>} />
               <Route path="/premium" element={<ProtectedRoute><ComingSoonPage title="Premium" description="Borynx Premium is currently in development." /></ProtectedRoute>} />
 
               {/* ── 404 catch-all ────────────────────────────────────────── */}

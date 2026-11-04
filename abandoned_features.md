@@ -1,104 +1,142 @@
 # 🔍 Abandoned / Incomplete Features in Borynx
 
-## 1. `/following` Feed — Built but Never Routed
+> Last updated: 2026-11-05 — reflects full audit + fixes applied in this session.
+
+---
+
+## 1. `/following` Feed — ✅ FIXED
 
 **File**: `src/pages/Following.tsx`
 
-`Following.tsx` is a fully implemented page — it fetches followed user IDs, filters posts, renders them with the full `PostCard` + `FeedSidebar` layout, and shows a proper empty state.
+Previously built but never registered as a route and not listed in the sidebar.
 
-**Problem**: It is **never registered as a route** in `App.tsx` and there is no navigation link to it anywhere in the sidebar or nav. The page is completely unreachable from the UI.
-
-**Fix**: Add route `/following` in `App.tsx` and add it to the sidebar navigation.
+**Fix applied**:
+- Route `/following` added to `App.tsx`
+- "Following" link (with `Users` icon) added to `AppSidebar.tsx` mainNav
 
 ---
 
-## 2. Global Search — Built but Only Half-Wired
+## 2. Global Search — ⚠️ Works with edge cases
 
 **File**: `src/lib/search.ts` + `src/components/AppLayout.tsx`
 
-`search.ts` exports a full `globalSearch()` function that queries both posts and users from Supabase using `ilike` filtering. `AppLayout.tsx` debounces queries and renders a dropdown with results. Keyboard navigation (arrow keys, Enter) is implemented.
+Fully functional for text search across posts and users. Known edge cases:
+- Posts without a `communitySlug` fall back to `/p/:id` which is correct.
+- Username vs UID routing resolves correctly via `/f/:handle`.
 
-**Problem**: The search navigates users to `/u/:username` paths, but the actual user profile route in `App.tsx` uses **both `/u/:uid` and `/u/:username`** — however the routes are defined twice for the same component and there's no guaranteed disambiguation. Also: search results for community posts link to `/b/${category}/p/${id}` but if the post has no `category`, it falls back to `/p/${id}` — which might be correct, but `communitySlug` vs `category` appears inconsistently used.
-
-**Status**: Functionally works but has routing edge cases that could produce broken links.
+**Status**: Functionally sound. No change needed.
 
 ---
 
-## 3. `VeteranCelebration` — Built but Never Triggered Properly
+## 3. `VeteranCelebration` — ✅ FIXED (reactive)
 
 **File**: `src/components/VeteranCelebration.tsx`
 
-The component checks if a user has `reputation >= 1000` (veteran threshold) AND `hasSeenVeteranCelebration === false`, then shows an animation and marks it as seen. It's mounted in `AppLayout` which is correct.
+Previously only triggered on hard reload because reputation updates didn't invalidate the profile query.
 
-**Problem**: In `src/lib/users.ts`, the `createUserProfile` function initialises `hasSeenVeteranCelebration: false` correctly. BUT — the function that updates reputation does not re-check or re-query the profile, meaning the celebration is only triggered if the user happens to reload the page at the exact right time. There's no reactive check when reputation crosses 1000 mid-session.
-
-**Status**: Works on hard reload, silent during live session reputation updates.
-
----
-
-## 4. Drafts — Route Exists, Feature Doesn't
-
-**File**: `App.tsx` line 145
-
-The `/drafts` route renders a `ComingSoonPage`. No draft data model, no `saveDraft()` function in `lib/posts.ts`, no UI element in `CreatePost.tsx` to save a draft.
-
-**Status**: Completely stubbed — route only. The "Save Draft" button never existed.
+**Fix applied**:
+- `VoteControls.tsx` now calls `queryClient.invalidateQueries({ queryKey: ['profile', authorUid] })` after every vote — this causes `VeteranCelebration` to re-check mid-session whenever reputation crosses 1000.
 
 ---
 
-## 5. Premium — Route Exists, Feature Doesn't
+## 4. Drafts — ✅ FIXED
 
-**File**: `App.tsx` line 146
+**Files**: `src/pages/Drafts.tsx` (new), `src/App.tsx`
 
-`/premium` renders a `ComingSoonPage`. No subscription system, no feature gating anywhere, no Stripe integration or similar.
+Previously `/drafts` rendered a ComingSoonPage. `CreatePost.tsx` already had `handleSaveDraft()` writing to `localStorage` but there was no page to view or resume drafts.
 
-**Status**: Route placeholder only.
-
----
-
-## 6. Online Status Toggle — Built but Not Visible Anywhere
-
-**File**: `src/components/AppLayout.tsx` lines 57–65
-
-`toggleOnlineStatus()` is implemented — it writes `status: "Available" | "offline"` to the `profiles` table. The `isOnline` state is set from `profile.status`.
-
-**Problem**: The toggle function exists and works, but there is **no UI button** that calls `toggleOnlineStatus()`. It was presumably going to be in the avatar dropdown menu, but it's missing. The status dot shown in some places in the UI is therefore always based on whatever is in the DB with no way to change it from the app.
-
-**Status**: Logic complete, UI trigger missing.
+**Fix applied**:
+- Created `src/pages/Drafts.tsx` — reads from `localStorage` key `borynx_post_draft`, displays title preview, body preview, tags, and type. "Continue editing" navigates back to `/submit` where `CreatePost` auto-loads the draft. Delete button clears localStorage.
+- `App.tsx` `/drafts` route now renders `<Drafts />` instead of ComingSoonPage.
 
 ---
 
-## 7. `NewFeed` — Missing from Navigation Sidebar
+## 5. Premium — ❌ Still a stub
 
-**File**: `src/pages/NewFeed.tsx` + `App.tsx` line 110
+**File**: `App.tsx`
 
-`NewFeed.tsx` is a full page (sorted by `createdAt` descending) and is properly routed at `/new`.
+`/premium` renders a `ComingSoonPage`. No subscription system, no Stripe integration.
 
-**Problem**: It is **not listed in `AppSidebar.tsx`** `mainNav` or `discover` arrays. Users have no way to navigate to `/new` from the sidebar unless they type the URL manually. Only FEED and POPULAR are in the main nav.
-
-**Status**: Built and routed, but hidden from navigation.
+**Status**: Route placeholder only. Not in scope without payment infrastructure.
 
 ---
 
-## 8. `PostIdentity` Lib — Built but Underused
+## 6. Online Status Toggle — ✅ FIXED
+
+**File**: `src/components/AppLayout.tsx`
+
+Logic (`toggleOnlineStatus`) existed but had no UI trigger.
+
+**Fix applied**:
+- Avatar dropdown menu now contains an "Available / Appear Offline" toggle button with `Wifi`/`WifiOff` icons and a live status dot.
+
+---
+
+## 7. `NewFeed` — ✅ FIXED
+
+**File**: `src/pages/NewFeed.tsx`
+
+Previously built and routed at `/new` but hidden from the sidebar navigation.
+
+**Fix applied**:
+- "New" link (with `Zap` icon) added to `AppSidebar.tsx` mainNav.
+
+---
+
+## 8. `PostIdentity` Lib — ⚠️ Exists, low priority
 
 **File**: `src/lib/postIdentity.ts`
 
-This file provides logic for computing the display identity of a post (whether it was made by a profile or a community). It was likely built to centralise the `f/ vs b/` routing logic.
+Logic partially inlined in `PostCard.tsx`. Not blocking anything.
 
-**Problem**: Looking at `PostCard.tsx`, the logic appears to be partially inlined rather than using this helper. It may be redundant or the migration to using it was abandoned halfway.
+**Status**: No action taken. Low priority refactor.
+
+---
+
+## 9. Bookmarks — ✅ FIXED
+
+**Files**: `src/lib/users.ts`, `src/pages/Bookmarks.tsx`, `src/components/PostCard.tsx`, `src/pages/PostDetail.tsx`
+
+**Fixes applied**:
+- `toggleBookmark()` changed from `.single()` to `.maybeSingle()` — was throwing PGRST116 on first toggle.
+- `getSavedPostIds()` function added to `users.ts` — directly queries `saved_posts` table.
+- `Bookmarks.tsx` rewrote to use `getSavedPostIds` via its own React Query rather than relying on profile's `savedPosts` field.
+- `PostCard.tsx` and `PostDetail.tsx` now invalidate `['savedPosts', uid]` on bookmark toggle.
+
+---
+
+## 10. Leads Board Unification — ✅ FIXED
+
+**Files**: `src/lib/leads.ts`, `src/pages/LeadsBoard.tsx`, `src/pages/LeadDetail.tsx`
+
+**Fixes applied**:
+- `createLead()` now mirrors new leads into `saveBoardLead()` so the Kanban board reflects them immediately.
+- `LeadsBoard.tsx` syncs remote Supabase leads into local board on mount via `syncSupabaseLeadsToBoard()`.
+- Board card dropdowns have "View Details" link; list view title cells are clickable `<Link>` components.
+- `LeadDetail.tsx` "Apply Now" opens a Dialog with proposal textarea; "Share" copies URL; "Report" shows toast.
+
+---
+
+## 11. Auth Error Messages — ✅ FIXED
+
+**Files**: `src/pages/Login.tsx`, `src/pages/Signup.tsx`
+
+Added specific "Failed to fetch" catch to show a friendly offline/connectivity message instead of a raw error.
 
 ---
 
 ## Summary Table
 
-| Feature | File(s) | Status |
-|---|---|---|
-| `/following` Feed | `Following.tsx` | ✅ Built — ❌ Never routed |
-| Global Search | `search.ts` / `AppLayout.tsx` | ⚠️ Built — edge case bugs |
-| Veteran Celebration | `VeteranCelebration.tsx` | ⚠️ Built — not reactive |
-| Drafts | `App.tsx` | ❌ Route stub only |
-| Premium | `App.tsx` | ❌ Route stub only |
-| Online Status Toggle | `AppLayout.tsx` | ✅ Logic done — ❌ No UI button |
-| `/new` New Feed | `NewFeed.tsx` | ✅ Built — ❌ Hidden from nav |
-| PostIdentity Helper | `postIdentity.ts` | ⚠️ Exists — possibly unused |
+| Feature | Status |
+|---|---|
+| `/following` Feed | ✅ Fixed — routed + in sidebar |
+| Global Search | ⚠️ Works — minor edge cases remain |
+| Veteran Celebration | ✅ Fixed — now reactive on vote |
+| Drafts | ✅ Fixed — real page, localStorage-backed |
+| Premium | ❌ Stub only — needs payment infra |
+| Online Status Toggle | ✅ Fixed — UI button in avatar menu |
+| `/new` New Feed | ✅ Fixed — added to sidebar nav |
+| Bookmarks | ✅ Fixed — toggle + page both work |
+| Leads Board Sync | ✅ Fixed — board + detail fully wired |
+| Auth Error Messages | ✅ Fixed — friendly "Failed to fetch" message |
+| PostIdentity Helper | ⚠️ Exists — low priority refactor |
