@@ -1,10 +1,12 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { Loader2 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/hooks/auth-context";
 import { useQuery } from "@tanstack/react-query";
 import { fetchPosts } from "@/lib/posts";
+import { QueryErrorState } from "@/components/QueryErrorState";
 import { getFollowingIds, getUserProfile } from "@/lib/users";
 import { PostCard } from "@/components/PostCard";
 import { FeedSidebar } from "@/components/FeedSidebar";
@@ -31,12 +33,12 @@ const Index = () => {
     ((myProfile.skills || []).length === 0 ||
       ["", "New to Borynx!", "New freelancer on Borynx!"].includes((myProfile.bio || "").trim()));
 
-  const { data: posts = [], isLoading } = useQuery({
+  const { data: posts = [], isLoading, isError: postsError, refetch: refetchPosts } = useQuery({
     queryKey: ["posts"],
     queryFn: fetchPosts,
   });
 
-  const { data: followingIds = [] } = useQuery({
+  const { data: followingIds = [], isLoading: followingLoading, isError: followingError, refetch: refetchFollowing } = useQuery({
     queryKey: ["followingIds", user?.uid],
     queryFn: () => (user?.uid ? getFollowingIds(user.uid) : []),
     enabled: !!user?.uid && activeTab === "Following",
@@ -102,7 +104,14 @@ const Index = () => {
             <ComposerBar />
 
             <div className="space-y-3">
-              {!isLoading && displayedPosts.length === 0 && (
+              {postsError || (activeTab === "Following" && followingError) ? (
+                <QueryErrorState
+                  title="Couldn't load the feed"
+                  onRetry={() => { refetchPosts(); if (activeTab === "Following") refetchFollowing(); }}
+                />
+              ) : isLoading || (activeTab === "Following" && followingLoading) ? (
+                <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+              ) : displayedPosts.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-border bg-card p-10 text-center">
                   <p className="font-heading text-base font-bold text-foreground">
                     {activeTab === "Following" ? "No posts from people you follow" : "No posts yet"}
@@ -113,8 +122,7 @@ const Index = () => {
                       : "Be the first to post a question, resource or poll."}
                   </p>
                 </div>
-              )}
-              {displayedPosts.map((post, i) => (
+              ) : displayedPosts.map((post, i) => (
                 <PostCard key={post.id} post={post} index={i} />
               ))}
             </div>

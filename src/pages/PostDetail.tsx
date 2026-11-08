@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { Editor } from "@/components/editor/Editor";
 import { MarkdownRenderer } from "@/components/editor/MarkdownRenderer";
 import { ReportDialog } from "@/components/ReportDialog";
+import { QueryErrorState } from "@/components/QueryErrorState";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,7 +64,7 @@ const CommentTextarea = ({
 );
 
 // ─── Comment Thread ──────────────────────────────────────────────────────────
-const CommentThread = ({ comment, postId, depth = 0, commentsEnabled = true }: { comment: CommentData; postId: string; depth?: number; commentsEnabled?: boolean }) => {
+const CommentThread = ({ comment, postId, depth = 0, commentsEnabled = true, votesEnabled = true }: { comment: CommentData; postId: string; depth?: number; commentsEnabled?: boolean; votesEnabled?: boolean }) => {
   const [isReplying, setIsReplying] = useState(false);
   const [replyBody, setReplyBody] = useState("");
   const [isEditing, setIsEditing] = useState(false);
@@ -81,6 +82,7 @@ const CommentThread = ({ comment, postId, depth = 0, commentsEnabled = true }: {
 
   const submitReply = useMutation({
     mutationFn: async () => {
+      if (!commentsEnabled) throw new Error("Replies are closed for this post.");
       if (!postId || !user || !profile || !replyBody.trim()) throw new Error("Missing data");
       await addComment(postId, {
         author: profile.username || "Anonymous",
@@ -95,6 +97,9 @@ const CommentThread = ({ comment, postId, depth = 0, commentsEnabled = true }: {
       setIsReplying(false);
       toast.success("Reply posted!");
       queryClient.invalidateQueries({ queryKey: ['comments', postId] });
+      queryClient.invalidateQueries({ queryKey: ['post', postId] });
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      queryClient.invalidateQueries({ queryKey: ['communityPosts'] });
     },
     onError: (e: Error) => toast.error(e.message || "Failed to post reply")
   });
@@ -113,6 +118,9 @@ const CommentThread = ({ comment, postId, depth = 0, commentsEnabled = true }: {
     mutationFn: async () => softDeleteComment(postId, comment.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments', postId] });
+      queryClient.invalidateQueries({ queryKey: ['post', postId] });
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      queryClient.invalidateQueries({ queryKey: ['communityPosts'] });
       toast.success("Comment deleted");
     },
     onError: () => toast.error("Failed to delete comment")
@@ -136,7 +144,7 @@ const CommentThread = ({ comment, postId, depth = 0, commentsEnabled = true }: {
           </div>
         </div>
         {comment.replies && comment.replies.map((r) => (
-          <CommentThread key={r.id} comment={r} postId={postId} depth={depth + 1} commentsEnabled={commentsEnabled} />
+          <CommentThread key={r.id} comment={r} postId={postId} depth={depth + 1} commentsEnabled={commentsEnabled} votesEnabled={votesEnabled} />
         ))}
       </div>
     );
@@ -146,7 +154,7 @@ const CommentThread = ({ comment, postId, depth = 0, commentsEnabled = true }: {
     <div className={`${depth > 0 ? "ml-4 sm:ml-8 pl-4 border-l-2 border-brand/40 relative" : ""}`}>
       {depth > 0 && <div className="absolute -left-[2px] top-4 h-4 w-4 border-l-2 border-b-2 border-brand/40 rounded-bl-lg" />}
       <div className="flex gap-3 py-3">
-        <VoteControls score={comment.score || 0} entityId={comment.id} authorUid={comment.authorUid} type="comment" postIdForComment={postId} />
+        <VoteControls score={comment.score || 0} entityId={comment.id} authorUid={comment.authorUid} type="comment" postIdForComment={postId} disabled={!votesEnabled} />
         
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
@@ -220,7 +228,7 @@ const CommentThread = ({ comment, postId, depth = 0, commentsEnabled = true }: {
             </button>
           )}
 
-          {isReplying && (
+          {commentsEnabled && isReplying && (
             <div className="mt-3 bg-card rounded-lg p-3 border border-brand/20 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
               <CommentTextarea value={replyBody} onChange={setReplyBody} placeholder="Write your reply..." minRows={2} />
               <div className="flex justify-end gap-2 mt-2">
@@ -244,7 +252,7 @@ const CommentThread = ({ comment, postId, depth = 0, commentsEnabled = true }: {
       </div>
       
       {comment.replies && comment.replies.map((r) => (
-        <CommentThread key={r.id} comment={r} postId={postId} depth={depth + 1} commentsEnabled={commentsEnabled} />
+        <CommentThread key={r.id} comment={r} postId={postId} depth={depth + 1} commentsEnabled={commentsEnabled} votesEnabled={votesEnabled} />
       ))}
     </div>
   );
@@ -261,13 +269,13 @@ const PostDetail = () => {
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [editPostBody, setEditPostBody] = useState("");
 
-  const { data: post, isLoading: loadingPost } = useQuery({
+  const { data: post, isLoading: loadingPost, isError: postError, refetch: refetchPost } = useQuery({
     queryKey: ['post', id],
     queryFn: () => fetchPostById(id as string),
     enabled: !!id
   });
 
-  const { data: comments = [], isLoading: loadingComments } = useQuery({
+  const { data: comments = [], isLoading: loadingComments, isError: commentsError, refetch: refetchComments } = useQuery({
     queryKey: ['comments', id],
     queryFn: () => fetchComments(id as string),
     enabled: !!id
@@ -304,7 +312,8 @@ const PostDetail = () => {
       queryClient.invalidateQueries({ queryKey: ['profile', user?.uid] });
       queryClient.invalidateQueries({ queryKey: ['savedPosts', user?.uid] });
       toast.success(nowSaved ? "Saved to your bookmarks" : "Removed from bookmarks");
-    }
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to update bookmark")
   });
 
   const updatePostMutation = useMutation({
@@ -312,21 +321,28 @@ const PostDetail = () => {
     onSuccess: () => {
       setIsEditingPost(false);
       queryClient.invalidateQueries({ queryKey: ['post', id] });
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      if (post?.communitySlug) queryClient.invalidateQueries({ queryKey: ['communityPosts', post.communitySlug] });
       toast.success("Post updated");
-    }
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to update post")
   });
 
   const deletePostMutation = useMutation({
     mutationFn: async () => softDeletePost(id as string),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['post', id] });
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      if (post?.communitySlug) queryClient.invalidateQueries({ queryKey: ['communityPosts', post.communitySlug] });
       toast.success("Post deleted");
       navigate('/');
-    }
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to delete post")
   });
 
   const submitComment = useMutation({
     mutationFn: async () => {
+      if (!commentsEnabled) throw new Error("Comments are closed for this post.");
       if (!id || !user || !profile || !newComment.trim()) throw new Error("Missing required data");
       await addComment(id, {
         author: profile.username || "Anonymous",
@@ -339,7 +355,11 @@ const PostDetail = () => {
       setNewComment("");
       toast.success("Comment posted!");
       queryClient.invalidateQueries({ queryKey: ['comments', id] });
-    }
+      queryClient.invalidateQueries({ queryKey: ['post', id] });
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      queryClient.invalidateQueries({ queryKey: ['communityPosts'] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to post comment")
   });
 
   const handleShare = () => {
@@ -348,12 +368,31 @@ const PostDetail = () => {
   };
 
   const commentTree = useMemo(() => buildCommentTree(comments), [comments]);
+  const activeCommentCount = useMemo(() => comments.filter((c) => !c.isDeleted).length, [comments]);
+  // A removed post is frozen: no new comments/replies and no comment votes.
+  // Comments-off only blocks new comments — existing votes still count.
+  const commentsEnabled = !!post && !post.isDeleted && post.allowComments !== false;
+  const votesEnabled = !!post && !post.isDeleted;
 
   if (loadingPost) {
     return (
       <AppLayout>
         <div className="flex h-[50vh] items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (postError) {
+    return (
+      <AppLayout>
+        <div className="mx-auto max-w-3xl px-4 py-12">
+          <QueryErrorState
+            title="Couldn't load this post"
+            message="The post may exist, but the backend didn't answer. Try again in a moment."
+            onRetry={() => refetchPost()}
+          />
         </div>
       </AppLayout>
     );
@@ -390,7 +429,7 @@ const PostDetail = () => {
                   <span className="font-body text-xs text-muted-foreground">{formatTimeAgo(post.createdAt)}</span>
                 </div>
                 <p className="font-body text-sm text-muted-foreground/70 italic leading-relaxed mb-4 bg-muted/30 p-3 rounded-md">
-                  The author has removed this content, but the discussion below remains active.
+                  The author has removed this content. Earlier comments remain visible, but replies and votes are closed.
                 </p>
                 <div className="flex items-center justify-between pt-3 border-t border-border/50">
                   <div className="flex items-center gap-2">
@@ -399,7 +438,7 @@ const PostDetail = () => {
                   </div>
                   <div className="flex items-center gap-1">
                     <div className="flex items-center gap-1 rounded-md px-2 py-1 font-body text-xs text-muted-foreground">
-                      <MessageSquare className="h-3.5 w-3.5" /> {comments.length}
+                      <MessageSquare className="h-3.5 w-3.5" /> {commentsError || loadingComments ? post.commentCount : activeCommentCount}
                     </div>
                   </div>
                 </div>
@@ -495,12 +534,18 @@ const PostDetail = () => {
                   </Link>
                   <div className="flex items-center gap-1">
                     <div className="flex items-center gap-1 rounded-md px-2 py-1 font-body text-xs text-muted-foreground">
-                      <MessageSquare className="h-3.5 w-3.5" /> {comments.length}
+                      <MessageSquare className="h-3.5 w-3.5" /> {commentsError || loadingComments ? post.commentCount : activeCommentCount}
                     </div>
                     <button onClick={handleShare} className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
                       <Share2 className="h-3.5 w-3.5" />
                     </button>
-                    <button onClick={() => bookmarkMutation.mutate()} disabled={bookmarkMutation.isPending} className={`rounded-md p-1.5 transition-colors hover:bg-secondary ${isSaved ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
+                    <button
+                      type="button"
+                      aria-label={isSaved ? "Remove bookmark" : "Bookmark post"}
+                      onClick={() => bookmarkMutation.mutate()}
+                      disabled={bookmarkMutation.isPending}
+                      className={`rounded-md p-1.5 transition-colors hover:bg-secondary ${isSaved ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                    >
                       <Bookmark className="h-3.5 w-3.5" fill={isSaved ? "currentColor" : "none"} />
                     </button>
                     {!isOwnPost && (
@@ -511,7 +556,7 @@ const PostDetail = () => {
                     {isOwnPost && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground focus:outline-none">
+                          <button type="button" aria-label="Post actions" className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground focus:outline-none">
                             <MoreHorizontal className="h-4 w-4" />
                           </button>
                         </DropdownMenuTrigger>
@@ -567,25 +612,33 @@ const PostDetail = () => {
 
         {/* Comments */}
         <h2 className="font-heading text-lg font-semibold text-foreground mb-3 px-1">
-          {comments.length} Comments
+          {commentsError || loadingComments ? "Comments" : `${activeCommentCount} Comments`}
         </h2>
-        
-        {loadingComments ? (
+
+        {commentsError ? (
+          <QueryErrorState
+            title="Couldn't load comments"
+            message="Comments couldn't be loaded right now. Try again in a moment."
+            onRetry={() => refetchComments()}
+          />
+        ) : loadingComments ? (
           <div className="flex justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : commentTree.length === 0 ? (
           <div className="rounded-xl border border-border bg-card p-8 text-center">
             <p className="text-sm text-muted-foreground">
-              {post.allowComments === false
-                ? "No comments yet — and new comments are turned off for this post."
-                : "No comments yet. Be the first to share your thoughts!"}
+              {post.isDeleted
+                ? "No comments are available for this removed post."
+                : post.allowComments === false
+                  ? "No comments yet — and new comments are turned off for this post."
+                  : "No comments yet. Be the first to share your thoughts!"}
             </p>
           </div>
         ) : (
           <div className="rounded-xl border border-border bg-card px-4 shadow-sm divide-y divide-border/50 overflow-hidden">
             {commentTree.map((c) => (
-              <CommentThread key={c.id} comment={c} postId={id as string} />
+              <CommentThread key={c.id} comment={c} postId={id as string} commentsEnabled={commentsEnabled} votesEnabled={votesEnabled} />
             ))}
           </div>
         )}

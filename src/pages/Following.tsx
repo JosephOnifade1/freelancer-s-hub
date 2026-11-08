@@ -6,24 +6,19 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { useQuery } from "@tanstack/react-query";
 import { fetchPosts } from "@/lib/posts";
-import { getUserProfile, getFollowingIds } from "@/lib/users";
+import { QueryErrorState } from "@/components/QueryErrorState";
+import { getFollowingIds } from "@/lib/users";
 import { useAuth } from "@/hooks/auth-context";
 
 const Following = () => {
   const { user } = useAuth();
   
-  const { data: profile } = useQuery({
-    queryKey: ['profile', user?.uid],
-    queryFn: () => user ? getUserProfile(user.uid) : null,
-    enabled: !!user,
-  });
-
-  const { data: posts = [], isLoading } = useQuery({
+  const { data: posts = [], isLoading, isError: postsError, refetch: refetchPosts } = useQuery({
     queryKey: ['posts'],
     queryFn: fetchPosts
   });
 
-  const { data: followingIds = [] } = useQuery({
+  const { data: followingIds = [], isLoading: followingLoading, isError: followingError, refetch: refetchFollowing } = useQuery({
     queryKey: ['followingIds', user?.uid],
     queryFn: () => (user?.uid ? getFollowingIds(user.uid) : []),
     enabled: !!user?.uid,
@@ -41,7 +36,9 @@ const Following = () => {
               title="Following"
               subtitle="Posts from freelancers you follow."
             />
-            {isLoading ? (
+            {postsError || followingError ? (
+              <QueryErrorState title="Couldn't load your following feed" onRetry={() => { refetchPosts(); refetchFollowing(); }} />
+            ) : isLoading || followingLoading ? (
               <div className="flex justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>

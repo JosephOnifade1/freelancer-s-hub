@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { ArrowBigUp, ArrowBigDown } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { ArrowBigUp, ArrowBigDown, RotateCcw } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/auth-context";
 import { fetchUserVote, handleVote as rtdbHandleVote } from "@/lib/votes";
@@ -14,31 +14,62 @@ interface VoteControlsProps {
   type?: "post" | "comment";
   postIdForComment?: string;
   orientation?: "vertical" | "horizontal";
+  disabled?: boolean;
 }
 
-export function VoteControls({ entityId, authorUid, score, type = "post", postIdForComment, orientation = "vertical" }: VoteControlsProps) {
+export function VoteControls({ entityId, authorUid, score, type = "post", postIdForComment, orientation = "vertical", disabled = false }: VoteControlsProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [vote, setVote] = useState<"up" | "down" | null>(null);
   const [displayScore, setDisplayScore] = useState(score);
+  const [isVoting, setIsVoting] = useState(false);
+  const [loadedVoteKey, setLoadedVoteKey] = useState<string | null>(null);
+  const [voteLoadError, setVoteLoadError] = useState(false);
+  const [voteRetry, setVoteRetry] = useState(0);
+  const voteKey = `${user?.uid || ""}:${type}:${entityId || ""}`;
+  const voteReady = disabled || !user?.uid || !entityId || loadedVoteKey === voteKey;
+  // A ref closes the tiny gap between a click and React's next render, so
+  // repeated clicks in the same tick cannot submit two RPCs.
+  const votingRef = useRef(false);
+  const latestScoreRef = useRef(score);
+  latestScoreRef.current = score;
 
   useEffect(() => {
-    setDisplayScore(score);
-    if (user && entityId) {
+    if (!votingRef.current) setDisplayScore(score);
+  }, [entityId, score]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setVote(null);
+    setLoadedVoteKey(null);
+    setVoteLoadError(false);
+    if (!disabled && user?.uid && entityId) {
       fetchUserVote(entityId, user.uid, type).then((val) => {
-        if (val === 1) setVote("up");
-        else if (val === -1) setVote("down");
-        else setVote(null);
-      }).catch(console.error);
+        if (!cancelled) {
+          setVote(val === 1 ? "up" : val === -1 ? "down" : null);
+          setLoadedVoteKey(voteKey);
+        }
+      }).catch((error) => {
+        if (!cancelled) {
+          console.error("Could not load vote status", error);
+          setVoteLoadError(true);
+        }
+      });
     }
-  }, [entityId, user, score, type]);
+    return () => { cancelled = true; };
+  }, [entityId, user?.uid, type, voteKey, voteRetry, disabled]);
 
   const handleVote = async (direction: "up" | "down") => {
+    if (disabled || !voteReady || votingRef.current) return;
     if (!user) {
       toast.error("You must be logged in to vote");
       return;
     }
     if (!entityId) return;
+    if (authorUid && authorUid === user.uid) {
+      toast.error("You can't vote on your own content");
+      return;
+    }
 
     let newVote: "up" | "down" | null;
     let delta = 0;
@@ -58,26 +89,43 @@ export function VoteControls({ entityId, authorUid, score, type = "post", postId
       numericVote = direction === "up" ? 1 : -1;
     }
 
-    // Optimistic UI update
+    // Optimistic UI update. The ref and disabled buttons lock this control
+    // until the RPC settles; cast_vote serializes other tabs on the server.
+    votingRef.current = true;
+    const scoreWhenSubmitted = latestScoreRef.current;
+    setIsVoting(true);
     setVote(newVote);
     setDisplayScore((prev) => prev + delta);
-    
-    // Fire mutation in background
+
     try {
       await rtdbHandleVote(entityId, authorUid, user.uid, numericVote, type, postIdForComment);
       // Invalidate author's profile so VeteranCelebration fires reactively on rep gain
       if (authorUid) {
         queryClient.invalidateQueries({ queryKey: ['profile', authorUid] });
       }
-      // Refresh posts so vote scores stay in sync across the feed
-      queryClient.invalidateQueries({ queryKey: ['posts'] });
     } catch (e) {
       console.error(e);
       // The RPC rejected the vote — roll the optimistic update back so the
       // UI never claims a score the server doesn't have.
       setVote(vote);
-      setDisplayScore((prev) => prev - delta);
+      setDisplayScore(latestScoreRef.current);
       toast.error(getErrorMessage(e, "Failed to vote"));
+    } finally {
+      votingRef.current = false;
+      setIsVoting(false);
+      // If another refetch changed the prop while the vote was in flight,
+      // use its latest score instead of leaving a stale optimistic number.
+      if (latestScoreRef.current !== scoreWhenSubmitted) setDisplayScore(latestScoreRef.current);
+      // Reconcile the optimistic score with the server on success or error
+      // (a network failure might arrive after the server committed a vote).
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      queryClient.invalidateQueries({ queryKey: ['communityPosts'] });
+      if (type === "post") {
+        queryClient.invalidateQueries({ queryKey: ['post', entityId] });
+      } else if (postIdForComment) {
+        queryClient.invalidateQueries({ queryKey: ['comments', postIdForComment] });
+        queryClient.invalidateQueries({ queryKey: ['post', postIdForComment] });
+      }
     }
   };
 
@@ -86,8 +134,13 @@ export function VoteControls({ entityId, authorUid, score, type = "post", postId
   return (
     <div className={isHorizontal ? "flex items-center gap-0.5 bg-muted/40 rounded-full px-1 py-0.5 border border-border" : "flex flex-col items-center justify-center gap-1.5 py-1 w-9 shrink-0"}>
       <button
+        type="button"
         onClick={(e) => { e.preventDefault(); handleVote("up"); }}
-        className={`rounded-full p-1 transition-all duration-200 ${
+        disabled={disabled || isVoting || !voteReady}
+        title={voteReady ? undefined : voteLoadError ? "Vote status unavailable; retry below" : "Loading your vote status"}
+        aria-label="Upvote"
+        aria-pressed={vote === "up"}
+        className={`rounded-full p-1 transition-all duration-200 disabled:opacity-50 ${
           vote === "up"
             ? "text-success bg-success/10"
             : "text-muted-foreground hover:text-success hover:bg-success/10"
@@ -109,9 +162,25 @@ export function VoteControls({ entityId, authorUid, score, type = "post", postId
         </motion.span>
       </div>
 
+      {voteLoadError && !disabled && (
+        <button
+          type="button"
+          aria-label="Retry loading vote"
+          title="Retry loading your vote status"
+          onClick={() => setVoteRetry((attempt) => attempt + 1)}
+          className="rounded-full p-1 text-muted-foreground hover:text-foreground"
+        >
+          <RotateCcw className="h-3 w-3" />
+        </button>
+      )}
       <button
+        type="button"
         onClick={(e) => { e.preventDefault(); handleVote("down"); }}
-        className={`rounded-full p-1 transition-all duration-200 ${
+        disabled={disabled || isVoting || !voteReady}
+        title={voteReady ? undefined : voteLoadError ? "Vote status unavailable; retry below" : "Loading your vote status"}
+        aria-label="Downvote"
+        aria-pressed={vote === "down"}
+        className={`rounded-full p-1 transition-all duration-200 disabled:opacity-50 ${
           vote === "down"
             ? "text-destructive bg-destructive/10"
             : "text-muted-foreground hover:text-destructive hover:bg-destructive/10"

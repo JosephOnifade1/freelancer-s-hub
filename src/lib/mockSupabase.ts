@@ -202,7 +202,7 @@ export const seedMockData = () => {
       ups: 187,
       downs: 0,
       views: 420,
-      commentCount: 42,
+      commentCount: 0,
       tags: ["pricing", "growth", "dev"],
       communitySlug: "dev",
       createdAt: new Date(Date.now() - 3 * 3600000).toISOString(),
@@ -219,7 +219,7 @@ export const seedMockData = () => {
       ups: 94,
       downs: 0,
       views: 240,
-      commentCount: 31,
+      commentCount: 1,
       tags: ["clients", "sales"],
       communitySlug: "consulting",
       createdAt: new Date(Date.now() - 5 * 3600000).toISOString(),
@@ -236,7 +236,7 @@ export const seedMockData = () => {
       ups: 312,
       downs: 0,
       views: 780,
-      commentCount: 67,
+      commentCount: 1,
       tags: ["proposals", "templates", "design"],
       communitySlug: "design",
       createdAt: new Date(Date.now() - 8 * 3600000).toISOString(),
@@ -253,7 +253,7 @@ export const seedMockData = () => {
       ups: 156,
       downs: 0,
       views: 320,
-      commentCount: 89,
+      commentCount: 0,
       tags: ["wins", "community"],
       communitySlug: "dev",
       createdAt: new Date(Date.now() - 24 * 3600000).toISOString(),
@@ -270,7 +270,7 @@ export const seedMockData = () => {
       ups: 73,
       downs: 0,
       views: 180,
-      commentCount: 19,
+      commentCount: 1,
       tags: ["pricing", "strategy"],
       communitySlug: "consulting",
       createdAt: new Date(Date.now() - 12 * 3600000).toISOString(),
@@ -287,7 +287,7 @@ export const seedMockData = () => {
       ups: 45,
       downs: 0,
       views: 110,
-      commentCount: 23,
+      commentCount: 0,
       tags: ["tools", "finance", "international"],
       communitySlug: "marketing",
       createdAt: new Date(Date.now() - 6 * 3600000).toISOString(),
@@ -385,6 +385,18 @@ export const seedMockData = () => {
   checkAndSeed("posts", seedPosts);
   checkAndSeed("comments", seedComments);
   checkAndSeed("leads", seedLeads);
+
+  // One-time equivalent of the SQL commentCount backfill for browsers that
+  // already have demo data (including legacy seeded fake counts).
+  if (!localStorage.getItem("mock_post_comment_count_reconciled_v1")) {
+    const posts = mockTable<{ id: string; commentCount?: number }>("posts");
+    const comments = mockTable<{ postId: string; isDeleted?: boolean }>("comments");
+    for (const post of posts) {
+      post.commentCount = comments.filter((c) => c.postId === post.id && c.isDeleted !== true).length;
+    }
+    localStorage.setItem("mock_supabase_posts", JSON.stringify(posts));
+    localStorage.setItem("mock_post_comment_count_reconciled_v1", "1");
+  }
   
   // usernames was originally stored as a {username: uid} map, which the
   // query builder (array-based) cannot read. Normalize legacy storage.
@@ -420,7 +432,8 @@ class MockQueryBuilder {
 
   select(fields: string = "*", options?: { count?: string; head?: boolean }) {
     this.selectFields = fields;
-    this.operation = "select";
+    // A trailing .select("id") on .insert/.update/.upsert requests the
+    // written row (PostgREST RETURNING), not a new read operation.
     if (options?.count) {
       this.isCount = true;
     }
@@ -615,8 +628,35 @@ class MockQueryBuilder {
         return record;
       });
 
+      if (this.tableName === "comments") {
+        const insertError = (() => {
+          const sessionUid = getMockSessionUid();
+          for (const rec of newRecords) {
+            const post = mockTable<MockRow>("posts").find((po) => po.id === rec.postId);
+            if (!post) return "Post not found";
+            if (rec.authorUid !== sessionUid) return "Not authorized to comment as another user";
+            if (post.isDeleted === true || post.allowComments === false) return "Comments are turned off for this post";
+            const profiles = mockTable<{ uid: string; role?: string }>("profiles");
+            const role = profiles.find((pr) => pr.uid === sessionUid)?.role;
+            if (!mockCanViewPost(post, sessionUid, role)) return "Not authorized to comment on this post";
+            if (rec.parentId) {
+              const parent = mockTable<MockRow>("comments").find((c) => c.id === rec.parentId);
+              if (!parent || parent.postId !== rec.postId) return "Reply parent belongs to a different post";
+            }
+          }
+          return null;
+        })();
+        if (insertError) return { data: null, error: { message: insertError } };
+      }
+
       data.push(...newRecords);
       localStorage.setItem(key, JSON.stringify(data));
+
+      if (this.tableName === "comments") {
+        for (const rec of newRecords) {
+          if (rec.isDeleted !== true) adjustMockPostCommentCount(rec.postId, 1);
+        }
+      }
 
       // Notification triggers (comments, follows, applications).
       if (this.tableName === "comments") {
@@ -714,7 +754,37 @@ class MockQueryBuilder {
         return row;
       });
 
+      if (this.tableName === "comments" && updatePayload && "postId" in updatePayload) {
+        const posts = mockTable<MockRow>("posts");
+        for (let idx = 0; idx < updatedData.length; idx++) {
+          const before = data[idx];
+          const after = updatedData[idx];
+          if (before === after || before.postId === after.postId || after.isDeleted === true) continue;
+          const target = posts.find((po) => po.id === after.postId);
+          if (!target || target.isDeleted === true || target.allowComments === false) {
+            return { data: null, error: { message: "Comments are closed for this post" } };
+          }
+        }
+      }
+
       localStorage.setItem(key, JSON.stringify(updatedData));
+
+      if (
+        this.tableName === "comments" &&
+        updatePayload &&
+        ("isDeleted" in updatePayload || "postId" in updatePayload)
+      ) {
+        updatedData.forEach((row, idx) => {
+          const before = data[idx];
+          if (!before || before === row) return;
+          if (before.postId !== row.postId) {
+            if (before.isDeleted !== true) adjustMockPostCommentCount(before.postId, -1);
+            if (row.isDeleted !== true) adjustMockPostCommentCount(row.postId, 1);
+          } else if ((before.isDeleted === true) !== (row.isDeleted === true)) {
+            adjustMockPostCommentCount(row.postId, row.isDeleted === true ? -1 : 1);
+          }
+        });
+      }
 
       // Notification trigger: application status transitions.
       if (this.tableName === "lead_applications" && updatePayload?.status) {
@@ -764,6 +834,9 @@ class MockQueryBuilder {
     }
 
     if (this.operation === "delete") {
+      const deletedRows = this.tableName === "comments"
+        ? data.filter(row => this.filters.every(filter => filter.type !== "eq" || row[filter.column!] == filter.value))
+        : [];
       const filteredData = data.filter(row => {
         const matches = this.filters.every(filter => {
           if (filter.type === "eq") {
@@ -775,6 +848,9 @@ class MockQueryBuilder {
       });
 
       localStorage.setItem(key, JSON.stringify(filteredData));
+      for (const row of deletedRows) {
+        if (row.isDeleted !== true) adjustMockPostCommentCount(row.postId, -1);
+      }
       return { data: null, error: null };
     }
 
@@ -1151,6 +1227,48 @@ const pushMockNotification = (n: {
 const mockTable = <T,>(name: string): T[] =>
   JSON.parse(localStorage.getItem(`mock_supabase_${name}`) || "[]") as T[];
 
+const getMockSessionUid = (): string | null => {
+  try {
+    const session = JSON.parse(localStorage.getItem("mock_supabase_session") || "null") as
+      | { user?: { id?: string; uid?: string }; id?: string; uid?: string }
+      | null;
+    return session?.user?.id || session?.user?.uid || session?.uid || session?.id || null;
+  } catch {
+    return null;
+  }
+};
+
+// Mirror of SQL public.can_view_post for raw mock post rows.
+const mockCanViewPost = (post: MockRow, uid: string | null, role?: string): boolean => {
+  const visibility = typeof post.visibility === "string" ? post.visibility : "public";
+  if (visibility === "public") return true;
+  if (!uid) return false;
+  if (post.authorUid === uid) return true;
+  if (role === "admin" || role === "moderator") return true;
+  const slug = typeof post.communitySlug === "string" ? post.communitySlug : "";
+  if (!slug) return false;
+  if (visibility === "members") {
+    return mockTable<MockRow>("community_members").some(
+      (m) => m.userId === uid && m.communitySlug === slug
+    );
+  }
+  return mockTable<MockRow>("communities").some(
+    (c) => c.slug === slug && c.ownerId === uid
+  );
+};
+
+// Mirror of the trg_post_comment_count trigger: posts."commentCount" is
+// the number of non-deleted comments on the post, maintained on every
+// comment insert / soft-delete / restore / hard delete.
+const adjustMockPostCommentCount = (postId: MockValue, delta: number) => {
+  if (typeof postId !== "string" || delta === 0) return;
+  const posts = mockTable<{ id: string; commentCount?: number }>("posts");
+  const idx = posts.findIndex((po) => po.id === postId);
+  if (idx < 0) return;
+  posts[idx].commentCount = Math.max(0, (posts[idx].commentCount || 0) + delta);
+  localStorage.setItem("mock_supabase_posts", JSON.stringify(posts));
+};
+
 // ─── Mock Storage ─────────────────────────────────────────────────────
 // Mirrors the real buckets (avatars, post-images): upload stores the file
 // as a data URL under mock_supabase_storage and getPublicUrl returns it,
@@ -1242,8 +1360,13 @@ export class MockSupabaseClient {
             const rows: { id: string; isDeleted?: boolean }[] = JSON.parse(localStorage.getItem(`mock_supabase_${table}`) || "[]");
             const ei = rows.findIndex((r) => r.id === report.entityId);
             if (ei >= 0) {
+              const wasDeleted = rows[ei].isDeleted === true;
               rows[ei].isDeleted = true;
               localStorage.setItem(`mock_supabase_${table}`, JSON.stringify(rows));
+              if (report.entityType === "comment" && !wasDeleted) {
+                const comment = rows[ei] as { postId?: string };
+                adjustMockPostCommentCount(comment.postId, -1);
+              }
             }
           } else if (report.entityType === "lead") {
             const leads: { id: string; status?: string }[] = JSON.parse(localStorage.getItem("mock_supabase_leads") || "[]");
@@ -1290,21 +1413,37 @@ export class MockSupabaseClient {
     }
 
 
-    // Local equivalent of the cast_vote SECURITY DEFINER RPC: compute the
-    // delta from the stored vote, then update vote + entity + reputation.
+    // Local equivalent of the hardened cast_vote SECURITY DEFINER RPC:
+    // same auth, visibility, deleted and self-vote rules as the SQL.
+    // (No advisory lock needed: localStorage access is single-threaded.)
     if (fnName === "cast_vote") {
       const entityId = typeof args.entity_id === "string" ? args.entity_id : "";
       const entityType = typeof args.entity_type === "string" ? args.entity_type : "";
       const voterUid = typeof args.voter_uid === "string" ? args.voter_uid : "";
-      const newVote = typeof args.new_vote === "number" ? args.new_vote : 0;
+      const newVote = args.new_vote;
+      if (typeof newVote !== "number" || ![-1, 0, 1].includes(newVote)) {
+        return { data: null, error: { message: `Invalid vote value: ${newVote}` } };
+      }
+      if (entityType !== "post" && entityType !== "comment") return { data: null, error: { message: `Unsupported vote entity type: ${entityType}` } };
+      if (!voterUid || getMockSessionUid() !== voterUid) return { data: null, error: { message: "Not authorized to vote as another user" } };
       const tableKey = entityType === "post" ? "posts" : "comments";
       type MockVote = { id?: string; userId: string; entityType: string; entityId: string; voteValue: number };
-      type MockEntity = { id: string; score?: number; ups?: number; downs?: number; authorUid?: string; postId?: string };
-      type MockProfile = { uid: string; reputation?: number };
+      type MockEntity = { id: string; score?: number; ups?: number; downs?: number; authorUid?: string; postId?: string; isDeleted?: boolean };
+      type MockProfile = { uid: string; reputation?: number; role?: string };
       const votes: MockVote[] = JSON.parse(localStorage.getItem("mock_supabase_votes") || "[]");
       const entities: MockEntity[] = JSON.parse(localStorage.getItem(`mock_supabase_${tableKey}`) || "[]");
       const entityIdx = entities.findIndex((e) => e.id === entityId);
-      if (entityIdx < 0) return { data: null, error: { message: "Entity not found" } };
+      if (entityIdx < 0) return { data: null, error: { message: "Vote target not found" } };
+      const entity = entities[entityIdx];
+      if (!entity.authorUid) return { data: null, error: { message: "Vote target not found" } };
+      const posts = mockTable<MockRow>("posts");
+      const parentPost = entityType === "post" ? entity : posts.find((po) => po.id === entity.postId);
+      if (!parentPost) return { data: null, error: { message: "Vote target not found" } };
+      if (entity.isDeleted === true || parentPost.isDeleted === true) return { data: null, error: { message: "Cannot vote on deleted content" } };
+      const voterProfiles: MockProfile[] = JSON.parse(localStorage.getItem("mock_supabase_profiles") || "[]");
+      const voterRole = voterProfiles.find((pr) => pr.uid === voterUid)?.role;
+      if (!mockCanViewPost(parentPost as MockRow, voterUid, voterRole)) return { data: null, error: { message: "Not authorized to vote on this content" } };
+      if (entity.authorUid === voterUid) return { data: null, error: { message: "You cannot vote on your own content" } };
 
       const voteIdx = votes.findIndex(
         (v) => v.userId === voterUid && v.entityType === entityType && v.entityId === entityId
@@ -1362,13 +1501,9 @@ export class MockSupabaseClient {
     }
 
     if (fnName === "increment_comment_count") {
-      const posts: { id: string; commentCount?: number }[] = JSON.parse(localStorage.getItem("mock_supabase_posts") || "[]");
-      const postIdx = posts.findIndex((po) => po.id === args.post_id);
-      if (postIdx >= 0) {
-        posts[postIdx].commentCount = (posts[postIdx].commentCount || 0) + 1;
-        localStorage.setItem("mock_supabase_posts", JSON.stringify(posts));
-      }
-      return { data: null, error: null };
+      // Dropped by supabase_post_interaction_hardening_migration.sql: the
+      // comment-count trigger owns posts."commentCount" now.
+      return { data: null, error: { message: "Could not find the function public.increment_comment_count(post_id) in the schema cache" } };
     }
 
     if (fnName === "increment_followers") {

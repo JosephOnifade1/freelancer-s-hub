@@ -131,10 +131,8 @@ export const fetchAllCommunities = async (): Promise<CommunityData[]> => {
     .select("*")
     .order("memberCount", { ascending: false });
 
-  if (error || !data) {
-    console.warn("Could not fetch communities:", error?.message || error);
-    return [];
-  }
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Could not load spaces.");
 
   return data.map(dbRowToCommunity);
 };

@@ -20,6 +20,7 @@ import { uploadImage } from "@/lib/uploads";
 import { fetchAllCommunities, getCommunityStyle } from "@/lib/communities";
 import { ResourceBodyEditor } from "@/components/editor/ResourceBodyEditor";
 import { ResourceMarkdownHelp } from "@/components/editor/ResourceMarkdownHelp";
+import { QueryErrorState } from "@/components/QueryErrorState";
 
 type PostType = "discussion" | "question" | "resource" | "poll";
 
@@ -28,10 +29,14 @@ interface PendingBodyImage {
   src: string;
 }
 
+type PostTargetKind = "loading" | "profile" | "space";
+
 interface BSpaceOption {
   id: string;
+  kind: PostTargetKind;
   name: string;
   slug: string;
+  communitySlug: string | null;
   icon: React.ElementType;
   color: string;
   popularTags: string[];
@@ -43,6 +48,16 @@ interface BSpaceOption {
 // (frontend-hub, indie-builders, etc.) with slugs that don't exist in the
 // real `communities` table, which is what was causing every post submit
 // to fail with a foreign key violation (23503).
+const LOADING_SPACE: BSpaceOption = {
+  id: "loading",
+  kind: "loading",
+  name: "Loading spaces…",
+  slug: "",
+  communitySlug: null,
+  icon: Globe,
+  color: "text-muted-foreground bg-muted",
+  popularTags: [],
+};
 
 const CreatePost = () => {
   const navigate = useNavigate();
@@ -53,38 +68,35 @@ const CreatePost = () => {
   const { user } = useAuth();
 
   // Real spaces (communities) from the database
-  const LOADING_SPACE: BSpaceOption = {
-    id: "loading",
-    name: "Loading spaces…",
-    slug: "",
-    icon: Globe,
-    color: "text-muted-foreground bg-muted",
-    popularTags: [],
-  };
-
-  const { data: realSpaces = [] } = useQuery({
+  const { data: realSpaces = [], isLoading: spacesLoading, isError: spacesError, refetch: refetchSpaces } = useQuery({
     queryKey: ["communities"],
     queryFn: fetchAllCommunities,
   });
 
-  const { data: profile } = useQuery({
+  const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ['profile', user?.uid],
     queryFn: () => user ? getUserProfile(user.uid) : null,
     enabled: !!user,
   });
 
-  const spaceHandle = (sp: { id: string; slug: string }) =>
-    sp.id.startsWith("profile:") ? `f/${profile?.username || "you"}` : `b/${sp.slug}`;
+  const spaceHandle = (sp: BSpaceOption) => {
+    if (sp.kind === "profile") return `f/${profile?.username || "you"}`;
+    if (sp.kind === "loading") return sp.id === "loading" ? "Loading…" : "Choose another target";
+    return `b/${sp.slug}`;
+  };
 
   const B_SPACES: BSpaceOption[] = useMemo(() => {
     const spaces: BSpaceOption[] = [];
 
-    // First option: Your Profile (like Reddit's r/username)
-    if (profile?.username) {
+    // Profile posts do not require a space slug or a successful profile
+    // lookup: the authenticated uid is their actual author identity.
+    if (user?.uid) {
       spaces.push({
-        id: `profile:${profile.uid}`,
+        id: `profile:${user.uid}`,
+        kind: "profile",
         name: "Your profile",
-        slug: "", // profile posts have no community slug
+        slug: "",
+        communitySlug: null, // profile posts have no community slug
         icon: User,
         color: "text-foreground bg-muted",
         popularTags: [],
@@ -98,8 +110,10 @@ const CreatePost = () => {
         const style = getCommunityStyle(c.category);
         return {
           id: c.slug,
+          kind: "space" as const,
           name: c.name,
           slug: c.slug,
+          communitySlug: c.slug,
           icon: style.icon,
           color: style.iconBg,
           popularTags: c.topics?.length ? c.topics : ["general"],
@@ -107,7 +121,7 @@ const CreatePost = () => {
         };
       }),
     ];
-  }, [realSpaces, profile?.username, profile?.uid]);
+  }, [realSpaces, user?.uid]);
 
   // Form State
   const VALID_TYPES: PostType[] = ["discussion", "question", "resource", "poll"];
@@ -122,15 +136,24 @@ const CreatePost = () => {
   const [selectedSpace, setSelectedSpace] = useState<BSpaceOption>(LOADING_SPACE);
 
   // A post to your own profile has no space: no space-only visibility, no pinning.
-  const isProfileTarget = !selectedSpace.slug && selectedSpace.id.startsWith("profile:");
+  // The target kind is explicit — an empty slug means "profile", not "loading".
+  const isProfileTarget = selectedSpace.kind === "profile";
+  const requestedSpaceSlug = searchParams.get("space");
+  const targetsReady = !profileLoading && (!requestedSpaceSlug || (!spacesLoading && !spacesError));
 
   useEffect(() => {
-    if (B_SPACES.length > 0 && selectedSpace.slug === "") {
-      const spaceParam = searchParams.get("space");
-      const preselected = spaceParam ? B_SPACES.find((s) => s.slug === spaceParam) : null;
-      setSelectedSpace(preselected || B_SPACES[0]);
+    if (!targetsReady || selectedSpace.kind !== "loading" || B_SPACES.length === 0) return;
+    if (requestedSpaceSlug) {
+      const preselected = B_SPACES.find((s) => s.kind === "space" && s.slug === requestedSpaceSlug);
+      setSelectedSpace(preselected || {
+        ...LOADING_SPACE,
+        id: `unavailable:${requestedSpaceSlug}`,
+        name: "Space unavailable — choose a target",
+      });
+    } else {
+      setSelectedSpace(B_SPACES[0]);
     }
-  }, [B_SPACES, searchParams, selectedSpace.slug]);
+  }, [targetsReady, B_SPACES, requestedSpaceSlug, selectedSpace.kind]);
 
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
@@ -234,7 +257,7 @@ const CreatePost = () => {
   const [hasDraft, setHasDraft] = useState<boolean>(() => !!localStorage.getItem("borynx_post_draft"));
 
   const handleSaveDraft = () => {
-    const draft = { title, body, postType, selectedSpaceSlug: selectedSpace.slug, tags };
+    const draft = { title, body, postType, selectedTargetId: selectedSpace.id, tags };
     localStorage.setItem("borynx_post_draft", JSON.stringify(draft));
     setHasDraft(true);
     toast({ title: "Draft saved", description: "Your post draft has been saved locally." });
@@ -249,6 +272,8 @@ const CreatePost = () => {
         if (draft.body) setBody(draft.body);
         if (draft.postType) setPostType(draft.postType);
         if (draft.tags) setTags(draft.tags);
+        const savedTarget = B_SPACES.find((target) => target.id === draft.selectedTargetId);
+        if (savedTarget) setSelectedSpace(savedTarget);
         toast({ title: "Draft loaded", description: "Restored your saved draft." });
       } catch {
         toast({ title: "No saved draft", description: "No valid draft found." });
@@ -292,8 +317,17 @@ const CreatePost = () => {
       return;
     }
 
-    if (!selectedSpace.slug) {
-      toast({ title: "Spaces still loading", description: "Give it a second and try again.", variant: "destructive" });
+    if (selectedSpace.kind === "loading") {
+      toast({
+        title: "Choose a post target",
+        description: spacesError ? "Spaces couldn't be loaded. Retry or select your profile." : "Wait for spaces to load, or select a valid target.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (selectedSpace.kind === "space" && !selectedSpace.communitySlug) {
+      toast({ title: "Choose a space", description: "That space could not be loaded. Pick another target and try again.", variant: "destructive" });
       return;
     }
 
@@ -304,7 +338,7 @@ const CreatePost = () => {
         body: finalBody,
         type: postType,
         tags,
-        communitySlug: selectedSpace.slug || null, // null for profile posts, slug for community posts
+        communitySlug: selectedSpace.kind === "space" ? selectedSpace.communitySlug : null,
         author: { 
           uid: user.uid,
           name: profile?.displayName || profile?.username || "Anonymous",
@@ -315,9 +349,9 @@ const CreatePost = () => {
         score: 0,
         commentCount: 0,
         timeAgo: "just now",
-        isPinned: pinToSpace,
+        isPinned: selectedSpace.kind === "space" && pinToSpace,
         allowComments,
-        visibility,
+        visibility: isProfileTarget ? "public" as const : visibility,
         ...(postType === "poll" ? { pollOptions: cleanPollOptions } : {}),
       };
 
@@ -334,9 +368,9 @@ const CreatePost = () => {
 
       toast({ title: "Post published!", description: `Your post is live in ${selectedSpace.name}.` });
       queryClient.invalidateQueries({ queryKey: ['posts'] });
-      queryClient.invalidateQueries({ queryKey: ['communityPosts', selectedSpace.slug] });
-      if (selectedSpace.slug) {
-        navigate(`/b/${selectedSpace.slug}`);
+      if (selectedSpace.kind === "space" && selectedSpace.communitySlug) {
+        queryClient.invalidateQueries({ queryKey: ['communityPosts', selectedSpace.communitySlug] });
+        navigate(`/b/${selectedSpace.communitySlug}`);
       } else {
         // Profile post — navigate to the user's own profile
         navigate(`/f/${profile?.username || user.uid}`);
@@ -564,6 +598,14 @@ const CreatePost = () => {
               <p className="text-xs text-muted-foreground">
                 Select the most relevant space for your post.
               </p>
+
+              {spacesError && (
+                <QueryErrorState
+                  title="Couldn't load spaces"
+                  message="Your profile is still available. Retry to load the space list."
+                  onRetry={() => refetchSpaces()}
+                />
+              )}
 
               <div className="pt-1">
                 <DropdownMenu>
@@ -925,11 +967,11 @@ const CreatePost = () => {
               <button
                 type="button"
                 onClick={submit}
-                disabled={isSubmitting || uploadingImages}
+                disabled={isSubmitting || uploadingImages || selectedSpace.kind === "loading"}
                 className="px-6 py-2.5 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground font-heading text-sm font-semibold flex items-center gap-2 transition-colors disabled:opacity-50"
               >
                 <Send className="h-3.5 w-3.5" />
-                <span>{isSubmitting ? "Publishing..." : uploadingImages ? "Uploading images..." : selectedSpace.slug ? `Post to ${selectedSpace.name}` : "Post to Profile"}</span>
+                <span>{isSubmitting ? "Publishing..." : uploadingImages ? "Uploading images..." : selectedSpace.kind === "loading" ? "Choose a target" : selectedSpace.kind === "space" ? `Post to ${selectedSpace.name}` : "Post to Profile"}</span>
               </button>
             </div>
 

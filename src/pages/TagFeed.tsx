@@ -5,13 +5,14 @@ import { FeedSidebar } from "@/components/FeedSidebar";
 import { EmptyState } from "@/components/EmptyState";
 import { useQuery } from "@tanstack/react-query";
 import { fetchPosts } from "@/lib/posts";
+import { QueryErrorState } from "@/components/QueryErrorState";
 import { Loader2, Hash, ArrowLeft } from "lucide-react";
 
 const TagFeed = () => {
   const { tagName } = useParams<{ tagName: string }>();
   const navigate = useNavigate();
 
-  const { data: posts = [], isLoading } = useQuery({
+  const { data: posts = [], isLoading, isError: postsError, refetch: refetchPosts } = useQuery({
     queryKey: ['posts'],
     queryFn: fetchPosts
   });
@@ -49,11 +50,13 @@ const TagFeed = () => {
                 <h1 className="font-heading text-2xl font-bold text-foreground">#{tagName}</h1>
               </div>
               <p className="font-body text-sm text-muted-foreground ml-10">
-                {isLoading ? "Loading…" : `${sorted.length} post${sorted.length !== 1 ? "s" : ""} tagged with #${tagName}`}
+                {postsError ? "Posts unavailable" : isLoading ? "Loading…" : `${sorted.length} post${sorted.length !== 1 ? "s" : ""} tagged with #${tagName}`}
               </p>
             </div>
 
-            {isLoading ? (
+            {postsError ? (
+                <QueryErrorState title="Couldn't load tagged posts" onRetry={() => refetchPosts()} />
+            ) : isLoading ? (
               <div className="flex justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>

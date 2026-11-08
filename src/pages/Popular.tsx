@@ -6,11 +6,12 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { useQuery } from "@tanstack/react-query";
 import { fetchPosts } from "@/lib/posts";
+import { QueryErrorState } from "@/components/QueryErrorState";
 import { useAuth } from "@/hooks/auth-context";
 
 const Popular = () => {
   const { user } = useAuth();
-  const { data: posts = [], isLoading } = useQuery({
+  const { data: posts = [], isLoading, isError: postsError, refetch: refetchPosts } = useQuery({
     queryKey: ["posts"],
     queryFn: fetchPosts,
   });
@@ -32,7 +33,9 @@ const Popular = () => {
               title="Popular"
               subtitle="The highest-scoring posts across Borynx."
             />
-            {isLoading ? (
+            {postsError ? (
+                <QueryErrorState title="Couldn't load popular posts" onRetry={() => refetchPosts()} />
+            ) : isLoading ? (
               <div className="flex justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>

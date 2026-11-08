@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { useQuery } from "@tanstack/react-query";
 import { fetchPosts } from "@/lib/posts";
+import { QueryErrorState } from "@/components/QueryErrorState";
 import { getSavedPostIds } from "@/lib/users";
 import { useAuth } from "@/hooks/auth-context";
 
@@ -17,7 +18,7 @@ const Bookmarks = () => {
     enabled: !!user?.uid,
   });
 
-  const { data: posts = [], isLoading: isPostsLoading } = useQuery({
+  const { data: posts = [], isLoading: isPostsLoading, isError: postsError, refetch: refetchPosts } = useQuery({
     queryKey: ['posts'],
     queryFn: fetchPosts,
   });
@@ -32,7 +33,9 @@ const Bookmarks = () => {
           title="Bookmarks"
           subtitle={`${bookmarked.length} saved post${bookmarked.length !== 1 ? 's' : ''}`}
         />
-        {isLoading ? (
+        {postsError ? (
+          <QueryErrorState title="Couldn't load bookmarks" onRetry={() => refetchPosts()} />
+        ) : isLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>

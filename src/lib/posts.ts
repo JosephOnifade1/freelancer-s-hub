@@ -93,7 +93,8 @@ export interface PostViewer {
 }
 
 export async function getPostViewer(): Promise<PostViewer> {
-  const { data } = await supabase.auth.getSession();
+  const { data, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw new Error(sessionError.message);
   const uid = (data?.session?.user?.id as string | undefined) ?? null;
   if (!uid) return { uid: null, role: "member", memberSlugs: [], ownedSlugs: [] };
 
@@ -102,6 +103,12 @@ export async function getPostViewer(): Promise<PostViewer> {
     supabase.from("community_members").select("communitySlug").eq("userId", uid),
     supabase.from("communities").select("slug").eq("ownerId", uid),
   ]);
+
+  // Missing visibility context is not a "no posts" result. In particular,
+  // a failed membership lookup must not make private posts vanish silently.
+  for (const result of [profileRes, memberRes, ownedRes]) {
+    if (result.error) throw new Error(result.error.message);
+  }
 
   return {
     uid,
@@ -146,21 +153,10 @@ export const fetchPosts = async (): Promise<PostData[]> => {
     error = retry.error;
   }
 
-  if (error) {
-    const fallback = await supabase
-      .from("posts")
-      .select("*")
-      .eq("isDeleted", false)
-      .order("createdAt", { ascending: false });
-
-    data = fallback.data;
-    error = fallback.error;
-  }
-
-  if (error || !data) {
-    console.warn("Could not fetch posts from Supabase backend:", error?.message || error);
-    return [];
-  }
+  // No silent "*" fallback: a degraded feed with missing author data is
+  // worse than an honest error state the UI can show and retry.
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Could not load posts.");
 
   return visibleOnly((data as PostRow[]).map(mapPostRow));
 };
@@ -175,10 +171,8 @@ export const fetchPostsByCommunity = async (slug: string): Promise<PostData[]> =
     .eq("communitySlug", slug)
     .order("createdAt", { ascending: false });
 
-  if (error || !data) {
-    console.warn("Could not fetch community posts:", error?.message || error);
-    return [];
-  }
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Could not load space posts.");
 
   const visible = await visibleOnly((data as PostRow[]).map(mapPostRow));
   return visible.sort(
@@ -196,10 +190,8 @@ export const fetchPostsByAuthor = async (uid: string): Promise<PostData[]> => {
     .eq("authorUid", uid)
     .order("createdAt", { ascending: false });
 
-  if (error || !data) {
-    console.warn("Could not fetch author posts:", error?.message || error);
-    return [];
-  }
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Could not load author posts.");
 
   return visibleOnly((data as PostRow[]).map(mapPostRow));
 };
@@ -260,9 +252,10 @@ export const fetchPostById = async (id: string): Promise<PostData | null> => {
     .from("posts")
     .select(POST_COLUMNS_FKEY)
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
-  if (error || !data) return null;
+  if (error) throw new Error(error.message);
+  if (!data) return null;
 
   const post = mapPostRow(data as PostRow);
   const viewer = await getPostViewer();
@@ -272,13 +265,17 @@ export const fetchPostById = async (id: string): Promise<PostData | null> => {
 };
 
 export const updatePost = async (id: string, body: string) => {
-  const { error } = await supabase.from("posts").update({ body, isEdited: true }).eq("id", id);
+  const { data, error } = await supabase.from("posts").update({ body, isEdited: true }).eq("id", id).select("id");
   if (error) throw new Error(error.message);
+  // PostgREST can return success with zero updated rows when RLS blocks the
+  // operation. Never report a successful edit when nothing was saved.
+  if (!data?.length) throw new Error("Post not found or not editable.");
 };
 
 export const softDeletePost = async (id: string) => {
-  const { error } = await supabase.from("posts").update({ isDeleted: true }).eq("id", id);
+  const { data, error } = await supabase.from("posts").update({ isDeleted: true }).eq("id", id).select("id");
   if (error) throw new Error(error.message);
+  if (!data?.length) throw new Error("Post not found or not removable.");
 };
 
 export const incrementPostViews = async (id: string) => {

@@ -35,7 +35,8 @@ export const fetchPollByPostId = async (
     .eq("postId", postId)
     .maybeSingle();
 
-  if (pollError || !poll) return null;
+  if (pollError) throw new Error(pollError.message);
+  if (!poll) return null;
 
   const { data: options, error: optionsError } = await supabase
     .from("poll_options")
@@ -43,12 +44,16 @@ export const fetchPollByPostId = async (
     .eq("pollId", poll.id)
     .order("position", { ascending: true });
 
-  if (optionsError || !options) return null;
+  if (optionsError) throw new Error(optionsError.message);
+  if (!options) throw new Error("Could not load poll options.");
 
-  const { data: votes } = await supabase
+  const { data: votes, error: votesError } = await supabase
     .from("poll_votes")
     .select("pollOptionId, userId")
     .eq("pollId", poll.id);
+
+  if (votesError) throw new Error(votesError.message);
+  if (!votes) throw new Error("Could not load poll votes.");
 
   const voteCounts: Record<string, number> = {};
   let userVoteOptionId: string | null = null;

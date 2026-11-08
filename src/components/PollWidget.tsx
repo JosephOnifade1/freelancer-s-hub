@@ -12,7 +12,7 @@ export function PollWidget({ postId }: PollWidgetProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: poll, isLoading } = useQuery({
+  const { data: poll, isLoading, isError, refetch } = useQuery({
     queryKey: ["poll", postId, user?.uid],
     queryFn: () => fetchPollByPostId(postId, user?.uid),
   });
@@ -28,6 +28,17 @@ export function PollWidget({ postId }: PollWidgetProps) {
     },
     onError: (err: Error) => toast.error(err.message || "Failed to vote"),
   });
+
+  if (isError) {
+    return (
+      <div className="mt-2 border border-border/50 bg-card/50 p-3 font-body text-xs text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+        Couldn't load this poll.{" "}
+        <button type="button" className="font-semibold text-foreground hover:underline" onClick={(e) => { e.stopPropagation(); refetch(); }}>
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   if (isLoading || !poll) return null;
 

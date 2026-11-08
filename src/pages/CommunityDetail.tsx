@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/auth-context";
 import { getUserProfile } from "@/lib/users";
 import { fetchPostsByCommunity } from "@/lib/posts";
+import { QueryErrorState } from "@/components/QueryErrorState";
 import {
   fetchCommunity,
   fetchCommunityMembers,
@@ -40,7 +41,7 @@ const CommunityDetail = () => {
     enabled: !!slug,
   });
 
-  const { data: posts = [] } = useQuery({
+  const { data: posts = [], isLoading: loadingPosts, isError: postsError, refetch: refetchPosts } = useQuery({
     queryKey: ["communityPosts", slug],
     queryFn: () => (slug ? fetchPostsByCommunity(slug) : []),
     enabled: !!slug,
@@ -239,12 +240,15 @@ const CommunityDetail = () => {
               <>
                 <ComposerBar spaceSlug={community.slug} placeholder={`Post in b/${community.slug}`} />
                 <div className="space-y-3">
-                  {visiblePosts.length === 0 && (
+                  {postsError ? (
+                    <QueryErrorState title="Couldn't load space posts" onRetry={() => refetchPosts()} />
+                  ) : loadingPosts ? (
+                    <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+                  ) : visiblePosts.length === 0 ? (
                     <div className="rounded-xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">
                       {emptyCopy[activeTab]}
                     </div>
-                  )}
-                  {visiblePosts.map((post, i) => (
+                  ) : visiblePosts.map((post, i) => (
                     <PostCard key={post.id} post={post} index={i} />
                   ))}
                 </div>

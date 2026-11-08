@@ -415,6 +415,7 @@ export const getFollowingIds = async (uid: string): Promise<string[]> => {
     .select("followingId")
     .eq("followerId", uid);
 
-  if (error || !data) return [];
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Could not load following list.");
   return (data as { followingId: string }[]).map((row) => row.followingId);
 };

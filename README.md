@@ -26,9 +26,9 @@ VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 This script automatically sets up:
 - **Tables**: `profiles`, `usernames`, `communities`, `posts`, `comments`, `leads`, `community_members`, `saved_posts`, `follows`, and `votes`.
 - **Foreign Keys**: Named relationships for PostgREST joins (`posts_authorUid_fkey`, `comments_authorUid_fkey`, `leads_postedByUid_fkey`).
-- **Row Level Security (RLS)**: Owner-scoped policies. Post/comment counters and reputation are **only** writable through SECURITY DEFINER RPCs — there is deliberately no general-purpose update policy on `posts`/`comments`.
-- **Triggers**: Automatic profile creation on auth signup via `handle_new_user()`.
-- **RPC Functions**: `cast_vote` (atomic voting: the server derives the author and computes score/reputation deltas), view counts, comment counts, follow/member counters.
+- **Row Level Security (RLS)**: Owner-scoped policies. Post/comment counters and reputation are maintained by server-owned RPCs and triggers — there is deliberately no general-purpose counter-update policy on `posts`/`comments`.
+- **Triggers**: Automatic profile creation on auth signup via `handle_new_user()`, plus transactional active-comment counts on insert/delete/restore.
+- **RPC Functions**: `cast_vote` (atomic, hardened voting: the server derives the author, checks visibility/deleted/self-vote rules, locks concurrent votes, and computes score/reputation deltas), view counts, and follow/member counters. Comment counts are maintained by the `trg_post_comment_count` trigger.
 - **Initial Seed Data**: Pre-populated communities for instant operation.
 
 > **Upgrading an existing database** created with an older schema? Run the
@@ -45,6 +45,17 @@ This script automatically sets up:
 > 6. `supabase_post_settings_and_storage_migration.sql` — enforces post
 >    visibility / allowComments / pinning via RLS (`can_view_post`) and
 >    creates the `avatars` + `post-images` Storage buckets.
+> 7. `supabase_post_interaction_hardening_migration.sql` — hardens
+>    `cast_vote` (visibility/deleted/self-vote checks, concurrency lock),
+>    moves `posts.commentCount` maintenance into a database trigger, and
+>    blocks comments on deleted posts / cross-post reply parents.
+>
+> Apply migration 7 **before** deploying the updated frontend. Its backfill
+> reconciles all existing comment counts and briefly locks post/comment writes
+> while installing the trigger. Older browser tabs may log an error from the
+> retired `increment_comment_count` RPC; comment inserts still succeed and
+> the trigger maintains the count. This repository does not automatically
+> execute migrations against an existing hosted project.
 
 ---
 
