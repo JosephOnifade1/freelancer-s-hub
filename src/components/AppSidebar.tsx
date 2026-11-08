@@ -6,6 +6,7 @@ import {
   Trophy,
   Plus,
   Briefcase,
+  Inbox,
   TrendingUp,
   Zap,
   Users,
@@ -37,6 +38,7 @@ const mainNav = [
 const discover = [
   { title: "Spaces", url: "/communities", icon: Compass },
   { title: "Leads", url: "/l", icon: Briefcase },
+  { title: "Applications", url: "/applications", icon: Inbox },
   { title: "Saved", url: "/bookmarks", icon: Bookmark },
   { title: "Achievements", url: "/achievements", icon: Trophy },
 ];

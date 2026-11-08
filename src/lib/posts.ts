@@ -258,13 +258,18 @@ export const fetchPostById = async (id: string): Promise<PostData | null> => {
 };
 
 export const updatePost = async (id: string, body: string) => {
-  await supabase.from("posts").update({ body, isEdited: true }).eq("id", id);
+  const { error } = await supabase.from("posts").update({ body, isEdited: true }).eq("id", id);
+  if (error) throw new Error(error.message);
 };
 
 export const softDeletePost = async (id: string) => {
-  await supabase.from("posts").update({ isDeleted: true }).eq("id", id);
+  const { error } = await supabase.from("posts").update({ isDeleted: true }).eq("id", id);
+  if (error) throw new Error(error.message);
 };
 
 export const incrementPostViews = async (id: string) => {
-  await supabase.rpc("increment_post_views", { post_id: id });
+  // Fire-and-forget by design (called from a view effect), but never silent:
+  // a failed view increment must show up in logs, not vanish.
+  const { error } = await supabase.rpc("increment_post_views", { post_id: id });
+  if (error) console.warn("incrementPostViews failed:", error.message);
 };

@@ -133,6 +133,19 @@ create table if not exists public.leads (
   constraint leads_postedByUid_fkey foreign key ("postedByUid") references public.profiles("uid") on delete cascade
 );
 
+-- Lead Applications (freelancer -> lead proposals)
+create table if not exists public.lead_applications (
+  "id" uuid primary key default gen_random_uuid(),
+  "leadId" uuid not null references public.leads("id") on delete cascade,
+  "applicantUid" uuid not null references public.profiles("uid") on delete cascade,
+  "proposal" text not null,
+  "status" text not null default 'pending'
+    check ("status" in ('pending', 'accepted', 'rejected', 'withdrawn')),
+  "createdAt" timestamptz default now(),
+  "updatedAt" timestamptz default now(),
+  unique ("leadId", "applicantUid")
+);
+
 -- Community Memberships
 create table if not exists public.community_members (
   "userId" uuid references public.profiles("uid") on delete cascade,
@@ -172,6 +185,8 @@ create index if not exists idx_posts_communitySlug on public.posts ("communitySl
 create index if not exists idx_comments_postId on public.comments ("postId");
 create index if not exists idx_comments_authorUid on public.comments ("authorUid");
 create index if not exists idx_leads_postedAt on public.leads ("postedAt" desc);
+create index if not exists idx_lead_applications_leadId on public.lead_applications ("leadId");
+create index if not exists idx_lead_applications_applicantUid on public.lead_applications ("applicantUid");
 create index if not exists idx_votes_entity on public.votes ("entityType", "entityId", "userId");
 
 -- 3. ROW LEVEL SECURITY (RLS) POLICIES
@@ -182,6 +197,7 @@ alter table public.communities enable row level security;
 alter table public.posts enable row level security;
 alter table public.comments enable row level security;
 alter table public.leads enable row level security;
+alter table public.lead_applications enable row level security;
 alter table public.community_members enable row level security;
 alter table public.saved_posts enable row level security;
 alter table public.follows enable row level security;
@@ -209,7 +225,18 @@ drop policy if exists "Public read communities" on public.communities;
 create policy "Public read communities" on public.communities for select using (true);
 
 drop policy if exists "Auth users can insert/update communities" on public.communities;
-create policy "Auth users can insert/update communities" on public.communities for all using (auth.role() = 'authenticated');
+drop policy if exists "Auth users can create communities" on public.communities;
+create policy "Auth users can create communities" on public.communities
+  for insert with check (auth.role() = 'authenticated' and auth.uid()::text = "ownerId");
+drop policy if exists "Owners and admins can update communities" on public.communities;
+create policy "Owners and admins can update communities" on public.communities
+  for update using (
+    auth.uid()::text = "ownerId"
+    or exists (select 1 from public.profiles where profiles."uid" = auth.uid() and profiles."role" = 'admin')
+  ) with check (
+    auth.uid()::text = "ownerId"
+    or exists (select 1 from public.profiles where profiles."uid" = auth.uid() and profiles."role" = 'admin')
+  );
 
 -- posts RLS
 drop policy if exists "Public read posts" on public.posts;
@@ -221,8 +248,10 @@ create policy "Auth users can create posts" on public.posts for insert with chec
 drop policy if exists "Authors can update/delete their posts" on public.posts;
 create policy "Authors can update/delete their posts" on public.posts for update using (auth.uid() = "authorUid");
 
-drop policy if exists "Anyone can update post views, score, and commentCount" on public.posts;
-create policy "Anyone can update post views, score, and commentCount" on public.posts for update using (true);
+-- NOTE: post counters (views/score/commentCount) are updated only through
+-- SECURITY DEFINER RPCs (increment_post_views, cast_vote, ...). There is
+-- deliberately NO general update policy here: RLS is row-level, so a
+-- permissive "update counters" policy would let anyone rewrite any column.
 
 -- polls RLS
 alter table public.polls enable row level security;
@@ -262,8 +291,7 @@ create policy "Auth users can create comments" on public.comments for insert wit
 drop policy if exists "Authors can update/delete their comments" on public.comments;
 create policy "Authors can update/delete their comments" on public.comments for update using (auth.uid() = "authorUid");
 
-drop policy if exists "Anyone can update comment score" on public.comments;
-create policy "Anyone can update comment score" on public.comments for update using (true);
+-- Comment scores are updated only through the cast_vote RPC (see below).
 
 -- leads RLS
 drop policy if exists "Public read leads" on public.leads;
@@ -274,6 +302,49 @@ create policy "Auth users can create leads" on public.leads for insert with chec
 
 drop policy if exists "Creators can update their leads" on public.leads;
 create policy "Creators can update their leads" on public.leads for update using (auth.uid() = "postedByUid");
+
+-- lead_applications RLS
+drop policy if exists "Applicants and lead owners can read applications" on public.lead_applications;
+create policy "Applicants and lead owners can read applications"
+  on public.lead_applications for select
+  using (
+    auth.uid() = "applicantUid"
+    or exists (
+      select 1 from public.leads
+      where leads."id" = "leadId" and leads."postedByUid" = auth.uid()
+    )
+  );
+
+drop policy if exists "Users can apply to open leads" on public.lead_applications;
+create policy "Users can apply to open leads"
+  on public.lead_applications for insert
+  with check (
+    auth.uid() = "applicantUid"
+    and exists (
+      select 1 from public.leads
+      where leads."id" = "leadId"
+        and leads."status" = 'open'
+        and leads."postedByUid" <> auth.uid()
+    )
+  );
+
+drop policy if exists "Applicant or lead owner can update application" on public.lead_applications;
+create policy "Applicant or lead owner can update application"
+  on public.lead_applications for update
+  using (
+    auth.uid() = "applicantUid"
+    or exists (
+      select 1 from public.leads
+      where leads."id" = "leadId" and leads."postedByUid" = auth.uid()
+    )
+  )
+  with check (
+    auth.uid() = "applicantUid"
+    or exists (
+      select 1 from public.leads
+      where leads."id" = "leadId" and leads."postedByUid" = auth.uid()
+    )
+  );
 
 -- community_members RLS
 drop policy if exists "Public read memberships" on public.community_members;
@@ -303,6 +374,93 @@ create policy "Public read votes" on public.votes for select using (true);
 drop policy if exists "Users can manage their own votes" on public.votes;
 create policy "Users can manage their own votes" on public.votes for all using (auth.uid() = "userId");
 
+
+-- Lead applications: column guard + applicantsCount maintenance
+create or replace function public.guard_lead_application_update()
+returns trigger as $$
+declare
+  is_owner boolean;
+begin
+  select exists (
+    select 1 from public.leads
+    where leads."id" = old."leadId" and leads."postedByUid" = auth.uid()
+  ) into is_owner;
+
+  if auth.uid() = old."applicantUid" and not is_owner then
+    -- Applicants may only withdraw (and un-withdraw by re-applying, which
+    -- the client does by setting status back to 'pending' with a new
+    -- proposal). Nothing else about the row may change.
+    if new."status" not in ('withdrawn', 'pending')
+       or new."leadId" <> old."leadId"
+       or new."applicantUid" <> old."applicantUid" then
+      raise exception 'Applicants can only withdraw or re-apply';
+    end if;
+  elsif is_owner then
+    -- Owners may only change the review status.
+    if new."proposal" <> old."proposal"
+       or new."leadId" <> old."leadId"
+       or new."applicantUid" <> old."applicantUid" then
+      raise exception 'Lead owners can only change application status';
+    end if;
+    if new."status" not in ('pending', 'accepted', 'rejected') then
+      raise exception 'Invalid review status: %', new."status";
+    end if;
+  end if;
+
+  new."updatedAt" := now();
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_guard_lead_application_update on public.lead_applications;
+create trigger trg_guard_lead_application_update
+  before update on public.lead_applications
+  for each row execute function public.guard_lead_application_update();
+
+
+-- 4. applicantsCount maintenance --------------------------------
+create or replace function public.maintain_lead_applicants_count()
+returns trigger as $$
+begin
+  if tg_op = 'INSERT' then
+    if new."status" <> 'withdrawn' then
+      update public.leads
+      set "applicantsCount" = coalesce("applicantsCount", 0) + 1
+      where "id" = new."leadId";
+    end if;
+    return new;
+  elsif tg_op = 'DELETE' then
+    if old."status" <> 'withdrawn' then
+      update public.leads
+      set "applicantsCount" = greatest(0, coalesce("applicantsCount", 0) - 1)
+      where "id" = old."leadId";
+    end if;
+    return old;
+  else -- UPDATE: only withdrawn <-> non-withdrawn transitions move the count
+    if old."status" = 'withdrawn' and new."status" <> 'withdrawn' then
+      update public.leads
+      set "applicantsCount" = coalesce("applicantsCount", 0) + 1
+      where "id" = new."leadId";
+    elsif old."status" <> 'withdrawn' and new."status" = 'withdrawn' then
+      update public.leads
+      set "applicantsCount" = greatest(0, coalesce("applicantsCount", 0) - 1)
+      where "id" = new."leadId";
+    end if;
+    return new;
+  end if;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_lead_applicants_count on public.lead_applications;
+create trigger trg_lead_applicants_count
+  after insert or delete or update of "status" on public.lead_applications
+  for each row execute function public.maintain_lead_applicants_count();
+
+update public.leads l
+set "applicantsCount" = (
+  select count(*) from public.lead_applications a
+  where a."leadId" = l."id" and a."status" <> 'withdrawn'
+);
 
 -- 4. RPC FUNCTIONS FOR APPLICATION STATE INCREMENT/DECREMENT
 
@@ -402,6 +560,96 @@ begin
   return jsonb_set(curr_list, array[slug], to_jsonb(value));
 end;
 $$ language plpgsql security definer;
+
+
+-- Cast Vote (atomic, server-computed)
+-- The client supplies only (entity, desired vote). This function reads the
+-- previous vote, derives the author from the entity itself, computes all
+-- deltas, and updates votes + entity score/ups/downs + author reputation in
+-- one transaction. It replaces the old client-side read-modify-write, which
+-- both raced under concurrency and silently failed under hardened RLS.
+-- The earlier apply_vote_aggregate(uuid,text,uuid,uuid,int,int,int) helper
+-- trusted caller-supplied deltas and author ids, so it is dropped here.
+drop function if exists public.apply_vote_aggregate(uuid, text, uuid, uuid, integer, integer, integer);
+
+create or replace function public.cast_vote(
+  entity_id uuid,
+  entity_type text,
+  voter_uid uuid,
+  new_vote integer
+)
+returns void as $$
+declare
+  previous_vote integer := 0;
+  entity_author uuid;
+  score_delta integer;
+  ups_delta integer;
+  downs_delta integer;
+begin
+  if auth.uid() is null or auth.uid() <> voter_uid then
+    raise exception 'Not authorized to vote as another user';
+  end if;
+
+  if new_vote not in (-1, 0, 1) then
+    raise exception 'Invalid vote value: %', new_vote;
+  end if;
+
+  if entity_type = 'post' then
+    select "authorUid" into entity_author from public.posts where id = entity_id;
+  elsif entity_type = 'comment' then
+    select "authorUid" into entity_author from public.comments where id = entity_id;
+  else
+    raise exception 'Unsupported vote entity type: %', entity_type;
+  end if;
+
+  if entity_author is null then
+    raise exception 'Vote target not found';
+  end if;
+
+  select "voteValue" into previous_vote
+  from public.votes
+  where "userId" = voter_uid and "entityType" = entity_type and "entityId" = entity_id;
+  previous_vote := coalesce(previous_vote, 0);
+
+  if previous_vote = new_vote then
+    return;
+  end if;
+
+  if new_vote = 0 then
+    delete from public.votes
+    where "userId" = voter_uid and "entityType" = entity_type and "entityId" = entity_id;
+  else
+    insert into public.votes ("userId", "entityType", "entityId", "voteValue")
+    values (voter_uid, entity_type, entity_id, new_vote)
+    on conflict ("userId", "entityType", "entityId")
+    do update set "voteValue" = excluded."voteValue";
+  end if;
+
+  score_delta := new_vote - previous_vote;
+  ups_delta := (case when new_vote = 1 then 1 else 0 end) - (case when previous_vote = 1 then 1 else 0 end);
+  downs_delta := (case when new_vote = -1 then 1 else 0 end) - (case when previous_vote = -1 then 1 else 0 end);
+
+  if entity_type = 'post' then
+    update public.posts
+    set score = coalesce(score, 0) + score_delta,
+        ups = coalesce(ups, 0) + ups_delta,
+        downs = coalesce(downs, 0) + downs_delta
+    where id = entity_id;
+  else
+    update public.comments
+    set score = coalesce(score, 0) + score_delta,
+        ups = coalesce(ups, 0) + ups_delta,
+        downs = coalesce(downs, 0) + downs_delta
+    where id = entity_id;
+  end if;
+
+  if entity_author <> voter_uid then
+    update public.profiles
+    set reputation = coalesce(reputation, 0) + score_delta
+    where uid = entity_author;
+  end if;
+end;
+$$ language plpgsql security definer set search_path = public;
 
 
 -- 5. AUTH USER CREATION TRIGGER

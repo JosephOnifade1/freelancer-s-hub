@@ -1,8 +1,14 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import { fetchLeadById } from "@/lib/leads";
+import {
+  applyToLead,
+  fetchMyApplication,
+  updateApplicationStatus,
+} from "@/lib/applications";
 import { 
   ArrowLeft, 
   DollarSign, 
@@ -35,7 +41,8 @@ import { Textarea } from "@/components/ui/textarea";
 
 const LeadDetail = () => {
   const { leadId } = useParams<{ leadId: string }>();
-  const [hasApplied, setHasApplied] = useState(false);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [isApplyOpen, setIsApplyOpen] = useState(false);
   const [proposalText, setProposalText] = useState("");
   const [isSubmittingProposal, setIsSubmittingProposal] = useState(false);
@@ -45,6 +52,23 @@ const LeadDetail = () => {
     queryFn: () => leadId ? fetchLeadById(leadId) : null,
     enabled: !!leadId,
   });
+
+  // Real application state from lead_applications (replaces local-only flag).
+  const { data: myApplication } = useQuery({
+    queryKey: ['myApplication', leadId, user?.uid],
+    queryFn: () => (leadId && user?.uid ? fetchMyApplication(leadId, user.uid) : null),
+    enabled: !!leadId && !!user?.uid,
+  });
+
+  const hasApplied = !!myApplication && myApplication.status !== "withdrawn";
+  const isOwnLead = !!user?.uid && !!lead && lead.postedBy.uid === user.uid;
+  const isOpen = lead?.status === "open";
+
+  const refreshApplication = () => {
+    queryClient.invalidateQueries({ queryKey: ['myApplication', leadId, user?.uid] });
+    queryClient.invalidateQueries({ queryKey: ['lead', leadId] });
+    queryClient.invalidateQueries({ queryKey: ['myApplications'] });
+  };
 
   const handleShare = async () => {
     try {
@@ -60,23 +84,49 @@ const LeadDetail = () => {
   };
 
   const handleMessageClient = () => {
-    toast.info("Direct messaging will be enabled once your proposal is accepted. You can view the client's profile.");
+    // No DM system exists yet; messaging unlock state follows the REAL
+    // application status instead of a promise disconnected from any data.
+    if (myApplication?.status === "accepted") {
+      toast.info("Your proposal was accepted. Open the client's profile to continue the conversation.");
+    } else {
+      toast.info("Messaging unlocks once the client accepts your proposal. You can view the client's profile meanwhile.");
+    }
   };
 
-  const handleApplySubmit = (e: React.FormEvent) => {
+  const handleApplySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user?.uid || !leadId) {
+      toast.error("Please log in to apply.");
+      return;
+    }
     if (!proposalText.trim()) {
       toast.error("Please enter a short cover note or proposal.");
       return;
     }
 
     setIsSubmittingProposal(true);
-    setTimeout(() => {
-      setIsSubmittingProposal(false);
-      setHasApplied(true);
+    try {
+      await applyToLead(leadId, user.uid, proposalText);
       setIsApplyOpen(false);
-      toast.success("Application submitted successfully! The client has been notified.");
-    }, 600);
+      setProposalText("");
+      refreshApplication();
+      toast.success("Application submitted. The client can review it in their Applications inbox.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to submit application.");
+    } finally {
+      setIsSubmittingProposal(false);
+    }
+  };
+
+  const handleWithdraw = async () => {
+    if (!myApplication) return;
+    try {
+      await updateApplicationStatus(myApplication.id, "withdrawn");
+      refreshApplication();
+      toast.success("Application withdrawn.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to withdraw application.");
+    }
   };
 
   if (isLoading) {
@@ -148,6 +198,10 @@ const LeadDetail = () => {
                   <DollarSign className="h-4 w-4" />
                   {lead.budget}
                 </div>
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  {lead.applicantsCount} applicant{lead.applicantsCount === 1 ? "" : "s"}
+                </div>
               </div>
             </div>
 
@@ -176,15 +230,28 @@ const LeadDetail = () => {
               <div className="mb-6">
                 <p className="text-xs text-muted-foreground font-body mb-1">Opportunity Status</p>
                 <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-success" />
-                  <span className="text-sm font-bold font-heading text-foreground ">Accepting Proposals</span>
+                  <div className={`h-2 w-2 rounded-full ${isOpen ? "bg-success" : "bg-muted-foreground"}`} />
+                  <span className="text-sm font-bold font-heading text-foreground ">
+                    {isOpen ? "Accepting Proposals" : "Closed"}
+                  </span>
                 </div>
+                {hasApplied && myApplication && (
+                  <p className="mt-2 text-xs text-muted-foreground font-body">
+                    Your application is <span className="font-semibold text-foreground capitalize">{myApplication.status}</span>.
+                  </p>
+                )}
+                {isOwnLead && (
+                  <p className="mt-2 text-xs text-muted-foreground font-body">
+                    This is your lead. Review applicants in your{" "}
+                    <Link to="/applications" className="font-semibold text-brand hover:underline">Applications inbox</Link>.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-3">
-                <Button 
+                <Button
                   onClick={() => setIsApplyOpen(true)}
-                  disabled={hasApplied}
+                  disabled={hasApplied || isOwnLead || !isOpen}
                   className={`w-full h-12 font-heading font-bold text-base rounded-xl transition-all ${
                     hasApplied ? "bg-success/20 text-success border border-success/30 hover:bg-success/30" : ""
                   }`}
@@ -193,10 +260,23 @@ const LeadDetail = () => {
                     <span className="flex items-center gap-2">
                       <CheckCircle2 className="h-5 w-5" /> Applied
                     </span>
+                  ) : isOwnLead ? (
+                    "Your Lead"
+                  ) : !isOpen ? (
+                    "Applications Closed"
                   ) : (
                     "Apply Now"
                   )}
                 </Button>
+                {myApplication?.status === "pending" && (
+                  <Button
+                    onClick={handleWithdraw}
+                    variant="ghost"
+                    className="w-full font-heading text-sm text-muted-foreground hover:text-destructive"
+                  >
+                    Withdraw application
+                  </Button>
+                )}
                 <Button 
                   onClick={handleMessageClient}
                   variant="outline" 

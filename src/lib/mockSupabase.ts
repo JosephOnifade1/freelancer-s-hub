@@ -538,6 +538,21 @@ class MockQueryBuilder {
       data.push(...newRecords);
       localStorage.setItem(key, JSON.stringify(data));
 
+      // Mirror of the applicantsCount trigger for lead applications.
+      if (this.tableName === "lead_applications") {
+        const leads: { id: string; applicantsCount?: number }[] = JSON.parse(localStorage.getItem("mock_supabase_leads") || "[]");
+        let leadsChanged = false;
+        for (const rec of newRecords) {
+          if (rec.status === "withdrawn") continue;
+          const li = leads.findIndex((l) => l.id === rec.leadId);
+          if (li >= 0) {
+            leads[li].applicantsCount = (leads[li].applicantsCount || 0) + 1;
+            leadsChanged = true;
+          }
+        }
+        if (leadsChanged) localStorage.setItem("mock_supabase_leads", JSON.stringify(leads));
+      }
+
       if (this.isSingle || !isArray) {
         return { data: newRecords[0], error: null };
       }
@@ -545,6 +560,11 @@ class MockQueryBuilder {
     }
 
     if (this.operation === "update") {
+      const prevStatusById = new Map(
+        this.tableName === "lead_applications"
+          ? data.map(row => [row.id, row.status])
+          : []
+      );
       let updatedCount = 0;
       const updatedData = data.map(row => {
         const matches = this.filters.every(filter => {
@@ -562,6 +582,25 @@ class MockQueryBuilder {
       });
 
       localStorage.setItem(key, JSON.stringify(updatedData));
+
+      // Mirror of the applicantsCount trigger: withdrawn transitions move it.
+      if (this.tableName === "lead_applications" && this.payload?.status) {
+        const leads: { id: string; applicantsCount?: number }[] = JSON.parse(localStorage.getItem("mock_supabase_leads") || "[]");
+        let leadsChanged = false;
+        updatedData.forEach((row, idx) => {
+          if (data[idx] === row) return;
+          const wasWithdrawn = prevStatusById.get(row.id) === "withdrawn";
+          const isWithdrawn = row.status === "withdrawn";
+          if (wasWithdrawn === isWithdrawn) return;
+          const li = leads.findIndex((l) => l.id === row.leadId);
+          if (li >= 0) {
+            leads[li].applicantsCount = Math.max(0, (leads[li].applicantsCount || 0) + (isWithdrawn ? -1 : 1));
+            leadsChanged = true;
+          }
+        });
+        if (leadsChanged) localStorage.setItem("mock_supabase_leads", JSON.stringify(leads));
+      }
+
       return { data: updatedData.filter((_, idx) => data[idx] !== updatedData[idx]), error: null };
     }
 
@@ -822,6 +861,53 @@ export class MockSupabaseClient {
   }
 
   async rpc(fnName: string, args: any) {
+    // Local equivalent of the cast_vote SECURITY DEFINER RPC: compute the
+    // delta from the stored vote, then update vote + entity + reputation.
+    if (fnName === "cast_vote") {
+      const { entity_id, entity_type, voter_uid, new_vote } = args;
+      const tableKey = entity_type === "post" ? "posts" : "comments";
+      type MockVote = { id?: string; userId: string; entityType: string; entityId: string; voteValue: number };
+      type MockEntity = { id: string; score?: number; ups?: number; downs?: number; authorUid?: string };
+      type MockProfile = { uid: string; reputation?: number };
+      const votes: MockVote[] = JSON.parse(localStorage.getItem("mock_supabase_votes") || "[]");
+      const entities: MockEntity[] = JSON.parse(localStorage.getItem(`mock_supabase_${tableKey}`) || "[]");
+      const entityIdx = entities.findIndex((e) => e.id === entity_id);
+      if (entityIdx < 0) return { data: null, error: { message: "Entity not found" } };
+
+      const voteIdx = votes.findIndex(
+        (v) => v.userId === voter_uid && v.entityType === entity_type && v.entityId === entity_id
+      );
+      const previousVote = voteIdx >= 0 ? votes[voteIdx].voteValue : 0;
+      if (previousVote === new_vote) return { data: null, error: null };
+
+      if (new_vote === 0) {
+        if (voteIdx >= 0) votes.splice(voteIdx, 1);
+      } else if (voteIdx >= 0) {
+        votes[voteIdx].voteValue = new_vote;
+      } else {
+        votes.push({ id: `vote-${Date.now()}`, userId: voter_uid, entityType: entity_type, entityId: entity_id, voteValue: new_vote });
+      }
+
+      const diff = new_vote - previousVote;
+      entities[entityIdx].score = (entities[entityIdx].score || 0) + diff;
+      entities[entityIdx].ups = (entities[entityIdx].ups || 0) + ((new_vote === 1 ? 1 : 0) - (previousVote === 1 ? 1 : 0));
+      entities[entityIdx].downs = (entities[entityIdx].downs || 0) + ((new_vote === -1 ? 1 : 0) - (previousVote === -1 ? 1 : 0));
+
+      const authorUid = entities[entityIdx].authorUid;
+      if (authorUid && authorUid !== voter_uid) {
+        const profiles: MockProfile[] = JSON.parse(localStorage.getItem("mock_supabase_profiles") || "[]");
+        const authorIdx = profiles.findIndex((p) => p.uid === authorUid);
+        if (authorIdx >= 0) {
+          profiles[authorIdx].reputation = (profiles[authorIdx].reputation || 0) + diff;
+          localStorage.setItem("mock_supabase_profiles", JSON.stringify(profiles));
+        }
+      }
+
+      localStorage.setItem("mock_supabase_votes", JSON.stringify(votes));
+      localStorage.setItem(`mock_supabase_${tableKey}`, JSON.stringify(entities));
+      return { data: null, error: null };
+    }
+
     if (fnName === "increment_post_views") {
       const posts = JSON.parse(localStorage.getItem("mock_supabase_posts") || "[]");
       const postIdx = posts.findIndex((p: any) => p.id === args.post_id);

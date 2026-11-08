@@ -293,48 +293,64 @@ export const getSavedPostIds = async (uid: string): Promise<Record<string, boole
 export const toggleBookmark = async (uid: string, postId: string) => {
   if (!uid || !postId) return false;
 
-  const { data: existing } = await supabase
+  const { data: existing, error: lookupError } = await supabase
     .from("saved_posts")
     .select("postId")
     .eq("userId", uid)
     .eq("postId", postId)
     .maybeSingle();
 
+  if (lookupError) throw new Error(lookupError.message);
+
   if (existing) {
-    await supabase.from("saved_posts").delete().eq("userId", uid).eq("postId", postId);
+    const { error } = await supabase.from("saved_posts").delete().eq("userId", uid).eq("postId", postId);
+    if (error) throw new Error(error.message);
     return false;
   } else {
-    await supabase.from("saved_posts").insert({ userId: uid, postId });
+    const { error } = await supabase.from("saved_posts").insert({ userId: uid, postId });
+    if (error) throw new Error(error.message);
     return true;
   }
 };
 
 export const updateUserAvatar = async (uid: string, base64Image: string) => {
   if (!uid) return;
-  await supabase.from("profiles").update({ avatarUrl: base64Image }).eq("uid", uid);
+  const { error } = await supabase.from("profiles").update({ avatarUrl: base64Image }).eq("uid", uid);
+  if (error) throw new Error(error.message);
   return base64Image;
 };
 
 export const toggleFollow = async (currentUid: string, targetUid: string) => {
   if (currentUid === targetUid) return;
 
-  const { data: existing } = await supabase
+  const { data: existing, error: lookupError } = await supabase
     .from("follows")
     .select("followingId")
     .eq("followerId", currentUid)
     .eq("followingId", targetUid)
-    .single();
+    .maybeSingle();
+
+  if (lookupError) throw new Error(lookupError.message);
 
   const isFollowing = !!existing;
 
+  // Counter RPCs keep profiles.followers/following in sync. Their errors are
+  // surfaced (thrown) rather than swallowed — a follow that "worked" in the UI
+  // while the counter write failed is how counts drifted out of sync before.
   if (isFollowing) {
-    await supabase.from("follows").delete().eq("followerId", currentUid).eq("followingId", targetUid);
-    await supabase.rpc("decrement_followers", { target_uid: targetUid });
-    await supabase.rpc("decrement_following", { target_uid: currentUid });
+    const { error } = await supabase.from("follows").delete().eq("followerId", currentUid).eq("followingId", targetUid);
+    if (error) throw new Error(error.message);
+    const { error: e1 } = await supabase.rpc("decrement_followers", { target_uid: targetUid });
+    if (e1) throw new Error(e1.message);
+    const { error: e2 } = await supabase.rpc("decrement_following", { target_uid: currentUid });
+    if (e2) throw new Error(e2.message);
   } else {
-    await supabase.from("follows").insert({ followerId: currentUid, followingId: targetUid });
-    await supabase.rpc("increment_followers", { target_uid: targetUid });
-    await supabase.rpc("increment_following", { target_uid: currentUid });
+    const { error } = await supabase.from("follows").insert({ followerId: currentUid, followingId: targetUid });
+    if (error) throw new Error(error.message);
+    const { error: e1 } = await supabase.rpc("increment_followers", { target_uid: targetUid });
+    if (e1) throw new Error(e1.message);
+    const { error: e2 } = await supabase.rpc("increment_following", { target_uid: currentUid });
+    if (e2) throw new Error(e2.message);
   }
 
   return !isFollowing;

@@ -161,7 +161,8 @@ export const joinCommunity = async (uid: string, slug: string) => {
 
   if (error) throw new Error(error.message);
 
-  await supabase.rpc("increment_community_members", { community_slug: slug });
+  const { error: rpcError } = await supabase.rpc("increment_community_members", { community_slug: slug });
+  if (rpcError) throw new Error(rpcError.message);
 };
 
 export const leaveCommunity = async (uid: string, slug: string) => {

@@ -193,7 +193,20 @@ export default function LeadsBoard() {
                 <DropdownMenuItem onClick={() => handleOpenAddLead("new")}>
                   <Plus className="h-3.5 w-3.5 mr-2" /> Add New Lead
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toast.success("Leads exported to CSV")}>
+                <DropdownMenuItem onClick={() => {
+                  const esc = (v: string) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+                  const rows = [
+                    ["Company", "Title", "Budget", "Stage", "Category", "Source", "Added"].join(","),
+                    ...leads.map(l => [l.company, l.title, l.budget, l.stage, l.category, l.source || "", new Date(l.createdAt).toISOString()].map(esc).join(",")),
+                  ];
+                  const url = URL.createObjectURL(new Blob([rows.join("\n")], { type: "text/csv" }));
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = "borynx-leads.csv";
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  toast.success(`Exported ${leads.length} lead${leads.length === 1 ? "" : "s"} to CSV`);
+                }}>
                   <ExternalLink className="h-3.5 w-3.5 mr-2" /> Export to CSV
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -808,18 +821,15 @@ export default function LeadsBoard() {
         <DialogContent className="sm:max-w-md border-border/60 bg-card text-foreground">
           <DialogHeader>
             <DialogTitle className="font-heading text-lg font-bold flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-muted-foreground" /> Follow-up Reminders Enabled
+              <Sparkles className="h-5 w-5 text-muted-foreground" /> Follow-up Reminders
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground leading-relaxed pt-2">
-              Borynx will automatically check your proposal status and trigger browser notifications when leads have not replied within 48 hours.
+              Follow-up reminders aren't available yet. When they ship, Borynx will nudge you about proposals that haven't had a reply within 48 hours — nothing is scheduled until then.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <button 
-              onClick={() => {
-                setRemindersModalOpen(false);
-                toast.success("Follow-up notifications activated!");
-              }}
+            <button
+              onClick={() => setRemindersModalOpen(false)}
               className="px-4 py-2 rounded-lg text-xs bg-primary hover:bg-primary text-primary-foreground font-medium"
             >
               Done
