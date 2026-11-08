@@ -16,7 +16,7 @@ export type UserProfile = {
   following: number;
   savedPosts?: Record<string, boolean>;
   communitiesList?: Record<string, boolean>;
-  createdAt: any;
+  createdAt?: string;
   avatarUrl?: string;
   isVerifiedPro?: boolean;
   role?: "admin" | "moderator" | "member";
@@ -24,7 +24,15 @@ export type UserProfile = {
   favoriteTopics?: string[];
 };
 
-export const ensureUserProfile = async (user: { id?: string; uid?: string; email?: string | null; user_metadata?: any }) => {
+interface AuthUserMetadata {
+  display_name?: string;
+  full_name?: string;
+  name?: string;
+  username?: string;
+  avatar_url?: string;
+}
+
+export const ensureUserProfile = async (user: { id?: string; uid?: string; email?: string | null; user_metadata?: AuthUserMetadata }) => {
   const uid = user.id || user.uid;
   if (!uid) return null;
 
@@ -325,11 +333,11 @@ export const toggleBookmark = async (uid: string, postId: string) => {
   }
 };
 
-export const updateUserAvatar = async (uid: string, base64Image: string) => {
+export const updateUserAvatar = async (uid: string, imageUrl: string) => {
   if (!uid) return;
-  const { error } = await supabase.from("profiles").update({ avatarUrl: base64Image }).eq("uid", uid);
+  const { error } = await supabase.from("profiles").update({ avatarUrl: imageUrl }).eq("uid", uid);
   if (error) throw new Error(error.message);
-  return base64Image;
+  return imageUrl;
 };
 
 export const toggleFollow = async (currentUid: string, targetUid: string) => {
@@ -408,5 +416,5 @@ export const getFollowingIds = async (uid: string): Promise<string[]> => {
     .eq("followerId", uid);
 
   if (error || !data) return [];
-  return data.map((row: any) => row.followingId);
+  return (data as { followingId: string }[]).map((row) => row.followingId);
 };

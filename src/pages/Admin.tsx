@@ -5,7 +5,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth-context";
 import { getUserProfile } from "@/lib/users";
 import {
   fetchModerationUsers,

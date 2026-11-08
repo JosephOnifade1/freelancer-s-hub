@@ -5,11 +5,12 @@ import { MapPin, Calendar, MessageSquare, Camera, Loader2, MoreHorizontal, Trash
 import { AppLayout } from "@/components/AppLayout";
 import { PostCard, PostData } from "@/components/PostCard";
 import { Textarea } from "@/components/ui/textarea";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth-context";
 import { getUserProfile, toggleFollow, updateUserAvatar, isVeteran } from "@/lib/users";
+import { uploadImage } from "@/lib/uploads";
 import { fetchPosts } from "@/lib/posts";
 import { fetchAllCommunities, getUserCommunities } from "@/lib/communities";
-import { fetchCommentsByAuthor, updateComment, softDeleteComment } from "@/lib/comments";
+import { fetchCommentsByAuthor, updateComment, softDeleteComment, CommentData } from "@/lib/comments";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatTimeAgo } from "@/lib/utils";
 import { toast } from "sonner";
@@ -19,7 +20,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 
 type Tab = "Threads" | "Resources" | "B-Spaces" | "Bookmarks";
 
-const ProfileCommentCard = ({ comment, isOwnProfile }: { comment: any, isOwnProfile: boolean }) => {
+const ProfileCommentCard = ({ comment, isOwnProfile }: { comment: CommentData & { postId: string }, isOwnProfile: boolean }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editBody, setEditBody] = useState(comment.body);
   const queryClient = useQueryClient();
@@ -206,22 +207,16 @@ export default function Profile() {
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !profileUid) return;
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Image must be smaller than 2MB");
-      return;
+    try {
+      // Upload to Storage (avatars bucket) and store the URL — avatars used
+      // to be saved as base64 blobs in the profiles table.
+      const url = await uploadImage(file, "avatars");
+      await updateUserAvatar(profileUid, url);
+      queryClient.invalidateQueries({ queryKey: ['profile', profileUid] });
+      toast.success("Avatar updated!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update avatar.");
     }
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64String = reader.result as string;
-      try {
-        await updateUserAvatar(profileUid, base64String);
-        queryClient.invalidateQueries({ queryKey: ['profile', profileUid] });
-        toast.success("Avatar updated!");
-      } catch (err) {
-        toast.error("Failed to update avatar.");
-      }
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleSaveBio = async () => {

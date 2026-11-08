@@ -1,28 +1,9 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "../lib/supabase";
-import { User } from "@supabase/supabase-js";
+import type { User } from "@supabase/supabase-js";
 import { ensureUserProfile } from "../lib/users";
 
-// Extend User to expose `uid` as an alias for `id`, and add Firebase-compatible fields,
-// so all existing code that references user.uid, user.displayName, user.photoURL, and user.email
-// continues to work without modification.
-export type AppUser = User & {
-  uid: string;
-  displayName: string | null;
-  photoURL: string | null;
-};
-
-interface AuthContextType {
-  user: AppUser | null;
-  loading: boolean;
-  signOut: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  loading: true,
-  signOut: async () => {},
-});
+import { AuthContext, type AppUser } from "./auth-context";
 
 function toAppUser(user: User | null): AppUser | null {
   if (!user) return null;
@@ -33,7 +14,7 @@ function toAppUser(user: User | null): AppUser | null {
   }) as AppUser;
 }
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -74,6 +55,3 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-export const useAuth = () => {
-  return useContext(AuthContext);
-};

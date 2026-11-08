@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { isDemoMode } from "../lib/supabase";
 import { requestPasswordReset, authErrorMessage } from "../lib/auth";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../hooks/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

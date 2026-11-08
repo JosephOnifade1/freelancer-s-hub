@@ -7,8 +7,19 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { PenTool, HelpCircle, FileText, BarChart2, Hash, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth-context";
 import { createPost } from "@/lib/posts";
+import { getErrorMessage } from "@/lib/utils";
+
+export interface CreatedSpacePost {
+  id: string;
+  authorName: string;
+  authorAvatar: string | null;
+  type: "discussion" | "question" | "resource";
+  title: string;
+  body: string;
+  tags: string[];
+}
 
 interface CreateSpacePostModalProps {
   open: boolean;
@@ -16,7 +27,7 @@ interface CreateSpacePostModalProps {
   spaceSlug: string;
   spaceName: string;
   initialType?: "post" | "question" | "resource" | "poll";
-  onPostCreated?: (newPost: any) => void;
+  onPostCreated?: (newPost: CreatedSpacePost) => void;
 }
 
 export const CreateSpacePostModal: React.FC<CreateSpacePostModalProps> = ({
@@ -94,7 +105,7 @@ export const CreateSpacePostModal: React.FC<CreateSpacePostModalProps> = ({
         score: 0,
         commentCount: 0,
         timeAgo: "Just now",
-      } as any);
+      });
 
       toast.success("Post created successfully!");
       if (onPostCreated) {
@@ -113,8 +124,8 @@ export const CreateSpacePostModal: React.FC<CreateSpacePostModalProps> = ({
       setContent("");
       setTagsInput("");
       setPollOptions(["", ""]);
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to publish post");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to publish post"));
     } finally {
       setSubmitting(false);
     }

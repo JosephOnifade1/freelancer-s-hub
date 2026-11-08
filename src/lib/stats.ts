@@ -1,5 +1,30 @@
 import { supabase } from "./supabase";
 
+interface AuthoredRow {
+  authorUid?: string;
+  createdAt: string;
+}
+
+interface ProfileContributionRow {
+  uid: string;
+  username?: string;
+  displayName?: string;
+  avatarUrl?: string;
+  isVerifiedPro?: boolean;
+}
+
+interface PostHealthRow {
+  id: string;
+  createdAt: string;
+  commentCount?: number;
+}
+
+interface CommentTimingRow {
+  postId: string;
+  createdAt: string;
+}
+
+
 // ─── Most active this week (replaces the fake "Weekly Leaderboard" XP list) ──
 export interface ActiveContributor {
   uid: string;
@@ -19,7 +44,7 @@ export const getMostActiveThisWeek = async (limit = 5): Promise<ActiveContributo
   ]);
 
   const counts: Record<string, number> = {};
-  [...(posts || []), ...(comments || [])].forEach((row: any) => {
+  [...(posts || []), ...(comments || [])].forEach((row: AuthoredRow) => {
     if (!row.authorUid) return;
     counts[row.authorUid] = (counts[row.authorUid] || 0) + 1;
   });
@@ -38,7 +63,7 @@ export const getMostActiveThisWeek = async (limit = 5): Promise<ActiveContributo
 
   return topUids
     .map((uid) => {
-      const profile = (profiles || []).find((p: any) => p.uid === uid);
+      const profile = ((profiles || []) as ProfileContributionRow[]).find((p) => p.uid === uid);
       if (!profile) return null;
       return { ...profile, contributions: counts[uid] } as ActiveContributor;
     })
@@ -60,7 +85,7 @@ export const getUserStreak = async (uid: string): Promise<StreakData> => {
   ]);
 
   const activeDates = new Set<string>();
-  [...(posts || []), ...(comments || [])].forEach((row: any) => {
+  [...(posts || []), ...(comments || [])].forEach((row: AuthoredRow) => {
     activeDates.add(new Date(row.createdAt).toISOString().slice(0, 10));
   });
 
@@ -109,7 +134,7 @@ export const getCommunityHealthStats = async (): Promise<CommunityHealth> => {
     return { helpfulRate: 0, avgResponseLabel: "—" };
   }
 
-  const postsWithReplies = posts.filter((p: any) => (p.commentCount || 0) > 0);
+  const postsWithReplies = (posts as PostHealthRow[]).filter((p) => (p.commentCount || 0) > 0);
   const helpfulRate = Math.round((postsWithReplies.length / posts.length) * 100);
 
   if (postsWithReplies.length === 0) {
@@ -120,16 +145,16 @@ export const getCommunityHealthStats = async (): Promise<CommunityHealth> => {
     .from("comments")
     .select("postId, createdAt")
     .eq("isDeleted", false)
-    .in("postId", postsWithReplies.map((p: any) => p.id))
+    .in("postId", postsWithReplies.map((p) => p.id))
     .order("createdAt", { ascending: true });
 
   const firstCommentByPost: Record<string, string> = {};
-  (firstComments || []).forEach((c: any) => {
+  ((firstComments || []) as CommentTimingRow[]).forEach((c) => {
     if (!firstCommentByPost[c.postId]) firstCommentByPost[c.postId] = c.createdAt;
   });
 
   const diffsMs: number[] = [];
-  postsWithReplies.forEach((p: any) => {
+  postsWithReplies.forEach((p) => {
     const firstReply = firstCommentByPost[p.id];
     if (firstReply) {
       diffsMs.push(new Date(firstReply).getTime() - new Date(p.createdAt).getTime());

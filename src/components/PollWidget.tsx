@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchPollByPostId, votePollOption } from "@/lib/polls";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth-context";
 import { toast } from "sonner";
 import { Check } from "lucide-react";
 
@@ -26,7 +26,7 @@ export function PollWidget({ postId }: PollWidgetProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["poll", postId, user?.uid] });
     },
-    onError: (err: any) => toast.error(err.message || "Failed to vote"),
+    onError: (err: Error) => toast.error(err.message || "Failed to vote"),
   });
 
   if (isLoading || !poll) return null;

@@ -14,7 +14,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth-context";
 import { useQuery } from "@tanstack/react-query";
 import { getUserProfile } from "@/lib/users";
 import { createLead, LeadType } from "@/lib/leads";

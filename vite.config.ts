@@ -15,6 +15,21 @@ export default defineConfig(({ mode }) => ({
     },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  build: {
+    rollupOptions: {
+      output: {
+        // Split the always-loaded vendor stack out of the entry chunk so no
+        // single bundle exceeds ~500 kB and vendor code stays cached across
+        // app deploys. Routes are already code-split via React.lazy.
+        manualChunks: {
+          "react-vendor": ["react", "react-dom", "react-router-dom"],
+          "supabase-vendor": ["@supabase/supabase-js"],
+          "query-vendor": ["@tanstack/react-query"],
+          "motion-vendor": ["framer-motion"],
+        },
+      },
+    },
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

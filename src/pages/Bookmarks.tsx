@@ -6,7 +6,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { useQuery } from "@tanstack/react-query";
 import { fetchPosts } from "@/lib/posts";
 import { getSavedPostIds } from "@/lib/users";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth-context";
 
 const Bookmarks = () => {
   const { user } = useAuth();

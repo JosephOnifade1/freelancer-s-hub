@@ -1,4 +1,4 @@
-import { MessageSquare, Share2, Bookmark, MoreHorizontal, Edit2, Trash2, Eye, ExternalLink } from "lucide-react";
+import { MessageSquare, Share2, Bookmark, MoreHorizontal, Edit2, Trash2, Eye, ExternalLink, Pin, Lock, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { VoteControls } from "@/components/VoteControls";
 import { PostTypeBadge } from "@/components/PostTypeBadge";
@@ -8,7 +8,7 @@ import { formatTimeAgo } from "@/lib/utils";
 import { isVeteran } from "@/lib/users";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getUserProfile, toggleBookmark } from "@/lib/users";
 import { updatePost, softDeletePost } from "@/lib/posts";
@@ -94,7 +94,7 @@ export function PostCard({ post, index }: PostCardProps) {
       queryClient.invalidateQueries({ queryKey: ['savedPosts', user?.uid] });
       toast.success(nowSaved ? "Saved to your bookmarks" : "Removed from bookmarks");
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to save post");
     }
   });
@@ -144,11 +144,26 @@ export function PostCard({ post, index }: PostCardProps) {
         </div>
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1.5">
+          <div className="flex flex-wrap items-center gap-2 mb-1.5">
             <PostTypeBadge type={post.type} />
             <span className="font-body text-xs text-muted-foreground">
               {formatTimeAgo(post.createdAt)}
             </span>
+            {post.isPinned && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-semibold text-brand">
+                <Pin className="h-3 w-3" /> Pinned
+              </span>
+            )}
+            {post.visibility === "members" && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                <Users className="h-3 w-3" /> Members only
+              </span>
+            )}
+            {post.visibility === "admins" && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                <Lock className="h-3 w-3" /> Space admins
+              </span>
+            )}
           </div>
 
           <Link to={post.category ? `/b/${post.category}/p/${post.id}` : `/p/${post.id}`} className="block">
@@ -263,6 +278,21 @@ export function PostCard({ post, index }: PostCardProps) {
             )}
           </span>
           <div className="ml-auto flex items-center gap-2">
+             {post.isPinned && (
+               <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-semibold text-brand">
+                 <Pin className="h-3 w-3" /> Pinned
+               </span>
+             )}
+             {post.visibility === "members" && (
+               <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                 <Users className="h-3 w-3" /> Members only
+               </span>
+             )}
+             {post.visibility === "admins" && (
+               <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                 <Lock className="h-3 w-3" /> Space admins
+               </span>
+             )}
              {post.type !== 'discussion' && <PostTypeBadge type={post.type} />}
           </div>
         </div>

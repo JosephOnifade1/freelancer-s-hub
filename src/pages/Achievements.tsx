@@ -5,7 +5,7 @@ import { formatDistanceToNowStrict } from "date-fns";
 import { motion } from "framer-motion";
 import { BadgeCheck, BookOpen, Calendar, Flame, Heart, Lock, MessageSquare, Star, Trophy, Zap, type LucideIcon } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth-context";
 import { getUserProfile, getUserResourcesCount } from "@/lib/users";
 import { fetchPosts } from "@/lib/posts";
 import { fetchCommentsByAuthor } from "@/lib/comments";

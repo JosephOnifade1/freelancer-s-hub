@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { ArrowBigUp, ArrowBigDown } from "lucide-react";
 import { motion } from "framer-motion";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth-context";
 import { fetchUserVote, handleVote as rtdbHandleVote } from "@/lib/votes";
+import { getErrorMessage } from "@/lib/utils";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -70,13 +71,13 @@ export function VoteControls({ entityId, authorUid, score, type = "post", postId
       }
       // Refresh posts so vote scores stay in sync across the feed
       queryClient.invalidateQueries({ queryKey: ['posts'] });
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
       // The RPC rejected the vote — roll the optimistic update back so the
       // UI never claims a score the server doesn't have.
       setVote(vote);
       setDisplayScore((prev) => prev - delta);
-      toast.error(e.message || "Failed to vote");
+      toast.error(getErrorMessage(e, "Failed to vote"));
     }
   };
 

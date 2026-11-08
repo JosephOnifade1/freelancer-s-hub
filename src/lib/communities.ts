@@ -92,7 +92,27 @@ const TOPIC_TO_CATEGORY: Record<string, CommunityData["category"]> = {
   workflow: "Other",
 };
 
-const dbRowToCommunity = (row: any): CommunityData => ({
+interface CommunityRow {
+  slug: string;
+  name: string;
+  description: string;
+  icon?: string;
+  category?: CommunityData["category"];
+  topics?: string[];
+  createdAt: string;
+  ownerId: string;
+  memberCount?: number;
+}
+
+interface CommunityMembershipRow {
+  communitySlug: string;
+}
+
+interface CommunityMemberRow {
+  profiles: CommunityMember | null;
+}
+
+const dbRowToCommunity = (row: CommunityRow): CommunityData => ({
   id: row.slug,
   name: row.name,
   slug: row.slug,
@@ -186,7 +206,7 @@ export const getUserCommunities = async (uid: string): Promise<string[]> => {
     .eq("userId", uid);
 
   if (error || !data) return [];
-  return data.map((row: any) => row.communitySlug);
+  return (data as CommunityMembershipRow[]).map((row) => row.communitySlug);
 };
 
 // ─── Real member list for a B-Space ────────────────────────────────────────
@@ -208,10 +228,10 @@ export const fetchCommunityMembers = async (slug: string): Promise<CommunityMemb
 
   if (error || !data) return [];
 
-  return data
-    .map((row: any) => row.profiles)
-    .filter(Boolean)
-    .map((p: any) => ({
+  return (data as unknown as CommunityMemberRow[])
+    .map((row) => row.profiles)
+    .filter((profile): profile is CommunityMember => Boolean(profile))
+    .map((p) => ({
       uid: p.uid,
       username: p.username,
       displayName: p.displayName,

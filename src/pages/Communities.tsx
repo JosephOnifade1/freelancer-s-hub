@@ -8,7 +8,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { CreateCommunityModal } from "@/components/modals/CreateCommunityModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth-context";
 import {
   fetchAllCommunities,
   getCommunityStyle,
@@ -51,7 +51,7 @@ const Communities = () => {
       return joinCommunity(user.uid, slug);
     },
     onSuccess: (_, slug) => { refresh(); toast.success(`Joined b/${slug}`); },
-    onError: (e: any) => toast.error(e.message || "Couldn't join this space"),
+    onError: (e: Error) => toast.error(e.message || "Couldn't join this space"),
   });
 
   const leaveMutation = useMutation({
@@ -60,7 +60,7 @@ const Communities = () => {
       return leaveCommunity(user.uid, slug);
     },
     onSuccess: (_, slug) => { refresh(); toast.success(`Left b/${slug}`); },
-    onError: (e: any) => toast.error(e.message || "Couldn't leave this space"),
+    onError: (e: Error) => toast.error(e.message || "Couldn't leave this space"),
   });
 
   // Category chips come from the categories that actually exist in the data,

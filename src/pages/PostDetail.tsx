@@ -9,7 +9,7 @@ import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchPostById, incrementPostViews, updatePost, softDeletePost } from "@/lib/posts";
 import { fetchComments, addComment, updateComment, softDeleteComment, CommentData } from "@/lib/comments";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth-context";
 import { getUserProfile, toggleBookmark } from "@/lib/users";
 import { formatTimeAgo } from "@/lib/utils";
 import { toast } from "sonner";
@@ -63,7 +63,7 @@ const CommentTextarea = ({
 );
 
 // ─── Comment Thread ──────────────────────────────────────────────────────────
-const CommentThread = ({ comment, postId, depth = 0 }: { comment: CommentData; postId: string; depth?: number }) => {
+const CommentThread = ({ comment, postId, depth = 0, commentsEnabled = true }: { comment: CommentData; postId: string; depth?: number; commentsEnabled?: boolean }) => {
   const [isReplying, setIsReplying] = useState(false);
   const [replyBody, setReplyBody] = useState("");
   const [isEditing, setIsEditing] = useState(false);
@@ -96,7 +96,7 @@ const CommentThread = ({ comment, postId, depth = 0 }: { comment: CommentData; p
       toast.success("Reply posted!");
       queryClient.invalidateQueries({ queryKey: ['comments', postId] });
     },
-    onError: (e: any) => toast.error(e.message || "Failed to post reply")
+    onError: (e: Error) => toast.error(e.message || "Failed to post reply")
   });
 
   const updateMutation = useMutation({
@@ -136,7 +136,7 @@ const CommentThread = ({ comment, postId, depth = 0 }: { comment: CommentData; p
           </div>
         </div>
         {comment.replies && comment.replies.map((r) => (
-          <CommentThread key={r.id} comment={r} postId={postId} depth={depth + 1} />
+          <CommentThread key={r.id} comment={r} postId={postId} depth={depth + 1} commentsEnabled={commentsEnabled} />
         ))}
       </div>
     );
@@ -157,7 +157,7 @@ const CommentThread = ({ comment, postId, depth = 0 }: { comment: CommentData; p
                 </div>
                 <span className="font-body text-xs font-semibold text-foreground flex items-center gap-1">
                   {comment.author || 'Anonymous'}
-                  <VerifiedBadge isVerified={!!(comment as any).isVerifiedPro} size={12} showTooltip={false} />
+                  <VerifiedBadge isVerified={!!comment.isVerifiedPro} size={12} showTooltip={false} />
                 </span>
                 <span className="font-body text-[10px] text-muted-foreground">
                   <LiveReputation uid={comment.authorUid} fallback={comment.reputation || 0} />
@@ -211,12 +211,14 @@ const CommentThread = ({ comment, postId, depth = 0 }: { comment: CommentData; p
             </p>
           )}
           
-          <button 
-            onClick={() => setIsReplying(!isReplying)}
-            className="font-body text-[11px] font-medium text-muted-foreground hover:text-brand transition-colors mt-1"
-          >
-            {isReplying ? "Cancel" : "Reply"}
-          </button>
+          {commentsEnabled && (
+            <button
+              onClick={() => setIsReplying(!isReplying)}
+              className="font-body text-[11px] font-medium text-muted-foreground hover:text-brand transition-colors mt-1"
+            >
+              {isReplying ? "Cancel" : "Reply"}
+            </button>
+          )}
 
           {isReplying && (
             <div className="mt-3 bg-card rounded-lg p-3 border border-brand/20 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
@@ -242,7 +244,7 @@ const CommentThread = ({ comment, postId, depth = 0 }: { comment: CommentData; p
       </div>
       
       {comment.replies && comment.replies.map((r) => (
-        <CommentThread key={r.id} comment={r} postId={postId} depth={depth + 1} />
+        <CommentThread key={r.id} comment={r} postId={postId} depth={depth + 1} commentsEnabled={commentsEnabled} />
       ))}
     </div>
   );
@@ -485,7 +487,7 @@ const PostDetail = () => {
                     </div>
                     <span className="font-body text-sm font-medium text-foreground flex items-center gap-1">
                       {post.author?.name || 'Anonymous'}
-                      <VerifiedBadge isVerified={!!(post.author as any).isVerifiedPro} size={14} showTooltip={false} />
+                      <VerifiedBadge isVerified={!!post.author?.isVerifiedPro} size={14} showTooltip={false} />
                     </span>
                     <span className="font-body text-[11px] text-muted-foreground">
                       <LiveReputation uid={post.author?.uid} fallback={post.author?.reputation || 0} />
@@ -532,8 +534,17 @@ const PostDetail = () => {
           </div>
         )}
 
-        {/* Comment compose — plain textarea, no rich text toolbar */}
-        {!post.isDeleted && (
+        {/* Comment compose — blocked entirely when the author turned
+            comments off (enforced in comments.ts + RLS as well) */}
+        {!post.isDeleted && post.allowComments === false && (
+          <div className="rounded-xl border border-border bg-card p-4 mb-6 text-center shadow-sm">
+            <p className="text-sm font-medium text-foreground">Comments are turned off for this post</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Existing comments stay visible, but new comments and replies are disabled.
+            </p>
+          </div>
+        )}
+        {!post.isDeleted && post.allowComments !== false && (
           <div className="rounded-xl border border-border bg-card p-4 mb-6 shadow-sm">
             <p className="font-body text-xs font-semibold text-muted-foreground mb-2 ">Leave a comment</p>
             <CommentTextarea
@@ -565,7 +576,11 @@ const PostDetail = () => {
           </div>
         ) : commentTree.length === 0 ? (
           <div className="rounded-xl border border-border bg-card p-8 text-center">
-            <p className="text-sm text-muted-foreground">No comments yet. Be the first to share your thoughts!</p>
+            <p className="text-sm text-muted-foreground">
+              {post.allowComments === false
+                ? "No comments yet — and new comments are turned off for this post."
+                : "No comments yet. Be the first to share your thoughts!"}
+            </p>
           </div>
         ) : (
           <div className="rounded-xl border border-border bg-card px-4 shadow-sm divide-y divide-border/50 overflow-hidden">
