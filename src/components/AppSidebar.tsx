@@ -5,7 +5,9 @@ import {
   Settings,
   Trophy,
   Plus,
+  Bell,
   Briefcase,
+  ShieldCheck,
   Inbox,
   TrendingUp,
   Zap,
@@ -44,6 +46,8 @@ const discover = [
 ];
 
 const personal = [
+  { title: "Notifications", url: "/notifications", icon: Bell },
+  { title: "Moderation", url: "/admin", icon: ShieldCheck },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 

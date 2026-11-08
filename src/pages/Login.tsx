@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, Navigate, useLocation } from "react-router-dom";
 import { supabase, isDemoMode } from "../lib/supabase";
 import { ensureUserProfile } from "../lib/users";
+import { postAuthRedirect, resendConfirmationEmail, authErrorMessage } from "../lib/auth";
+import { useAuth } from "../hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +15,12 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user, loading: authLoading } = useAuth();
+  const redirectTo = postAuthRedirect(location.state);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +34,8 @@ export default function Login() {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         if (error.message.includes("Email not confirmed")) {
-          throw new Error("Your email address has not been confirmed yet. Please check your inbox or disable 'Confirm email' in your Supabase Auth settings.");
+          setUnconfirmedEmail(email);
+          throw new Error("Your email address has not been confirmed yet. Please check your inbox for the confirmation link.");
         } else if (error.message.includes("Invalid login credentials")) {
           throw new Error("Invalid email or password. Please check your details or create a new account.");
         }
@@ -39,7 +47,7 @@ export default function Login() {
       }
 
       toast.success("Logged in successfully!");
-      navigate("/");
+      navigate(redirectTo, { replace: true });
     } catch (error: any) {
       if (error?.message?.includes("Failed to fetch")) {
         toast.error("Unable to connect to Supabase backend. Please check your connection or project status.");
@@ -98,13 +106,31 @@ export default function Login() {
       }
 
       toast.success("Logged in as Demo Freelancer!");
-      navigate("/");
+      navigate(redirectTo, { replace: true });
     } catch (error: any) {
       toast.error(error.message || "Demo login failed.");
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleResendConfirmation = async () => {
+    if (!unconfirmedEmail) return;
+    setResending(true);
+    try {
+      await resendConfirmationEmail(unconfirmedEmail);
+      toast.success("Confirmation email sent. Check your inbox, then log in.");
+    } catch (error) {
+      toast.error(authErrorMessage(error, "Could not resend the confirmation email."));
+    } finally {
+      setResending(false);
+    }
+  };
+
+  // Already signed in? Don't show a login form — go where they were headed.
+  if (!authLoading && user) {
+    return <Navigate to={redirectTo} replace />;
+  }
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
@@ -160,9 +186,27 @@ export default function Login() {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-3">
+            {unconfirmedEmail && (
+              <div className="w-full rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+                <p className="text-foreground">This email hasn't been confirmed yet.</p>
+                <button
+                  type="button"
+                  onClick={handleResendConfirmation}
+                  disabled={resending}
+                  className="mt-1 font-medium text-brand hover:underline disabled:opacity-50"
+                >
+                  {resending ? "Sending..." : "Resend confirmation email"}
+                </button>
+              </div>
+            )}
             <Button className="w-full" type="submit" disabled={isLoading}>
               {isLoading ? "Logging in..." : "Log in"}
             </Button>
+            <div className="w-full text-right">
+              <Link to="/forgot-password" className="text-sm text-muted-foreground hover:text-brand hover:underline">
+                Forgot your password?
+              </Link>
+            </div>
 
             {isDemoMode && (
               <Button

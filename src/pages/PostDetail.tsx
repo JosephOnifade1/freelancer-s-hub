@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, MessageSquare, Share2, Bookmark, Loader2, MoreHorizontal, Edit2, Trash2, Eye, ExternalLink } from "lucide-react";
+import { ArrowLeft, MessageSquare, Share2, Bookmark, Loader2, MoreHorizontal, Edit2, Trash2, Eye, ExternalLink, Flag } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { VoteControls } from "@/components/VoteControls";
 import { PostTypeBadge } from "@/components/PostTypeBadge";
@@ -15,6 +15,7 @@ import { formatTimeAgo } from "@/lib/utils";
 import { toast } from "sonner";
 import { Editor } from "@/components/editor/Editor";
 import { MarkdownRenderer } from "@/components/editor/MarkdownRenderer";
+import { ReportDialog } from "@/components/ReportDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -255,6 +256,7 @@ const PostDetail = () => {
   
   const [newComment, setNewComment] = useState("");
   const [isEditingPost, setIsEditingPost] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
   const [editPostBody, setEditPostBody] = useState("");
 
   const { data: post, isLoading: loadingPost } = useQuery({
@@ -499,6 +501,11 @@ const PostDetail = () => {
                     <button onClick={() => bookmarkMutation.mutate()} disabled={bookmarkMutation.isPending} className={`rounded-md p-1.5 transition-colors hover:bg-secondary ${isSaved ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
                       <Bookmark className="h-3.5 w-3.5" fill={isSaved ? "currentColor" : "none"} />
                     </button>
+                    {!isOwnPost && (
+                      <button onClick={() => setIsReportOpen(true)} title="Report this post" className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+                        <Flag className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                     {isOwnPost && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -568,6 +575,16 @@ const PostDetail = () => {
           </div>
         )}
       </div>
+
+      {post && (
+        <ReportDialog
+          open={isReportOpen}
+          onOpenChange={setIsReportOpen}
+          entityType="post"
+          entityId={post.id}
+          entityLabel="this post"
+        />
+      )}
     </AppLayout>
   );
 };

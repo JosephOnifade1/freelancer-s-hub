@@ -1,10 +1,11 @@
 import { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { fetchPosts } from "@/lib/posts";
-import { getFollowingIds } from "@/lib/users";
+import { getFollowingIds, getUserProfile } from "@/lib/users";
 import { PostCard } from "@/components/PostCard";
 import { FeedSidebar } from "@/components/FeedSidebar";
 import { ComposerBar } from "@/components/ComposerBar";
@@ -14,6 +15,21 @@ const TABS = ["For You", "Following"] as const;
 const Index = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("For You");
+  const [bannerDismissed, setBannerDismissed] = useState(
+    () => sessionStorage.getItem("borynx_profile_banner_dismissed") === "1"
+  );
+
+  const { data: myProfile } = useQuery({
+    queryKey: ["myProfile", user?.uid],
+    queryFn: () => (user?.uid ? getUserProfile(user.uid) : null),
+    enabled: !!user?.uid,
+  });
+
+  // Onboarding prompt: shown until the profile has a real bio and skills.
+  const profileIncomplete =
+    !!myProfile &&
+    ((myProfile.skills || []).length === 0 ||
+      ["", "New to Borynx!", "New freelancer on Borynx!"].includes((myProfile.bio || "").trim()));
 
   const { data: posts = [], isLoading } = useQuery({
     queryKey: ["posts"],
@@ -38,6 +54,31 @@ const Index = () => {
       <div className="mx-auto max-w-[1380px] px-4 py-6 md:px-6">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
           <div className="space-y-5 lg:col-span-8">
+            {profileIncomplete && !bannerDismissed && (
+              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-brand/30 bg-brand/5 p-4">
+                <p className="min-w-0 flex-1 text-sm leading-relaxed text-muted-foreground">
+                  <span className="font-semibold text-foreground">Your profile is incomplete.</span>{" "}
+                  Add your skills and a short bio so clients can find and trust you.
+                </p>
+                <Link
+                  to="/onboarding"
+                  className="rounded-lg bg-primary px-3.5 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"
+                >
+                  Complete profile
+                </Link>
+                <button
+                  type="button"
+                  aria-label="Dismiss"
+                  onClick={() => {
+                    sessionStorage.setItem("borynx_profile_banner_dismissed", "1");
+                    setBannerDismissed(true);
+                  }}
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
             <div className="flex items-center gap-6 border-b border-border">
               {TABS.map((tab) => {
                 const isActive = activeTab === tab;
