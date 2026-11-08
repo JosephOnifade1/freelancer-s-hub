@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { SidebarContext, useSidebar, type SidebarContextValue } from "@/components/ui/sidebar-context";
 
 const SIDEBAR_COOKIE_NAME = "sidebar:state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
@@ -18,31 +19,6 @@ const SIDEBAR_WIDTH = "270px";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "30px";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
-
-type SidebarContext = {
-  state: "expanded" | "collapsed";
-  open: boolean;
-  setOpen: (open: boolean) => void;
-  openMobile: boolean;
-  setOpenMobile: (open: boolean) => void;
-  isMobile: boolean;
-  toggleSidebar: () => void;
-  isPinned: boolean;
-  setIsPinned: (pinned: boolean) => void;
-  isHovered: boolean;
-  setIsHovered: (hovered: boolean) => void;
-};
-
-const SidebarContext = React.createContext<SidebarContext | null>(null);
-
-function useSidebar() {
-  const context = React.useContext(SidebarContext);
-  if (!context) {
-    throw new Error("useSidebar must be used within a SidebarProvider.");
-  }
-
-  return context;
-}
 
 const SidebarProvider = React.forwardRef<
   HTMLDivElement,
@@ -100,7 +76,7 @@ const SidebarProvider = React.forwardRef<
   // This makes it easier to style the sidebar with Tailwind classes.
   const state = open ? "expanded" : "collapsed";
 
-  const contextValue = React.useMemo<SidebarContext>(
+  const contextValue = React.useMemo<SidebarContextValue>(
     () => ({
       state,
       open,
@@ -659,5 +635,4 @@ export {
   SidebarRail,
   SidebarSeparator,
   SidebarTrigger,
-  useSidebar,
 };

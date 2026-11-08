@@ -1,10 +1,11 @@
-import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { useSidebar } from "@/components/ui/sidebar-context";
 import { AppSidebar } from "@/components/AppSidebar";
 import { VeteranCelebration } from "./VeteranCelebration";
 import { NotificationBell } from "./NotificationBell";
 import { Plus, User, LogOut, Settings, Search, X, FileText, Sparkles, Monitor, Sun, Moon, Shield, Check, Wifi, WifiOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth-context";
 import { getUserProfile, UserProfile } from "@/lib/users";
 import { useState, useEffect, useRef } from "react";
 import { globalSearch, SearchResults } from "@/lib/search";

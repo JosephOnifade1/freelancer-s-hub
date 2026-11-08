@@ -6,10 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Truck, Code, Megaphone, Palette, Briefcase, Network, Plus, Check } from "lucide-react";
 import { createCommunity } from "@/lib/communities";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth-context";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { cn } from "@/lib/utils";
+import { cn, getErrorMessage } from "@/lib/utils";
 
 const NICHE_TOPICS = [
   { id: 'logistics', label: 'Logistics', icon: Truck },
@@ -97,8 +97,8 @@ export function CreateCommunityModal({ children }: { children?: React.ReactNode 
       toast.success(`Welcome to ${name}!`);
       setOpen(false);
       navigate(`/b/${slug}`);
-    } catch (err: any) {
-      setError(err.message || "Failed to create community.");
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to create community."));
     } finally {
       setLoading(false);
     }

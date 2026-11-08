@@ -10,7 +10,7 @@ import { PostCard } from "@/components/PostCard";
 import { ComposerBar } from "@/components/ComposerBar";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth-context";
 import { getUserProfile } from "@/lib/users";
 import { fetchPostsByCommunity } from "@/lib/posts";
 import {
@@ -84,7 +84,7 @@ const CommunityDetail = () => {
       refreshMembership();
       toast.success(`Joined b/${slug}`);
     },
-    onError: (err: any) => toast.error(err.message || "Couldn't join this space"),
+    onError: (err: Error) => toast.error(err.message || "Couldn't join this space"),
   });
 
   const leaveMutation = useMutation({
@@ -97,7 +97,7 @@ const CommunityDetail = () => {
       refreshMembership();
       toast.success(`Left b/${slug}`);
     },
-    onError: (err: any) => toast.error(err.message || "Couldn't leave this space"),
+    onError: (err: Error) => toast.error(err.message || "Couldn't leave this space"),
   });
 
   const copyInviteLink = async () => {

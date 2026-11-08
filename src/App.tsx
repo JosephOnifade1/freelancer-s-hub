@@ -5,37 +5,40 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider } from "@/components/ui/sidebar.tsx";
 
-// Page imports
-import Index from "./pages/Index.tsx";
-import NewFeed from "./pages/NewFeed.tsx";
-import Following from "./pages/Following.tsx";
-import Popular from "./pages/Popular.tsx";
-import TagFeed from "./pages/TagFeed.tsx";
-import Communities from "./pages/Communities.tsx";
-import Bookmarks from "./pages/Bookmarks.tsx";
-import Achievements from "./pages/Achievements.tsx";
-import ProfileDetail from "./pages/Profile.tsx";
-import UserMeRedirect from "./pages/UserMeRedirect.tsx";
-import LeadsBoard from "./pages/LeadsBoard.tsx";
-import Applications from "./pages/Applications.tsx";
-import Notifications from "./pages/Notifications.tsx";
-import Privacy from "./pages/Privacy.tsx";
-import Terms from "./pages/Terms.tsx";
-import Admin from "./pages/Admin.tsx";
-import LeadDetail from "./pages/LeadDetail.tsx";
-import CreateLead from "./pages/CreateLead.tsx";
-import Settings from "./pages/Settings.tsx";
-import CreatePost from "./pages/CreatePost.tsx";
-import PostDetail from "./pages/PostDetail.tsx";
-import CommunityDetail from "./pages/CommunityDetail.tsx";
-import NotFound from "./pages/NotFound.tsx";
-import Login from "./pages/Login.tsx";
-import Signup from "./pages/Signup.tsx";
-import ForgotPassword from "./pages/ForgotPassword.tsx";
-import ResetPassword from "./pages/ResetPassword.tsx";
-import Onboarding from "./pages/Onboarding.tsx";
-import Landing from "./pages/Landing.tsx";
-import Drafts from "./pages/Drafts.tsx";
+// Page imports are route-level lazy chunks. This keeps editor-heavy and
+// feature-specific pages out of the first JavaScript payload.
+import { lazy, Suspense, type CSSProperties } from "react";
+
+const Index = lazy(() => import("./pages/Index.tsx"));
+const NewFeed = lazy(() => import("./pages/NewFeed.tsx"));
+const Following = lazy(() => import("./pages/Following.tsx"));
+const Popular = lazy(() => import("./pages/Popular.tsx"));
+const TagFeed = lazy(() => import("./pages/TagFeed.tsx"));
+const Communities = lazy(() => import("./pages/Communities.tsx"));
+const Bookmarks = lazy(() => import("./pages/Bookmarks.tsx"));
+const Achievements = lazy(() => import("./pages/Achievements.tsx"));
+const ProfileDetail = lazy(() => import("./pages/Profile.tsx"));
+const UserMeRedirect = lazy(() => import("./pages/UserMeRedirect.tsx"));
+const LeadsBoard = lazy(() => import("./pages/LeadsBoard.tsx"));
+const Applications = lazy(() => import("./pages/Applications.tsx"));
+const Notifications = lazy(() => import("./pages/Notifications.tsx"));
+const Privacy = lazy(() => import("./pages/Privacy.tsx"));
+const Terms = lazy(() => import("./pages/Terms.tsx"));
+const Admin = lazy(() => import("./pages/Admin.tsx"));
+const LeadDetail = lazy(() => import("./pages/LeadDetail.tsx"));
+const CreateLead = lazy(() => import("./pages/CreateLead.tsx"));
+const Settings = lazy(() => import("./pages/Settings.tsx"));
+const CreatePost = lazy(() => import("./pages/CreatePost.tsx"));
+const PostDetail = lazy(() => import("./pages/PostDetail.tsx"));
+const CommunityDetail = lazy(() => import("./pages/CommunityDetail.tsx"));
+const NotFound = lazy(() => import("./pages/NotFound.tsx"));
+const Login = lazy(() => import("./pages/Login.tsx"));
+const Signup = lazy(() => import("./pages/Signup.tsx"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword.tsx"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword.tsx"));
+const Onboarding = lazy(() => import("./pages/Onboarding.tsx"));
+const Landing = lazy(() => import("./pages/Landing.tsx"));
+const Drafts = lazy(() => import("./pages/Drafts.tsx"));
 
 // Component imports
 import { ProtectedRoute } from "./components/ProtectedRoute.tsx";
@@ -43,7 +46,8 @@ import { ErrorBoundary } from "./components/ErrorBoundary.tsx";
 import { AppLayout } from "./components/AppLayout.tsx";
 import { ComingSoon } from "./components/ComingSoon.tsx";
 
-import { useAuth, AuthProvider } from "./hooks/useAuth.tsx";
+import { useAuth } from "./hooks/auth-context.ts";
+import { AuthProvider } from "./hooks/useAuth.tsx";
 
 // ─── Query Client ───────────────────────────────────────────────────────────
 const queryClient = new QueryClient({
@@ -56,15 +60,16 @@ const queryClient = new QueryClient({
 });
 
 // ─── Root Route: authenticated → feed, anonymous → landing ──────────────────
+const RouteFallback = () => (
+  <div className="min-h-screen flex items-center justify-center" aria-label="Loading page">
+    <div className="animate-pulse h-8 w-8 rounded-full bg-brand/30" />
+  </div>
+);
+
+// ─── Root Route: authenticated → feed, anonymous → landing ──────────────────
 const RootRoute = () => {
   const { user, loading } = useAuth();
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse h-8 w-8 rounded-full bg-brand/30" />
-      </div>
-    );
-  }
+  if (loading) return <RouteFallback />;
   return user ? <Index /> : <Landing />;
 };
 
@@ -106,8 +111,9 @@ const App = () => (
       <Toaster />
       <Sonner />
       <AuthProvider>
-        <SidebarProvider style={{ "--sidebar-top": "3.5rem" } as React.CSSProperties}>
+        <SidebarProvider style={{ "--sidebar-top": "3.5rem" } as CSSProperties}>
           <BrowserRouter>
+            <Suspense fallback={<RouteFallback />}>
             <Routes>
 
               {/* ── Public routes ───────────────────────────────────────── */}
@@ -173,6 +179,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
 
             </Routes>
+            </Suspense>
           </BrowserRouter>
         </SidebarProvider>
       </AuthProvider>

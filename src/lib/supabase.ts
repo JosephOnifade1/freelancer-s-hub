@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { MockSupabaseClient, seedMockData } from "./mockSupabase";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
@@ -24,7 +24,7 @@ const isPlaceholder =
  */
 export const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
 
-let supabaseInstance: any;
+let supabaseInstance: SupabaseClient;
 
 if (isDemoMode) {
   console.info(
@@ -33,7 +33,7 @@ if (isDemoMode) {
   );
   // Seed mock data on first load
   seedMockData();
-  supabaseInstance = new MockSupabaseClient();
+  supabaseInstance = new MockSupabaseClient() as unknown as SupabaseClient;
 } else if (isPlaceholder) {
   console.error(
     "[Borynx] Supabase is not configured and demo mode is off. " +

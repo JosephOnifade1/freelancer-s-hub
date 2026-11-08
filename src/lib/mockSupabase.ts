@@ -1,4 +1,63 @@
-import { User } from "@supabase/supabase-js";
+// ─── Mock database types ─────────────────────────────────────────────────
+// Rows in the mock DB are plain JSON-shaped records. MockValue covers every
+// JSON value (plus undefined for absent fields); MockRow is one table row.
+export type MockValue =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | MockValue[]
+  | { [key: string]: MockValue };
+
+export interface MockRow {
+  [key: string]: MockValue;
+  id?: string;
+  uid?: string;
+  username?: string;
+  status?: string;
+  authorUid?: string;
+  postedByUid?: string;
+  postId?: string;
+  parentId?: string | null;
+  leadId?: string;
+  applicantUid?: string;
+  followerId?: string;
+  followingId?: string;
+  userId?: string;
+  entityType?: string;
+  entityId?: string;
+  createdAt?: string;
+  postedAt?: string;
+  profiles?: MockRow | null;
+}
+
+export interface MockQueryResult {
+  data: MockRow | MockRow[] | null;
+  error: { code?: string; message: string } | null;
+  count?: number;
+}
+
+interface MockAuthUser {
+  uid: string;
+  email: string;
+  password?: string;
+}
+
+interface MockSessionUser {
+  id: string;
+  email: string;
+  email_confirmed_at: string;
+  user_metadata: { display_name?: string; username?: string; [key: string]: MockValue };
+}
+
+interface MockSession {
+  user: MockSessionUser;
+  access_token: string;
+  refresh_token: string;
+}
+
+type MockAuthListener = (event: string, session: MockSession | null) => void;
 
 // Seed default data
 export const seedMockData = () => {
@@ -314,7 +373,7 @@ export const seedMockData = () => {
 
   const seedUsernames = seedProfiles.map(p => ({ username: p.username, uid: p.uid }));
 
-  const checkAndSeed = (tableKey: string, seedData: any) => {
+  const checkAndSeed = (tableKey: string, seedData: unknown) => {
     const key = `mock_supabase_${tableKey}`;
     if (!localStorage.getItem(key)) {
       localStorage.setItem(key, JSON.stringify(seedData));
@@ -344,14 +403,14 @@ export const seedMockData = () => {
 class MockQueryBuilder {
   private tableName: string;
   private selectFields: string = "*";
-  private filters: { type: "eq" | "or" | "ilike"; column?: string; value?: any; orString?: string }[] = [];
+  private filters: { type: "eq" | "or" | "ilike"; column?: string; value?: MockValue; orString?: string }[] = [];
   private orderField?: string;
   private orderAscending?: boolean;
   private limitCount?: number;
   private isSingle: boolean = false;
   private isMaybeSingle: boolean = false;
   private operation: "select" | "insert" | "update" | "delete" | "upsert" = "select";
-  private payload: any = null;
+  private payload: MockRow | MockRow[] | null = null;
 
   constructor(tableName: string) {
     this.tableName = tableName;
@@ -368,12 +427,12 @@ class MockQueryBuilder {
     return this;
   }
 
-  eq(column: string, value: any) {
+  eq(column: string, value: MockValue) {
     this.filters.push({ type: "eq", column, value });
     return this;
   }
 
-  ilike(column: string, value: any) {
+  ilike(column: string, value: MockValue) {
     this.filters.push({ type: "ilike", column, value });
     return this;
   }
@@ -406,13 +465,13 @@ class MockQueryBuilder {
     return this;
   }
 
-  insert(data: any) {
+  insert(data: MockRow | MockRow[]) {
     this.operation = "insert";
     this.payload = data;
     return this;
   }
 
-  update(data: any) {
+  update(data: MockRow) {
     this.operation = "update";
     this.payload = data;
     return this;
@@ -423,17 +482,20 @@ class MockQueryBuilder {
     return this;
   }
 
-  upsert(data: any) {
+  upsert(data: MockRow | MockRow[]) {
     this.operation = "upsert";
     this.payload = data;
     return this;
   }
 
-  async then(onfulfilled?: (value: any) => any, onrejected?: (reason: any) => any) {
+  async then<TResult1 = MockQueryResult, TResult2 = never>(
+    onfulfilled?: ((value: MockQueryResult) => TResult1 | PromiseLike<TResult1>) | null,
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
+  ): Promise<TResult1 | TResult2> {
     try {
       const res = await this.execute();
       if (onfulfilled) return onfulfilled(res);
-      return res;
+      return res as unknown as TResult1;
     } catch (err) {
       if (onrejected) return onrejected(err);
       throw err;
@@ -442,7 +504,7 @@ class MockQueryBuilder {
 
   private async execute() {
     const key = `mock_supabase_${this.tableName}`;
-    let data: any[] = JSON.parse(localStorage.getItem(key) || "[]");
+    const data: MockRow[] = JSON.parse(localStorage.getItem(key) || "[]");
 
     if (this.operation === "select") {
       let filtered = [...data];
@@ -474,8 +536,8 @@ class MockQueryBuilder {
 
       if (this.orderField) {
         filtered.sort((a, b) => {
-          let valA = a[this.orderField!];
-          let valB = b[this.orderField!];
+          const valA = a[this.orderField!];
+          const valB = b[this.orderField!];
 
           if (valA === valB) return 0;
           if (valA === undefined || valA === null) return 1;
@@ -486,13 +548,17 @@ class MockQueryBuilder {
             return this.orderAscending ? cmp : -cmp;
           }
 
-          if (valA instanceof Date || (typeof valA === "string" && !isNaN(Date.parse(valA)))) {
+          if (typeof valA === "string" && !isNaN(Date.parse(valA))) {
             const timeA = new Date(valA).getTime();
-            const timeB = new Date(valB).getTime();
+            const timeB = new Date(String(valB)).getTime();
             return this.orderAscending ? (timeA > timeB ? 1 : -1) : (timeA < timeB ? 1 : -1);
           }
 
-          return this.orderAscending ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
+          if (typeof valA === "number" && typeof valB === "number") {
+            return this.orderAscending ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
+          }
+
+          return 0;
         });
       }
 
@@ -504,9 +570,9 @@ class MockQueryBuilder {
         const newRow = { ...row };
         
         if (this.selectFields.includes("profiles")) {
-          const profilesTable = JSON.parse(localStorage.getItem("mock_supabase_profiles") || "[]");
+          const profilesTable: MockRow[] = JSON.parse(localStorage.getItem("mock_supabase_profiles") || "[]");
           const authorUid = row.authorUid || row.postedByUid;
-          const profile = profilesTable.find((p: any) => p.uid === authorUid);
+          const profile = profilesTable.find((pr) => pr.uid === authorUid);
           newRow.profiles = profile || null;
         }
 
@@ -529,7 +595,11 @@ class MockQueryBuilder {
 
     if (this.operation === "insert") {
       const isArray = Array.isArray(this.payload);
-      const inserted = isArray ? this.payload : [this.payload];
+      const inserted: MockRow[] = Array.isArray(this.payload)
+        ? this.payload
+        : this.payload
+          ? [this.payload]
+          : [];
       
       const newRecords = inserted.map(item => {
         const record = { ...item };
@@ -628,6 +698,7 @@ class MockQueryBuilder {
           : []
       );
       let updatedCount = 0;
+      const updatePayload: MockRow | null = Array.isArray(this.payload) ? null : this.payload;
       const updatedData = data.map(row => {
         const matches = this.filters.every(filter => {
           if (filter.type === "eq") {
@@ -638,7 +709,7 @@ class MockQueryBuilder {
 
         if (matches) {
           updatedCount++;
-          return { ...row, ...this.payload, updatedAt: new Date().toISOString() };
+          return { ...row, ...updatePayload, updatedAt: new Date().toISOString() };
         }
         return row;
       });
@@ -646,7 +717,7 @@ class MockQueryBuilder {
       localStorage.setItem(key, JSON.stringify(updatedData));
 
       // Notification trigger: application status transitions.
-      if (this.tableName === "lead_applications" && this.payload?.status) {
+      if (this.tableName === "lead_applications" && updatePayload?.status) {
         updatedData.forEach((row, idx) => {
           if (data[idx] === row) return;
           const prev = prevStatusById.get(row.id);
@@ -672,7 +743,7 @@ class MockQueryBuilder {
       }
 
       // Mirror of the applicantsCount trigger: withdrawn transitions move it.
-      if (this.tableName === "lead_applications" && this.payload?.status) {
+      if (this.tableName === "lead_applications" && updatePayload?.status) {
         const leads: { id: string; applicantsCount?: number }[] = JSON.parse(localStorage.getItem("mock_supabase_leads") || "[]");
         let leadsChanged = false;
         updatedData.forEach((row, idx) => {
@@ -709,7 +780,11 @@ class MockQueryBuilder {
 
     if (this.operation === "upsert") {
       const isArray = Array.isArray(this.payload);
-      const items = isArray ? this.payload : [this.payload];
+      const items: MockRow[] = Array.isArray(this.payload)
+        ? this.payload
+        : this.payload
+          ? [this.payload]
+          : [];
 
       items.forEach(item => {
         let matchIdx = -1;
@@ -747,19 +822,19 @@ class MockQueryBuilder {
 }
 
 class MockAuth {
-  private listeners: ((event: string, session: any) => void)[] = [];
+  private listeners: MockAuthListener[] = [];
 
-  private getSessionUser() {
+  private getSessionUser(): MockSession | null {
     const session = localStorage.getItem("mock_supabase_session");
     if (!session) return null;
     try {
-      return JSON.parse(session);
+      return JSON.parse(session) as MockSession;
     } catch {
       return null;
     }
   }
 
-  private setSessionUser(session: any) {
+  private setSessionUser(session: MockSession | null) {
     if (session) {
       localStorage.setItem("mock_supabase_session", JSON.stringify(session));
       this.triggerListeners("SIGNED_IN", session);
@@ -769,13 +844,17 @@ class MockAuth {
     }
   }
 
-  private triggerListeners(event: string, session: any) {
+  private triggerListeners(event: string, session: MockSession | null) {
     this.listeners.forEach(cb => cb(event, session));
   }
 
-  async signUp({ email, password, options }: any) {
-    const users = JSON.parse(localStorage.getItem("mock_supabase_users") || "[]");
-    if (users.find((u: any) => u.email === email)) {
+  async signUp({ email, password, options }: {
+    email: string;
+    password: string;
+    options?: { data?: { display_name?: string; username?: string } };
+  }) {
+    const users: MockAuthUser[] = JSON.parse(localStorage.getItem("mock_supabase_users") || "[]");
+    if (users.find((u) => u.email === email)) {
       return { data: null, error: { message: "User already exists." } };
     }
 
@@ -834,15 +913,15 @@ class MockAuth {
     return { data: { user: session.user, session }, error: null };
   }
 
-  async signInWithPassword({ email, password }: any) {
-    const users = JSON.parse(localStorage.getItem("mock_supabase_users") || "[]");
-    const user = users.find((u: any) => u.email === email && u.password === password);
+  async signInWithPassword({ email, password }: { email: string; password: string }) {
+    const users: MockAuthUser[] = JSON.parse(localStorage.getItem("mock_supabase_users") || "[]");
+    const user = users.find((u) => u.email === email && u.password === password);
     if (!user) {
       return { data: null, error: { message: "Invalid email or password." } };
     }
 
-    const profiles = JSON.parse(localStorage.getItem("mock_supabase_profiles") || "[]");
-    const profile = profiles.find((p: any) => p.uid === user.uid);
+    const profiles: { uid: string; displayName?: string }[] = JSON.parse(localStorage.getItem("mock_supabase_profiles") || "[]");
+    const profile = profiles.find((pr) => pr.uid === user.uid);
     const displayName = profile?.displayName || user.email.split("@")[0];
 
     const session = {
@@ -860,12 +939,15 @@ class MockAuth {
     return { data: { user: session.user, session }, error: null };
   }
 
-  async signInWithOAuth({ provider, options }: any) {
+  async signInWithOAuth({ provider: _provider, options }: {
+    provider: string;
+    options?: { redirectTo?: string };
+  }) {
     const email = "google_user@example.com";
     const displayName = "Google User";
-    
-    const users = JSON.parse(localStorage.getItem("mock_supabase_users") || "[]");
-    let user = users.find((u: any) => u.email === email);
+
+    const users: MockAuthUser[] = JSON.parse(localStorage.getItem("mock_supabase_users") || "[]");
+    let user = users.find((u) => u.email === email);
     if (!user) {
       const uid = self.crypto.randomUUID();
       user = { uid, email, password: "oauth_dummy_password" };
@@ -946,7 +1028,7 @@ class MockAuth {
     return { data: {}, error: null };
   }
 
-  async updateUser({ password, data: metadata }: { password?: string; data?: Record<string, unknown> }) {
+  async updateUser({ password, data: metadata }: { password?: string; data?: Record<string, MockValue> }) {
     const session = this.getSessionUser();
     let recovery: { uid: string; email: string } | null = null;
     try {
@@ -1012,7 +1094,7 @@ class MockAuth {
     return { data: { session }, error: null };
   }
 
-  onAuthStateChange(callback: (event: string, session: any) => void) {
+  onAuthStateChange(callback: MockAuthListener) {
     this.listeners.push(callback);
     const session = this.getSessionUser();
     callback("INITIAL_SESSION", session);
@@ -1069,14 +1151,71 @@ const pushMockNotification = (n: {
 const mockTable = <T,>(name: string): T[] =>
   JSON.parse(localStorage.getItem(`mock_supabase_${name}`) || "[]") as T[];
 
+// ─── Mock Storage ─────────────────────────────────────────────────────
+// Mirrors the real buckets (avatars, post-images): upload stores the file
+// as a data URL under mock_supabase_storage and getPublicUrl returns it,
+// so avatarUrl / post markdown contain a URL string exactly like prod.
+class MockStorageBucket {
+  private bucket: string;
+
+  constructor(bucket: string) {
+    this.bucket = bucket;
+  }
+
+  private readStore(): Record<string, Record<string, string>> {
+    try {
+      return JSON.parse(localStorage.getItem("mock_supabase_storage") || "{}");
+    } catch {
+      return {};
+    }
+  }
+
+  async upload(path: string, file: File) {
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error("Could not read the selected file."));
+      reader.readAsDataURL(file);
+    });
+
+    const store = this.readStore();
+    if (!store[this.bucket]) store[this.bucket] = {};
+    store[this.bucket][path] = dataUrl;
+    try {
+      localStorage.setItem("mock_supabase_storage", JSON.stringify(store));
+    } catch {
+      return { data: null, error: { message: "Demo storage is full (localStorage quota). Try a smaller image." } };
+    }
+    return { data: { path }, error: null };
+  }
+
+  getPublicUrl(path: string) {
+    const store = this.readStore();
+    return { data: { publicUrl: store[this.bucket]?.[path] || "" } };
+  }
+
+  async remove(paths: string[]) {
+    const store = this.readStore();
+    if (store[this.bucket]) {
+      paths.forEach((path) => delete store[this.bucket][path]);
+      localStorage.setItem("mock_supabase_storage", JSON.stringify(store));
+    }
+    return { data: [], error: null };
+  }
+}
+
 export class MockSupabaseClient {
   auth = new MockAuth();
+
+  storage = {
+    from: (bucket: string) => new MockStorageBucket(bucket),
+  };
 
   from(tableName: string) {
     return new MockQueryBuilder(tableName);
   }
 
-  async rpc(fnName: string, args: any) {
+  async rpc(fnName: string, args: Record<string, MockValue>) {
     // ── Moderation RPCs (mirror supabase_reports_and_moderation_migration.sql)
     if (fnName === "moderate_report" || fnName === "set_user_verified_pro" || fnName === "set_user_role") {
       type MockProfileRow = { uid: string; role?: string; isVerifiedPro?: boolean };
@@ -1116,10 +1255,11 @@ export class MockSupabaseClient {
           }
         }
 
+        const newStatus = typeof args.new_status === "string" ? args.new_status : undefined;
         reports[idx] = {
           ...report,
-          status: args.new_status,
-          resolvedBy: args.new_status === "open" ? null : callerUid,
+          status: newStatus,
+          resolvedBy: newStatus === "open" ? null : callerUid,
           updatedAt: new Date().toISOString(),
         };
         localStorage.setItem("mock_supabase_reports", JSON.stringify(reports));
@@ -1143,7 +1283,7 @@ export class MockSupabaseClient {
         if (args.target_uid === callerUid && args.new_role !== "admin") {
           return { data: null, error: { message: "Admins cannot demote themselves" } };
         }
-        profiles[targetIdx].role = args.new_role;
+        profiles[targetIdx].role = typeof args.new_role === "string" ? args.new_role : profiles[targetIdx].role;
       }
       saveProfiles();
       return { data: null, error: null };
@@ -1153,37 +1293,40 @@ export class MockSupabaseClient {
     // Local equivalent of the cast_vote SECURITY DEFINER RPC: compute the
     // delta from the stored vote, then update vote + entity + reputation.
     if (fnName === "cast_vote") {
-      const { entity_id, entity_type, voter_uid, new_vote } = args;
-      const tableKey = entity_type === "post" ? "posts" : "comments";
+      const entityId = typeof args.entity_id === "string" ? args.entity_id : "";
+      const entityType = typeof args.entity_type === "string" ? args.entity_type : "";
+      const voterUid = typeof args.voter_uid === "string" ? args.voter_uid : "";
+      const newVote = typeof args.new_vote === "number" ? args.new_vote : 0;
+      const tableKey = entityType === "post" ? "posts" : "comments";
       type MockVote = { id?: string; userId: string; entityType: string; entityId: string; voteValue: number };
       type MockEntity = { id: string; score?: number; ups?: number; downs?: number; authorUid?: string; postId?: string };
       type MockProfile = { uid: string; reputation?: number };
       const votes: MockVote[] = JSON.parse(localStorage.getItem("mock_supabase_votes") || "[]");
       const entities: MockEntity[] = JSON.parse(localStorage.getItem(`mock_supabase_${tableKey}`) || "[]");
-      const entityIdx = entities.findIndex((e) => e.id === entity_id);
+      const entityIdx = entities.findIndex((e) => e.id === entityId);
       if (entityIdx < 0) return { data: null, error: { message: "Entity not found" } };
 
       const voteIdx = votes.findIndex(
-        (v) => v.userId === voter_uid && v.entityType === entity_type && v.entityId === entity_id
+        (v) => v.userId === voterUid && v.entityType === entityType && v.entityId === entityId
       );
       const previousVote = voteIdx >= 0 ? votes[voteIdx].voteValue : 0;
-      if (previousVote === new_vote) return { data: null, error: null };
+      if (previousVote === newVote) return { data: null, error: null };
 
-      if (new_vote === 0) {
+      if (newVote === 0) {
         if (voteIdx >= 0) votes.splice(voteIdx, 1);
       } else if (voteIdx >= 0) {
-        votes[voteIdx].voteValue = new_vote;
+        votes[voteIdx].voteValue = newVote;
       } else {
-        votes.push({ id: `vote-${Date.now()}`, userId: voter_uid, entityType: entity_type, entityId: entity_id, voteValue: new_vote });
+        votes.push({ id: `vote-${Date.now()}`, userId: voterUid, entityType: entityType, entityId: entityId, voteValue: newVote });
       }
 
-      const diff = new_vote - previousVote;
+      const diff = newVote - previousVote;
       entities[entityIdx].score = (entities[entityIdx].score || 0) + diff;
-      entities[entityIdx].ups = (entities[entityIdx].ups || 0) + ((new_vote === 1 ? 1 : 0) - (previousVote === 1 ? 1 : 0));
-      entities[entityIdx].downs = (entities[entityIdx].downs || 0) + ((new_vote === -1 ? 1 : 0) - (previousVote === -1 ? 1 : 0));
+      entities[entityIdx].ups = (entities[entityIdx].ups || 0) + ((newVote === 1 ? 1 : 0) - (previousVote === 1 ? 1 : 0));
+      entities[entityIdx].downs = (entities[entityIdx].downs || 0) + ((newVote === -1 ? 1 : 0) - (previousVote === -1 ? 1 : 0));
 
       const authorUid = entities[entityIdx].authorUid;
-      if (authorUid && authorUid !== voter_uid) {
+      if (authorUid && authorUid !== voterUid) {
         const profiles: MockProfile[] = JSON.parse(localStorage.getItem("mock_supabase_profiles") || "[]");
         const authorIdx = profiles.findIndex((p) => p.uid === authorUid);
         if (authorIdx >= 0) {
@@ -1192,14 +1335,14 @@ export class MockSupabaseClient {
         }
       }
 
-      if (new_vote === 1 && previousVote !== 1 && authorUid && authorUid !== voter_uid) {
+      if (newVote === 1 && previousVote !== 1 && authorUid && authorUid !== voterUid) {
         pushMockNotification({
           userId: authorUid,
-          actorUid: voter_uid,
+          actorUid: voterUid,
           type: "upvote",
-          entityId: entity_id,
-          contextId: entity_type === "post" ? entity_id : entities[entityIdx].postId,
-          message: `${mockActorName(voter_uid)} upvoted your ${entity_type}`,
+          entityId: entityId,
+          contextId: entityType === "post" ? entityId : entities[entityIdx].postId,
+          message: `${mockActorName(voterUid)} upvoted your ${entityType}`,
         });
       }
 
@@ -1209,8 +1352,8 @@ export class MockSupabaseClient {
     }
 
     if (fnName === "increment_post_views") {
-      const posts = JSON.parse(localStorage.getItem("mock_supabase_posts") || "[]");
-      const postIdx = posts.findIndex((p: any) => p.id === args.post_id);
+      const posts: { id: string; views?: number }[] = JSON.parse(localStorage.getItem("mock_supabase_posts") || "[]");
+      const postIdx = posts.findIndex((po) => po.id === args.post_id);
       if (postIdx >= 0) {
         posts[postIdx].views = (posts[postIdx].views || 0) + 1;
         localStorage.setItem("mock_supabase_posts", JSON.stringify(posts));
@@ -1219,8 +1362,8 @@ export class MockSupabaseClient {
     }
 
     if (fnName === "increment_comment_count") {
-      const posts = JSON.parse(localStorage.getItem("mock_supabase_posts") || "[]");
-      const postIdx = posts.findIndex((p: any) => p.id === args.post_id);
+      const posts: { id: string; commentCount?: number }[] = JSON.parse(localStorage.getItem("mock_supabase_posts") || "[]");
+      const postIdx = posts.findIndex((po) => po.id === args.post_id);
       if (postIdx >= 0) {
         posts[postIdx].commentCount = (posts[postIdx].commentCount || 0) + 1;
         localStorage.setItem("mock_supabase_posts", JSON.stringify(posts));
@@ -1229,8 +1372,8 @@ export class MockSupabaseClient {
     }
 
     if (fnName === "increment_followers") {
-      const profiles = JSON.parse(localStorage.getItem("mock_supabase_profiles") || "[]");
-      const idx = profiles.findIndex((p: any) => p.uid === args.target_uid);
+      const profiles: { uid: string; followers?: number }[] = JSON.parse(localStorage.getItem("mock_supabase_profiles") || "[]");
+      const idx = profiles.findIndex((pr) => pr.uid === args.target_uid);
       if (idx >= 0) {
         profiles[idx].followers = (profiles[idx].followers || 0) + 1;
         localStorage.setItem("mock_supabase_profiles", JSON.stringify(profiles));
@@ -1239,8 +1382,8 @@ export class MockSupabaseClient {
     }
 
     if (fnName === "decrement_followers") {
-      const profiles = JSON.parse(localStorage.getItem("mock_supabase_profiles") || "[]");
-      const idx = profiles.findIndex((p: any) => p.uid === args.target_uid);
+      const profiles: { uid: string; followers?: number }[] = JSON.parse(localStorage.getItem("mock_supabase_profiles") || "[]");
+      const idx = profiles.findIndex((pr) => pr.uid === args.target_uid);
       if (idx >= 0) {
         profiles[idx].followers = Math.max(0, (profiles[idx].followers || 0) - 1);
         localStorage.setItem("mock_supabase_profiles", JSON.stringify(profiles));
@@ -1249,8 +1392,8 @@ export class MockSupabaseClient {
     }
 
     if (fnName === "increment_following") {
-      const profiles = JSON.parse(localStorage.getItem("mock_supabase_profiles") || "[]");
-      const idx = profiles.findIndex((p: any) => p.uid === args.target_uid);
+      const profiles: { uid: string; following?: number }[] = JSON.parse(localStorage.getItem("mock_supabase_profiles") || "[]");
+      const idx = profiles.findIndex((pr) => pr.uid === args.target_uid);
       if (idx >= 0) {
         profiles[idx].following = (profiles[idx].following || 0) + 1;
         localStorage.setItem("mock_supabase_profiles", JSON.stringify(profiles));
@@ -1259,8 +1402,8 @@ export class MockSupabaseClient {
     }
 
     if (fnName === "decrement_following") {
-      const profiles = JSON.parse(localStorage.getItem("mock_supabase_profiles") || "[]");
-      const idx = profiles.findIndex((p: any) => p.uid === args.target_uid);
+      const profiles: { uid: string; following?: number }[] = JSON.parse(localStorage.getItem("mock_supabase_profiles") || "[]");
+      const idx = profiles.findIndex((pr) => pr.uid === args.target_uid);
       if (idx >= 0) {
         profiles[idx].following = Math.max(0, (profiles[idx].following || 0) - 1);
         localStorage.setItem("mock_supabase_profiles", JSON.stringify(profiles));
@@ -1269,8 +1412,8 @@ export class MockSupabaseClient {
     }
 
     if (fnName === "increment_community_members") {
-      const communities = JSON.parse(localStorage.getItem("mock_supabase_communities") || "[]");
-      const idx = communities.findIndex((c: any) => c.slug === args.community_slug);
+      const communities: { slug: string; memberCount?: number }[] = JSON.parse(localStorage.getItem("mock_supabase_communities") || "[]");
+      const idx = communities.findIndex((c) => c.slug === args.community_slug);
       if (idx >= 0) {
         communities[idx].memberCount = (communities[idx].memberCount || 0) + 1;
         localStorage.setItem("mock_supabase_communities", JSON.stringify(communities));
@@ -1279,8 +1422,8 @@ export class MockSupabaseClient {
     }
 
     if (fnName === "decrement_community_members") {
-      const communities = JSON.parse(localStorage.getItem("mock_supabase_communities") || "[]");
-      const idx = communities.findIndex((c: any) => c.slug === args.community_slug);
+      const communities: { slug: string; memberCount?: number }[] = JSON.parse(localStorage.getItem("mock_supabase_communities") || "[]");
+      const idx = communities.findIndex((c) => c.slug === args.community_slug);
       if (idx >= 0) {
         communities[idx].memberCount = Math.max(0, (communities[idx].memberCount || 0) - 1);
         localStorage.setItem("mock_supabase_communities", JSON.stringify(communities));
@@ -1289,13 +1432,14 @@ export class MockSupabaseClient {
     }
 
     if (fnName === "jsonb_set_community") {
-      const profiles = JSON.parse(localStorage.getItem("mock_supabase_profiles") || "[]");
-      const idx = profiles.findIndex((p: any) => p.uid === args.uid);
+      const profiles: { uid: string; communitiesList?: Record<string, MockValue> }[] = JSON.parse(localStorage.getItem("mock_supabase_profiles") || "[]");
+      const idx = profiles.findIndex((pr) => pr.uid === args.uid);
       if (idx >= 0) {
         if (!profiles[idx].communitiesList) {
           profiles[idx].communitiesList = {};
         }
-        profiles[idx].communitiesList[args.slug] = args.value;
+        const slug = typeof args.slug === "string" ? args.slug : "";
+        profiles[idx].communitiesList[slug] = args.value ?? null;
         localStorage.setItem("mock_supabase_profiles", JSON.stringify(profiles));
         return profiles[idx].communitiesList;
       }

@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth-context";
 import { cn } from "@/lib/utils";
 import {
   Sidebar,
@@ -26,8 +26,8 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar,
 } from "@/components/ui/sidebar";
+import { useSidebar } from "@/components/ui/sidebar-context";
 import { CreateCommunityModal } from "@/components/modals/CreateCommunityModal";
 
 const mainNav = [

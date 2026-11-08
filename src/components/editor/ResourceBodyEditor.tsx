@@ -29,6 +29,8 @@ import {
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { uploadImage } from "@/lib/uploads";
+import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -201,27 +203,28 @@ export function ResourceBodyEditor({
     });
   };
 
-  const handleImageFiles = (files: FileList | null) => {
+  // Images upload to Storage and are referenced by URL — previously the
+  // file was embedded as a base64 data URL inside the post body text.
+  const handleImageFiles = async (files: FileList | null) => {
     if (!files?.length) return;
 
-    Array.from(files).forEach((file) => {
-      if (!file.type.startsWith("image/")) return;
+    for (const file of Array.from(files)) {
+      if (!file.type.startsWith("image/")) continue;
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const dataUrl = reader.result;
-        if (typeof dataUrl !== "string") return;
+      try {
+        const url = await uploadImage(file, "post-images");
 
         if (mode === "rich-text" && editor) {
-          editor.chain().focus().setImage({ src: dataUrl, alt: file.name, title: file.name }).run();
-          return;
+          editor.chain().focus().setImage({ src: url, alt: file.name, title: file.name }).run();
+          continue;
         }
 
-        const snippet = `![${file.name}](${dataUrl})`;
+        const snippet = `![${file.name}](${url})`;
         insertMarkdownAtSelection(normalizedValue ? `\n${snippet}\n` : snippet);
-      };
-      reader.readAsDataURL(file);
-    });
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Image upload failed.");
+      }
+    }
   };
 
   return (

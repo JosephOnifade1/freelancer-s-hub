@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { PenTool, HelpCircle, FileText, BarChart2 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth-context";
 import { getUserProfile } from "@/lib/users";
 
 type ComposerType = "discussion" | "question" | "resource" | "poll";

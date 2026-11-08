@@ -6,10 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth-context";
 import { getUserProfile, UserProfile, checkUsernameAvailability, claimUsername } from "@/lib/users";
 import { supabase, isDemoMode } from "@/lib/supabase";
 import { requestPasswordReset, resendConfirmationEmail } from "@/lib/auth";
+import { getErrorMessage } from "@/lib/utils";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 
 const Section = ({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) => (
@@ -108,8 +109,8 @@ const Settings = () => {
       if (error) throw new Error(error.message);
 
       toast({ title: "Saved", description: "Your settings have been updated." });
-    } catch (error: any) {
-      toast({ title: "Error saving profile", description: error.message, variant: "destructive" });
+    } catch (error) {
+      toast({ title: "Error saving profile", description: getErrorMessage(error), variant: "destructive" });
     } finally {
       setIsSaving(false);
     }

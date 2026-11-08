@@ -3,6 +3,12 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ResourceBodyEditor } from "@/components/editor/ResourceBodyEditor";
 
+// Local images are uploaded to Storage and referenced by URL (they used to
+// be embedded as base64 data URLs). Mock the upload boundary here.
+vi.mock("@/lib/uploads", () => ({
+  uploadImage: vi.fn(async (file: File) => `https://storage.test/post-images/test/${file.name}`),
+}));
+
 const exactMarkdownSample = `# \u{1F680} Markdown Test Document
 
 ## Headings

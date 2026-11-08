@@ -1,6 +1,7 @@
 import { supabase } from "./supabase";
 import { PostData } from "@/components/PostCard";
 import { UserProfile } from "./users";
+import { mapPostRow, getPostViewer, canViewPost, PostRow } from "./posts";
 
 export interface SearchResults {
   posts: PostData[];
@@ -18,37 +19,18 @@ export async function globalSearch(searchTerm: string): Promise<SearchResults> {
     .select(`
       id, title, body, category, tags, type, score, ups, downs, views,
       commentCount, isDeleted, isEdited, createdAt, communitySlug, authorUid,
+      visibility, allowComments, isPinned, externalLink,
       profiles!posts_authorUid_fkey (username, displayName, avatarUrl, reputation, isVerifiedPro)
     `)
     .eq("isDeleted", false)
     .or(`title.ilike.%${term}%,body.ilike.%${term}%`)
     .limit(10);
 
-  const posts: PostData[] = (postsData || []).map((p: any) => ({
-    id: p.id,
-    title: p.title,
-    body: p.body,
-    category: p.category,
-    tags: p.tags || [],
-    type: p.type,
-    score: p.score,
-    ups: p.ups,
-    downs: p.downs,
-    views: p.views,
-    commentCount: p.commentCount,
-    isDeleted: p.isDeleted,
-    isEdited: p.isEdited,
-    createdAt: new Date(p.createdAt).getTime(),
-    communitySlug: p.communitySlug,
-    author: {
-      uid: p.authorUid,
-      name: p.profiles?.displayName || p.profiles?.username || "Unknown",
-      username: p.profiles?.username,
-      avatarUrl: p.profiles?.avatarUrl,
-      reputation: p.profiles?.reputation || 0,
-      isVerifiedPro: p.profiles?.isVerifiedPro || false,
-    },
-  }));
+  // Search results obey the same visibility rules as the feed.
+  const viewer = await getPostViewer();
+  const posts: PostData[] = ((postsData || []) as PostRow[])
+    .map(mapPostRow)
+    .filter((post) => canViewPost(post, viewer));
 
   // Search Users using ilike on displayName, username, and bio
   const { data: usersData } = await supabase

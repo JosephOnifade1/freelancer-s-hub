@@ -3,7 +3,7 @@ import { useNavigate, Link, Navigate, useLocation } from "react-router-dom";
 import { supabase, isDemoMode } from "../lib/supabase";
 import { ensureUserProfile } from "../lib/users";
 import { postAuthRedirect, resendConfirmationEmail, authErrorMessage } from "../lib/auth";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../hooks/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,11 +48,12 @@ export default function Login() {
 
       toast.success("Logged in successfully!");
       navigate(redirectTo, { replace: true });
-    } catch (error: any) {
-      if (error?.message?.includes("Failed to fetch")) {
+    } catch (error) {
+      const message = authErrorMessage(error, "Failed to log in.");
+      if (message.includes("Failed to fetch")) {
         toast.error("Unable to connect to Supabase backend. Please check your connection or project status.");
       } else {
-        toast.error(error.message || "Failed to log in.");
+        toast.error(message);
       }
     } finally {
       setIsLoading(false);
@@ -71,12 +72,13 @@ export default function Login() {
     const demoPassword = "DemoPassword123!";
 
     try {
-      let { data, error } = await supabase.auth.signInWithPassword({
+      const signInRes = await supabase.auth.signInWithPassword({
         email: demoEmail,
         password: demoPassword,
       });
+      let data = signInRes.data;
 
-      if (error) {
+      if (signInRes.error) {
         // Try creating demo account if it doesn't exist
         const signUpRes = await supabase.auth.signUp({
           email: demoEmail,
@@ -107,8 +109,8 @@ export default function Login() {
 
       toast.success("Logged in as Demo Freelancer!");
       navigate(redirectTo, { replace: true });
-    } catch (error: any) {
-      toast.error(error.message || "Demo login failed.");
+    } catch (error) {
+      toast.error(authErrorMessage(error, "Demo login failed."));
     } finally {
       setIsLoading(false);
     }
@@ -140,8 +142,8 @@ export default function Login() {
         options: { redirectTo: window.location.origin + "/" },
       });
       if (error) throw error;
-    } catch (error: any) {
-      toast.error(error.message || "Failed to log in with Google.");
+    } catch (error) {
+      toast.error(authErrorMessage(error, "Failed to log in with Google."));
       setIsLoading(false);
     }
   };

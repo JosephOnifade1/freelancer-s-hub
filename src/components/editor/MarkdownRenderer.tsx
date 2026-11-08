@@ -10,11 +10,21 @@ interface MarkdownRendererProps {
   className?: string;
 }
 
+type MarkdownCodeProps = React.ComponentPropsWithoutRef<'code'> & {
+  inline?: boolean;
+  node?: unknown;
+};
+
+type MarkdownSpanProps = React.ComponentPropsWithoutRef<'span'> & {
+  node?: unknown;
+  'data-spoiler'?: string | boolean;
+};
+
 export const MarkdownRenderer = ({ content, className }: MarkdownRendererProps) => {
   const processedContent = content.replace(/(?:^|\s|\()([ubf]\/[a-zA-Z0-9_]+)\b/g, (match, p1, offset) => {
     // Check if this match is inside a markdown link URL or label
     const before = content.slice(0, offset);
-    const isInsideLink = /\[[^\]]*$/.test(before) || /\([^\)]*$/.test(before);
+    const isInsideLink = /\[[^\]]*$/.test(before) || /\([^)]*$/.test(before);
     if (isInsideLink) return match;
     
     // Check if it's already a link by looking at preceding char
@@ -86,7 +96,7 @@ export const MarkdownRenderer = ({ content, className }: MarkdownRendererProps) 
               />
             );
           },
-          code: ({ node, inline, ...props }: any) => (
+          code: ({ node: _node, inline, ...props }: MarkdownCodeProps) => (
             inline 
               ? <code {...props} className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono" />
               : <code {...props} />
@@ -97,7 +107,7 @@ export const MarkdownRenderer = ({ content, className }: MarkdownRendererProps) 
           blockquote: ({ node, ...props }) => (
             <blockquote {...props} className="border-l-4 border-brand/40 pl-4 italic my-4 text-muted-foreground" />
           ),
-          span: ({ node, ...props }: any) => {
+          span: ({ node: _node, ...props }: MarkdownSpanProps) => {
             if (props['data-spoiler']) {
               return <span {...props} className="bg-foreground text-transparent hover:bg-muted hover:text-foreground transition-all duration-300 cursor-pointer rounded px-1" />;
             }

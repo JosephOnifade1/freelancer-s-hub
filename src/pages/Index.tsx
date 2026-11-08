@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth-context";
 import { useQuery } from "@tanstack/react-query";
 import { fetchPosts } from "@/lib/posts";
 import { getFollowingIds, getUserProfile } from "@/lib/users";

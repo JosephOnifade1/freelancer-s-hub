@@ -7,7 +7,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { useQuery } from "@tanstack/react-query";
 import { fetchPosts } from "@/lib/posts";
 import { getUserProfile, getFollowingIds } from "@/lib/users";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth-context";
 
 const Following = () => {
   const { user } = useAuth();

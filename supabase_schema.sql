@@ -285,15 +285,78 @@ create policy "Owners and admins can update communities" on public.communities
     or exists (select 1 from public.profiles where profiles."uid" = auth.uid() and profiles."role" = 'admin')
   );
 
+-- Who can see a post: single source of truth for post/comment/poll RLS.
+-- 'admins' visibility = author + community owner + platform staff;
+-- 'members' additionally includes community members.
+create or replace function public.can_view_post(p_id uuid)
+returns boolean as $$
+  select case
+    when p."visibility" = 'public' then true
+    when auth.uid() is null then false
+    when p."authorUid" = auth.uid() then true
+    when exists (
+      select 1 from public.profiles pr
+      where pr."uid" = auth.uid() and pr."role" in ('admin', 'moderator')
+    ) then true
+    when p."visibility" = 'members'
+      and p."communitySlug" is not null
+      and exists (
+        select 1 from public.community_members m
+        where m."communitySlug" = p."communitySlug" and m."userId" = auth.uid()
+      ) then true
+    when p."visibility" = 'admins'
+      and p."communitySlug" is not null
+      and exists (
+        select 1 from public.communities c
+        where c."slug" = p."communitySlug" and c."ownerId" = auth.uid()::text
+      ) then true
+    else false
+  end
+  from public.posts p
+  where p."id" = p_id;
+$$ language sql stable security definer set search_path = public;
+
 -- posts RLS
 drop policy if exists "Public read posts" on public.posts;
-create policy "Public read posts" on public.posts for select using (true);
+drop policy if exists "Read posts per visibility" on public.posts;
+create policy "Read posts per visibility" on public.posts
+  for select using (public.can_view_post("id"));
 
+-- Pinning is a space-owner / staff action, enforced here as well as in the UI.
 drop policy if exists "Auth users can create posts" on public.posts;
-create policy "Auth users can create posts" on public.posts for insert with check (auth.uid() = "authorUid");
+create policy "Auth users can create posts" on public.posts
+  for insert with check (
+    auth.uid() = "authorUid"
+    and (
+      "isPinned" is not true
+      or exists (
+        select 1 from public.communities c
+        where c."slug" = "communitySlug" and c."ownerId" = auth.uid()::text
+      )
+      or exists (
+        select 1 from public.profiles pr
+        where pr."uid" = auth.uid() and pr."role" in ('admin', 'moderator')
+      )
+    )
+  );
 
 drop policy if exists "Authors can update/delete their posts" on public.posts;
-create policy "Authors can update/delete their posts" on public.posts for update using (auth.uid() = "authorUid");
+create policy "Authors can update/delete their posts" on public.posts
+  for update using (auth.uid() = "authorUid")
+  with check (
+    auth.uid() = "authorUid"
+    and (
+      "isPinned" is not true
+      or exists (
+        select 1 from public.communities c
+        where c."slug" = "communitySlug" and c."ownerId" = auth.uid()::text
+      )
+      or exists (
+        select 1 from public.profiles pr
+        where pr."uid" = auth.uid() and pr."role" in ('admin', 'moderator')
+      )
+    )
+  );
 
 -- NOTE: post counters (views/score/commentCount) are updated only through
 -- SECURITY DEFINER RPCs (increment_post_views, cast_vote, ...). There is
@@ -306,14 +369,23 @@ alter table public.poll_options enable row level security;
 alter table public.poll_votes enable row level security;
 
 drop policy if exists "Public read polls" on public.polls;
-create policy "Public read polls" on public.polls for select using (true);
+drop policy if exists "Read polls per post visibility" on public.polls;
+create policy "Read polls per post visibility" on public.polls
+  for select using (public.can_view_post("postId"));
 drop policy if exists "Post author can create poll" on public.polls;
 create policy "Post author can create poll" on public.polls for insert with check (
   exists (select 1 from public.posts where posts."id" = "postId" and posts."authorUid" = auth.uid())
 );
 
 drop policy if exists "Public read poll options" on public.poll_options;
-create policy "Public read poll options" on public.poll_options for select using (true);
+drop policy if exists "Read poll options per post visibility" on public.poll_options;
+create policy "Read poll options per post visibility" on public.poll_options
+  for select using (
+    exists (
+      select 1 from public.polls
+      where polls."id" = "pollId" and public.can_view_post(polls."postId")
+    )
+  );
 drop policy if exists "Post author can create poll options" on public.poll_options;
 create policy "Post author can create poll options" on public.poll_options for insert with check (
   exists (
@@ -324,16 +396,40 @@ create policy "Post author can create poll options" on public.poll_options for i
 );
 
 drop policy if exists "Public read poll votes" on public.poll_votes;
-create policy "Public read poll votes" on public.poll_votes for select using (true);
+drop policy if exists "Read poll votes per post visibility" on public.poll_votes;
+create policy "Read poll votes per post visibility" on public.poll_votes
+  for select using (
+    exists (
+      select 1 from public.polls
+      where polls."id" = "pollId" and public.can_view_post(polls."postId")
+    )
+  );
 drop policy if exists "Auth users can vote once per poll" on public.poll_votes;
-create policy "Auth users can vote once per poll" on public.poll_votes for insert with check (auth.uid() = "userId");
+create policy "Auth users can vote once per poll" on public.poll_votes
+  for insert with check (
+    auth.uid() = "userId"
+    and exists (
+      select 1 from public.polls
+      where polls."id" = "pollId" and public.can_view_post(polls."postId")
+    )
+  );
 
 -- comments RLS
 drop policy if exists "Public read comments" on public.comments;
-create policy "Public read comments" on public.comments for select using (true);
+drop policy if exists "Read comments per post visibility" on public.comments;
+create policy "Read comments per post visibility" on public.comments
+  for select using (public.can_view_post("postId"));
 
 drop policy if exists "Auth users can create comments" on public.comments;
-create policy "Auth users can create comments" on public.comments for insert with check (auth.uid() = "authorUid");
+create policy "Auth users can create comments" on public.comments
+  for insert with check (
+    auth.uid() = "authorUid"
+    and public.can_view_post("postId")
+    and exists (
+      select 1 from public.posts p
+      where p."id" = "postId" and p."allowComments"
+    )
+  );
 
 drop policy if exists "Authors can update/delete their comments" on public.comments;
 create policy "Authors can update/delete their comments" on public.comments for update using (auth.uid() = "authorUid");
@@ -1196,3 +1292,50 @@ values
   ('video', 'Video & Motion', 'Editors, motion designers, animators.', 'Video', 'Other', array['video', 'motion', 'animation'], 'system', 50, now()),
   ('consulting', 'Consulting', 'Strategy, ops, advisory work.', 'Briefcase', 'Business', array['strategy', 'ops', 'advisory'], 'system', 150, now())
 on conflict (slug) do nothing;
+
+
+-- ==========================================
+-- STORAGE: uploaded images (avatars, post images)
+-- Objects live under "<auth.uid>/..." folders: users write only inside
+-- their own folder; reads are public so image URLs render anywhere.
+-- ==========================================
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values
+  ('avatars', 'avatars', true, 2097152,
+   array['image/png', 'image/jpeg', 'image/gif', 'image/webp']),
+  ('post-images', 'post-images', true, 5242880,
+   array['image/png', 'image/jpeg', 'image/gif', 'image/webp'])
+on conflict (id) do update
+  set public = excluded.public,
+      file_size_limit = excluded.file_size_limit,
+      allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "Public read uploaded images" on storage.objects;
+create policy "Public read uploaded images" on storage.objects
+  for select using (bucket_id in ('avatars', 'post-images'));
+
+drop policy if exists "Users upload images to own folder" on storage.objects;
+create policy "Users upload images to own folder" on storage.objects
+  for insert with check (
+    bucket_id in ('avatars', 'post-images')
+    and auth.uid() is not null
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists "Users update own uploaded images" on storage.objects;
+create policy "Users update own uploaded images" on storage.objects
+  for update using (
+    bucket_id in ('avatars', 'post-images')
+    and (storage.foldername(name))[1] = auth.uid()::text
+  )
+  with check (
+    bucket_id in ('avatars', 'post-images')
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists "Users delete own uploaded images" on storage.objects;
+create policy "Users delete own uploaded images" on storage.objects
+  for delete using (
+    bucket_id in ('avatars', 'post-images')
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );

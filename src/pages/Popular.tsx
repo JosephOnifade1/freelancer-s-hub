@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { useQuery } from "@tanstack/react-query";
 import { fetchPosts } from "@/lib/posts";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth-context";
 
 const Popular = () => {
   const { user } = useAuth();

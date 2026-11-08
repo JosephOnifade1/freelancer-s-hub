@@ -1,4 +1,4 @@
-import { Mark, mergeAttributes } from '@tiptap/core';
+import { Mark, mergeAttributes, type RawCommands } from '@tiptap/core';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -30,13 +30,13 @@ export const Spoiler = Mark.create({
     ];
   },
 
-  addCommands() {
+  addCommands(): Partial<RawCommands> {
     return {
       toggleSpoiler:
         () =>
         ({ commands }) => {
           return commands.toggleMark(this.name);
         },
-    } as any;
+    };
   },
 });

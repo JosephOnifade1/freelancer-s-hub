@@ -42,11 +42,15 @@ This script automatically sets up:
 > 5. `supabase_auth_completion_migration.sql` — signup usernames honored by
 >    `handle_new_user()`; also lists the Auth dashboard settings (confirm
 >    email, site URL, redirect allow list incl. `/reset-password`) to set.
+> 6. `supabase_post_settings_and_storage_migration.sql` — enforces post
+>    visibility / allowComments / pinning via RLS (`can_view_post`) and
+>    creates the `avatars` + `post-images` Storage buckets.
 
 ---
 
 ## 🛠️ Features
 
+- **Post Settings, Enforced**: Post visibility (`public` / `members` / `admins`), comment on/off, and space pinning are enforced by database RLS (`can_view_post`) — not just hidden in the UI — and mirrored in the feed, search, and demo mode. Images (avatars, post images) upload to Supabase Storage buckets (`avatars`, `post-images`, own-folder write policies) instead of being stored as base64 in the database.
 - **Authentication**: Email/Password and Google OAuth sign-in via Supabase Auth — with chosen @usernames at signup (live availability check), email confirmation + resend, forgot/reset-password flow (`/forgot-password` → email link → `/reset-password`), return-to-page after login, and a first-run profile setup at `/onboarding` (plus a "complete your profile" prompt on the feed until your bio and skills are filled in).
 - **Feed & Discussions**: Post creation, voting, rich text markdown editing, and commenting threads.
 - **Communities**: Join/leave specialized freelancer communities (Design, Dev, Marketing, Writing, etc.).

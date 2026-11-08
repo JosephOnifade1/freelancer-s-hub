@@ -6,6 +6,16 @@ export interface PollOption {
   votes: number;
 }
 
+interface PollVoteRow {
+  pollOptionId: string;
+  userId: string;
+}
+
+interface PollOptionRow {
+  id: string;
+  label: string;
+}
+
 export interface PollData {
   id: string;
   options: PollOption[];
@@ -43,12 +53,12 @@ export const fetchPollByPostId = async (
   const voteCounts: Record<string, number> = {};
   let userVoteOptionId: string | null = null;
 
-  (votes || []).forEach((v: any) => {
+  ((votes || []) as PollVoteRow[]).forEach((v) => {
     voteCounts[v.pollOptionId] = (voteCounts[v.pollOptionId] || 0) + 1;
     if (viewerUid && v.userId === viewerUid) userVoteOptionId = v.pollOptionId;
   });
 
-  const mappedOptions: PollOption[] = options.map((o: any) => ({
+  const mappedOptions: PollOption[] = (options as PollOptionRow[]).map((o) => ({
     id: o.id,
     label: o.label,
     votes: voteCounts[o.id] || 0,

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import confetti from "canvas-confetti";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getUserProfile, isVeteran } from "@/lib/users";
 import { supabase } from "@/lib/supabase";
@@ -16,7 +16,7 @@ export function VeteranCelebration() {
     enabled: !!user?.uid,
   });
 
-  const markCelebrated = useMutation({
+  const { mutate: markCelebrated } = useMutation({
     mutationFn: async (uid: string) => {
       await supabase
         .from("profiles")
@@ -37,7 +37,7 @@ export function VeteranCelebration() {
 
       const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
 
-      const interval: any = setInterval(function() {
+      const interval: ReturnType<typeof setInterval> = setInterval(function() {
         const timeLeft = animationEnd - Date.now();
 
         if (timeLeft <= 0) {
@@ -55,11 +55,11 @@ export function VeteranCelebration() {
         duration: 10000,
       });
 
-      markCelebrated.mutate(user!.uid);
+      markCelebrated(user!.uid);
       
       return () => clearInterval(interval);
     }
-  }, [profile, user]);
+  }, [profile, user, markCelebrated]);
 
   return null;
 }

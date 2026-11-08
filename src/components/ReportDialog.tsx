@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Flag } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth-context";
 import {
   createReport,
   REPORT_REASONS,

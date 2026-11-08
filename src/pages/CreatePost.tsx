@@ -12,10 +12,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getUserProfile } from "@/lib/users";
 import { createPost } from "@/lib/posts";
+import { uploadImage } from "@/lib/uploads";
 import { fetchAllCommunities, getCommunityStyle } from "@/lib/communities";
 import { ResourceBodyEditor } from "@/components/editor/ResourceBodyEditor";
 import { ResourceMarkdownHelp } from "@/components/editor/ResourceMarkdownHelp";
@@ -34,6 +35,7 @@ interface BSpaceOption {
   icon: React.ElementType;
   color: string;
   popularTags: string[];
+  ownerId?: string;
 }
 
 // Real spaces are loaded from the database inside the component (see
@@ -101,6 +103,7 @@ const CreatePost = () => {
           icon: style.icon,
           color: style.iconBg,
           popularTags: c.topics?.length ? c.topics : ["general"],
+          ownerId: c.ownerId,
         };
       }),
     ];
@@ -127,7 +130,7 @@ const CreatePost = () => {
       const preselected = spaceParam ? B_SPACES.find((s) => s.slug === spaceParam) : null;
       setSelectedSpace(preselected || B_SPACES[0]);
     }
-  }, [B_SPACES]);
+  }, [B_SPACES, searchParams, selectedSpace.slug]);
 
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
@@ -137,6 +140,15 @@ const CreatePost = () => {
   const [showVideoInput, setShowVideoInput] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<string[]>([]);
   
+  // Pinning is restricted to the space owner and platform staff — the
+  // database rejects pinned posts from anyone else, so the toggle is
+  // only offered when it will actually work.
+  const canPin =
+    !!user?.uid &&
+    (profile?.role === "admin" ||
+      profile?.role === "moderator" ||
+      (!!selectedSpace.ownerId && selectedSpace.ownerId === user.uid));
+
   // Post Settings State
   const [visibility, setVisibility] = useState<"public" | "members" | "admins">("public");
   const [allowComments, setAllowComments] = useState(true);
@@ -149,6 +161,10 @@ const CreatePost = () => {
       setPinToSpace(false);
     }
   }, [isProfileTarget]);
+
+  useEffect(() => {
+    if (!canPin) setPinToSpace(false);
+  }, [canPin]);
 
   const bodyImagePreviews = useMemo(() => bodyImages, [bodyImages]);
 
@@ -171,28 +187,30 @@ const CreatePost = () => {
 
   const removeTag = (t: string) => setTags(tags.filter((x) => x !== t));
 
-  // Media Handlers
-  const handleBodyImageFiles = (files: FileList | null) => {
+  // Media Handlers — images are uploaded to Storage when picked, so the
+  // post body stores a URL instead of a multi-megabyte base64 blob.
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const handleBodyImageFiles = async (files: FileList | null) => {
     if (!files?.length) return;
 
-    Array.from(files).forEach((file) => {
-      if (!file.type.startsWith("image/")) return;
+    const images = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    if (images.length === 0) return;
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const dataUrl = reader.result;
-        if (typeof dataUrl !== "string") return;
-
-        setBodyImages((current) => [
-          ...current,
-          {
-            alt: file.name,
-            src: dataUrl,
-          },
-        ]);
-      };
-      reader.readAsDataURL(file);
-    });
+    setUploadingImages(true);
+    try {
+      for (const file of images) {
+        const url = await uploadImage(file, "post-images");
+        setBodyImages((current) => [...current, { alt: file.name, src: url }]);
+      }
+    } catch (error) {
+      toast({
+        title: "Image upload failed",
+        description: error instanceof Error ? error.message : "Could not upload that image.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingImages(false);
+    }
   };
 
   const removeBodyImage = (src: string) => {
@@ -804,7 +822,7 @@ const CreatePost = () => {
                       <Globe className="h-4.5 w-4.5 text-muted-foreground shrink-0" />
                       <div>
                         <p className="font-heading text-xs font-bold text-foreground">Public</p>
-                        <p className="text-[11px] text-muted-foreground">{isProfileTarget ? "Anyone can view and interact" : "Anyone in the B-Space can view and interact"}</p>
+                        <p className="text-[11px] text-muted-foreground">Anyone on Borynx can view and interact</p>
                       </div>
                     </div>
                     <div className={`h-4 w-4 rounded-full border flex items-center justify-center ${
@@ -830,7 +848,7 @@ const CreatePost = () => {
                       <Users className="h-4.5 w-4.5 text-muted-foreground shrink-0" />
                       <div>
                         <p className="font-heading text-xs font-bold text-foreground">Space Members Only</p>
-                        <p className="text-[11px] text-muted-foreground">Only members of {selectedSpace.name} can see this</p>
+                        <p className="text-[11px] text-muted-foreground">Only members of {selectedSpace.name} can see this — hidden from feeds and search for everyone else</p>
                       </div>
                     </div>
                     <div className={`h-4 w-4 rounded-full border flex items-center justify-center ${
@@ -854,7 +872,7 @@ const CreatePost = () => {
                       <ShieldAlert className="h-4.5 w-4.5 text-muted-foreground shrink-0" />
                       <div>
                         <p className="font-heading text-xs font-bold text-foreground">Admins & Moderators Only</p>
-                        <p className="text-[11px] text-muted-foreground">Only admins and moderators can see this</p>
+                        <p className="text-[11px] text-muted-foreground">Only you, the space owner, and platform moderators can see this</p>
                       </div>
                     </div>
                     <div className={`h-4 w-4 rounded-full border flex items-center justify-center ${
@@ -874,16 +892,16 @@ const CreatePost = () => {
                   <div className="flex items-center justify-between p-2 rounded-xl">
                     <div className="space-y-0.5">
                       <p className="font-heading text-xs font-bold text-foreground">Allow comments</p>
-                      <p className="text-[11px] text-muted-foreground">Others can reply to your post</p>
+                      <p className="text-[11px] text-muted-foreground">When off, nobody can add new comments — existing comments stay visible</p>
                     </div>
                     <Switch checked={allowComments} onCheckedChange={setAllowComments} />
                   </div>
 
-                  {!isProfileTarget && (
+                  {!isProfileTarget && canPin && (
                   <div className="flex items-center justify-between p-2 rounded-xl">
                     <div className="space-y-0.5">
                       <p className="font-heading text-xs font-bold text-foreground">Pin to B-Space</p>
-                      <p className="text-[11px] text-muted-foreground">Make this post visible at the top</p>
+                      <p className="text-[11px] text-muted-foreground">Pinned posts appear at the top of the space</p>
                     </div>
                     <Switch checked={pinToSpace} onCheckedChange={setPinToSpace} />
                   </div>
@@ -907,11 +925,11 @@ const CreatePost = () => {
               <button
                 type="button"
                 onClick={submit}
-                disabled={isSubmitting}
+                disabled={isSubmitting || uploadingImages}
                 className="px-6 py-2.5 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground font-heading text-sm font-semibold flex items-center gap-2 transition-colors disabled:opacity-50"
               >
                 <Send className="h-3.5 w-3.5" />
-                <span>{isSubmitting ? "Publishing..." : selectedSpace.slug ? `Post to ${selectedSpace.name}` : "Post to Profile"}</span>
+                <span>{isSubmitting ? "Publishing..." : uploadingImages ? "Uploading images..." : selectedSpace.slug ? `Post to ${selectedSpace.name}` : "Post to Profile"}</span>
               </button>
             </div>
 

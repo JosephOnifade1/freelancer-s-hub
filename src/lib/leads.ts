@@ -22,6 +22,30 @@ export interface BoardLead {
   createdAt: number;
 }
 
+interface LeadProfileJoin {
+  username?: string;
+  displayName?: string;
+  avatarUrl?: string;
+  isVerifiedPro?: boolean;
+}
+
+interface LeadRow {
+  id: string;
+  title: string;
+  description: string;
+  budget: string;
+  currency: string;
+  location: string;
+  type: LeadType;
+  status: LeadStatus;
+  skills?: string[];
+  isVerified?: boolean;
+  postedAt: string;
+  applicantsCount: number;
+  postedByUid: string;
+  profiles?: LeadProfileJoin | null;
+}
+
 export interface Lead {
   id: string;
   title: string;
@@ -415,7 +439,7 @@ export const fetchLeads = async (): Promise<Lead[]> => {
     return [];
   }
 
-  return (data || []).map((l: any) => ({
+  return (data as LeadRow[]).map((l) => ({
     id: l.id,
     title: l.title,
     description: l.description,
@@ -482,25 +506,26 @@ export const fetchLeadById = async (id: string): Promise<Lead | null> => {
       .maybeSingle();
 
     if (data) {
+      const row = data as LeadRow;
       return {
-        id: data.id,
-        title: data.title,
-        description: data.description,
-        budget: data.budget,
-        currency: data.currency,
-        location: data.location,
-        type: data.type,
-        status: data.status,
-        skills: data.skills || [],
-        isVerified: data.isVerified,
-        postedAt: new Date(data.postedAt).getTime(),
-        applicantsCount: data.applicantsCount,
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        budget: row.budget,
+        currency: row.currency,
+        location: row.location,
+        type: row.type,
+        status: row.status,
+        skills: row.skills || [],
+        isVerified: row.isVerified,
+        postedAt: new Date(row.postedAt).getTime(),
+        applicantsCount: row.applicantsCount,
         postedBy: {
-          uid: data.postedByUid,
-          name: (data as any).profiles?.displayName || (data as any).profiles?.username || "Unknown",
-          avatar: (data as any).profiles?.avatarUrl,
-          username: (data as any).profiles?.username,
-          isVerified: (data as any).profiles?.isVerifiedPro || false,
+          uid: row.postedByUid,
+          name: row.profiles?.displayName || row.profiles?.username || "Unknown",
+          avatar: row.profiles?.avatarUrl,
+          username: row.profiles?.username,
+          isVerified: row.profiles?.isVerifiedPro || false,
         },
       };
     }
