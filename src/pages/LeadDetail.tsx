@@ -4,6 +4,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchLeadById } from "@/lib/leads";
+import { ReportDialog } from "@/components/ReportDialog";
 import {
   applyToLead,
   fetchMyApplication,
@@ -44,6 +45,7 @@ const LeadDetail = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isApplyOpen, setIsApplyOpen] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
   const [proposalText, setProposalText] = useState("");
   const [isSubmittingProposal, setIsSubmittingProposal] = useState(false);
 
@@ -77,10 +79,6 @@ const LeadDetail = () => {
     } catch {
       toast.error("Failed to copy link.");
     }
-  };
-
-  const handleReport = () => {
-    toast.success("Thank you. This opportunity has been reported for review.");
   };
 
   const handleMessageClient = () => {
@@ -315,8 +313,8 @@ const LeadDetail = () => {
                  >
                     <Share2 className="h-3.5 w-3.5" /> Share
                  </button>
-                 <button 
-                   onClick={handleReport}
+                 <button
+                   onClick={() => setIsReportOpen(true)}
                    className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
                  >
                     <ShieldCheck className="h-3.5 w-3.5" /> Report
@@ -325,6 +323,14 @@ const LeadDetail = () => {
             </div>
           </div>
         </div>
+
+        <ReportDialog
+          open={isReportOpen}
+          onOpenChange={setIsReportOpen}
+          entityType="lead"
+          entityId={lead.id}
+          entityLabel="this lead"
+        />
 
         {/* Apply Dialog */}
         <Dialog open={isApplyOpen} onOpenChange={setIsApplyOpen}>

@@ -1,6 +1,7 @@
 import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { VeteranCelebration } from "./VeteranCelebration";
+import { NotificationBell } from "./NotificationBell";
 import { Plus, User, LogOut, Settings, Search, X, FileText, Sparkles, Monitor, Sun, Moon, Shield, Check, Wifi, WifiOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -406,6 +407,8 @@ export function AppLayout({ children }: AppLayoutProps) {
                 <Plus className="h-4 w-4" />
                 <span className="hidden sm:inline">Create</span>
               </Link>
+
+              <NotificationBell />
 
               <div className="relative">
                 <button

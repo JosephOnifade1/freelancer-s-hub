@@ -13,6 +13,10 @@ export const seedMockData = () => {
       website: "marcelo.dev",
       joined: "2024",
       status: "Available",
+      // Demo bootstrap: the demo account doubles as the first admin so the
+      // moderation surface is reachable in demo mode (mirror of the SQL
+      // bootstrap documented in the reports migration).
+      role: "admin",
       skills: ["React", "TypeScript", "UI Design", "Figma"],
       reputation: 2340,
       followers: 847,
@@ -308,10 +312,7 @@ export const seedMockData = () => {
     }
   ];
 
-  const seedUsernames: Record<string, string> = {};
-  seedProfiles.forEach(p => {
-    seedUsernames[p.username] = p.uid;
-  });
+  const seedUsernames = seedProfiles.map(p => ({ username: p.username, uid: p.uid }));
 
   const checkAndSeed = (tableKey: string, seedData: any) => {
     const key = `mock_supabase_${tableKey}`;
@@ -326,6 +327,15 @@ export const seedMockData = () => {
   checkAndSeed("comments", seedComments);
   checkAndSeed("leads", seedLeads);
   
+  // usernames was originally stored as a {username: uid} map, which the
+  // query builder (array-based) cannot read. Normalize legacy storage.
+  try {
+    const storedUsernames = JSON.parse(localStorage.getItem("mock_supabase_usernames") || "null");
+    if (storedUsernames && !Array.isArray(storedUsernames)) {
+      const rows = Object.entries(storedUsernames).map(([username, uid]) => ({ username, uid }));
+      localStorage.setItem("mock_supabase_usernames", JSON.stringify(rows));
+    }
+  } catch { /* corrupted storage is re-seeded below */ }
   if (!localStorage.getItem("mock_supabase_usernames")) {
     localStorage.setItem("mock_supabase_usernames", JSON.stringify(seedUsernames));
   }
@@ -538,6 +548,58 @@ class MockQueryBuilder {
       data.push(...newRecords);
       localStorage.setItem(key, JSON.stringify(data));
 
+      // Notification triggers (comments, follows, applications).
+      if (this.tableName === "comments") {
+        for (const rec of newRecords) {
+          const post = mockTable<{ id: string; authorUid?: string; title?: string }>("posts").find((po) => po.id === rec.postId);
+          const actor = mockActorName(rec.authorUid);
+          if (rec.parentId) {
+            const parent = mockTable<{ id: string; authorUid?: string }>("comments").find((c) => c.id === rec.parentId);
+            pushMockNotification({
+              userId: parent?.authorUid, actorUid: rec.authorUid, type: "reply",
+              entityId: rec.id, contextId: rec.postId,
+              message: `${actor} replied to your comment`,
+            });
+            if (post && post.authorUid !== parent?.authorUid) {
+              pushMockNotification({
+                userId: post.authorUid, actorUid: rec.authorUid, type: "comment",
+                entityId: rec.id, contextId: rec.postId,
+                message: `${actor} commented on your post "${String(post.title || "").slice(0, 60)}"`,
+              });
+            }
+          } else if (post) {
+            pushMockNotification({
+              userId: post.authorUid, actorUid: rec.authorUid, type: "comment",
+              entityId: rec.id, contextId: rec.postId,
+              message: `${actor} commented on your post "${String(post.title || "").slice(0, 60)}"`,
+            });
+          }
+        }
+      }
+
+      if (this.tableName === "follows") {
+        for (const rec of newRecords) {
+          pushMockNotification({
+            userId: rec.followingId, actorUid: rec.followerId, type: "follow",
+            entityId: rec.followerId,
+            message: `${mockActorName(rec.followerId)} started following you`,
+          });
+        }
+      }
+
+      if (this.tableName === "lead_applications") {
+        for (const rec of newRecords) {
+          const lead = mockTable<{ id: string; postedByUid?: string; title?: string }>("leads").find((l) => l.id === rec.leadId);
+          if (lead) {
+            pushMockNotification({
+              userId: lead.postedByUid, actorUid: rec.applicantUid, type: "application_received",
+              entityId: rec.id, contextId: rec.leadId,
+              message: `${mockActorName(rec.applicantUid)} applied to your lead "${String(lead.title || "").slice(0, 60)}"`,
+            });
+          }
+        }
+      }
+
       // Mirror of the applicantsCount trigger for lead applications.
       if (this.tableName === "lead_applications") {
         const leads: { id: string; applicantsCount?: number }[] = JSON.parse(localStorage.getItem("mock_supabase_leads") || "[]");
@@ -582,6 +644,32 @@ class MockQueryBuilder {
       });
 
       localStorage.setItem(key, JSON.stringify(updatedData));
+
+      // Notification trigger: application status transitions.
+      if (this.tableName === "lead_applications" && this.payload?.status) {
+        updatedData.forEach((row, idx) => {
+          if (data[idx] === row) return;
+          const prev = prevStatusById.get(row.id);
+          if (!prev || prev === row.status) return;
+          const lead = mockTable<{ id: string; postedByUid?: string; title?: string }>("leads").find((l) => l.id === row.leadId);
+          if (!lead) return;
+          const title = String(lead.title || "").slice(0, 60);
+          if (row.status === "accepted" || row.status === "rejected") {
+            pushMockNotification({
+              userId: row.applicantUid, actorUid: lead.postedByUid,
+              type: `application_${row.status}`,
+              entityId: row.id, contextId: row.leadId,
+              message: `Your application to "${title}" was ${row.status}`,
+            });
+          } else if (row.status === "withdrawn") {
+            pushMockNotification({
+              userId: lead.postedByUid, actorUid: row.applicantUid, type: "application_withdrawn",
+              entityId: row.id, contextId: row.leadId,
+              message: `${mockActorName(row.applicantUid)} withdrew their application to "${title}"`,
+            });
+          }
+        });
+      }
 
       // Mirror of the applicantsCount trigger: withdrawn transitions move it.
       if (this.tableName === "lead_applications" && this.payload?.status) {
@@ -697,9 +785,12 @@ class MockAuth {
     localStorage.setItem("mock_supabase_users", JSON.stringify(users));
 
     const displayName = options?.data?.display_name || email.split("@")[0];
-    const username = displayName.toLowerCase().replace(/[^a-z0-9_]/g, "_");
-    
+    let username = (options?.data?.username || displayName).toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 15);
+
     const profiles = JSON.parse(localStorage.getItem("mock_supabase_profiles") || "[]");
+    if (username.length < 3 || profiles.some((p: { username?: string }) => p.username === username)) {
+      username = `user_${Math.floor(100000 + Math.random() * 900000)}`;
+    }
     const newProfile = {
       uid,
       username,
@@ -722,22 +813,25 @@ class MockAuth {
     profiles.push(newProfile);
     localStorage.setItem("mock_supabase_profiles", JSON.stringify(profiles));
 
-    const usernames = JSON.parse(localStorage.getItem("mock_supabase_usernames") || "{}");
-    usernames[username] = uid;
-    localStorage.setItem("mock_supabase_usernames", JSON.stringify(usernames));
+    const usernames = JSON.parse(localStorage.getItem("mock_supabase_usernames") || "[]");
+    if (Array.isArray(usernames)) {
+      usernames.push({ username, uid });
+      localStorage.setItem("mock_supabase_usernames", JSON.stringify(usernames));
+    }
 
     const session = {
       user: {
         id: uid,
         email,
-        user_metadata: { display_name: displayName }
+        email_confirmed_at: new Date().toISOString(),
+        user_metadata: { display_name: displayName, username }
       },
       access_token: "mock-token",
       refresh_token: "mock-refresh-token"
     };
     this.setSessionUser(session);
 
-    return { data: session, error: null };
+    return { data: { user: session.user, session }, error: null };
   }
 
   async signInWithPassword({ email, password }: any) {
@@ -755,6 +849,7 @@ class MockAuth {
       user: {
         id: user.uid,
         email: user.email,
+        email_confirmed_at: new Date().toISOString(),
         user_metadata: { display_name: displayName }
       },
       access_token: "mock-token",
@@ -762,7 +857,7 @@ class MockAuth {
     };
     this.setSessionUser(session);
 
-    return { data: session, error: null };
+    return { data: { user: session.user, session }, error: null };
   }
 
   async signInWithOAuth({ provider, options }: any) {
@@ -801,15 +896,18 @@ class MockAuth {
       profiles.push(newProfile);
       localStorage.setItem("mock_supabase_profiles", JSON.stringify(profiles));
 
-      const usernames = JSON.parse(localStorage.getItem("mock_supabase_usernames") || "{}");
-      usernames[username] = uid;
-      localStorage.setItem("mock_supabase_usernames", JSON.stringify(usernames));
+      const usernames = JSON.parse(localStorage.getItem("mock_supabase_usernames") || "[]");
+      if (Array.isArray(usernames)) {
+        usernames.push({ username, uid });
+        localStorage.setItem("mock_supabase_usernames", JSON.stringify(usernames));
+      }
     }
 
     const session = {
       user: {
         id: user.uid,
         email: user.email,
+        email_confirmed_at: new Date().toISOString(),
         user_metadata: { display_name: displayName }
       },
       access_token: "mock-token",
@@ -823,7 +921,85 @@ class MockAuth {
       }, 500);
     }
 
-    return { data: session, error: null };
+    return { data: { user: session.user, session }, error: null };
+  }
+
+  // Confirmation resend: demo mode delivers no email, so this succeeds
+  // neutrally whether or not the account exists (same anti-enumeration
+  // behavior as the real auth API).
+  async resend() {
+    return { data: {}, error: null };
+  }
+
+  // Password reset: stores a pending recovery record instead of emailing
+  // a link. /reset-password treats that record as "the email link was
+  // opened" and updateUser consumes it.
+  async resetPasswordForEmail(email: string) {
+    const users: { uid: string; email: string }[] = JSON.parse(localStorage.getItem("mock_supabase_users") || "[]");
+    const user = users.find((u) => u.email === email);
+    if (user) {
+      localStorage.setItem(
+        "mock_supabase_password_recovery",
+        JSON.stringify({ uid: user.uid, email: user.email, createdAt: new Date().toISOString() })
+      );
+    }
+    return { data: {}, error: null };
+  }
+
+  async updateUser({ password, data: metadata }: { password?: string; data?: Record<string, unknown> }) {
+    const session = this.getSessionUser();
+    let recovery: { uid: string; email: string } | null = null;
+    try {
+      recovery = JSON.parse(localStorage.getItem("mock_supabase_password_recovery") || "null");
+    } catch { recovery = null; }
+
+    const uid = session?.user?.id || recovery?.uid;
+    if (!uid) {
+      return { data: { user: null }, error: { message: "Auth session missing!" } };
+    }
+
+    const users: { uid: string; email: string; password?: string }[] = JSON.parse(localStorage.getItem("mock_supabase_users") || "[]");
+    const idx = users.findIndex((u) => u.uid === uid);
+    if (idx < 0) {
+      return { data: { user: null }, error: { message: "User not found." } };
+    }
+
+    if (password) {
+      users[idx] = { ...users[idx], password };
+      localStorage.setItem("mock_supabase_users", JSON.stringify(users));
+    }
+
+    if (recovery && !session) {
+      // Consuming a recovery record signs the user in, mirroring the
+      // session Supabase creates when a reset email link is opened.
+      localStorage.removeItem("mock_supabase_password_recovery");
+      const profiles: { uid: string; displayName?: string }[] = JSON.parse(localStorage.getItem("mock_supabase_profiles") || "[]");
+      const profile = profiles.find((p) => p.uid === uid);
+      const newSession = {
+        user: {
+          id: uid,
+          email: users[idx].email,
+          email_confirmed_at: new Date().toISOString(),
+          user_metadata: { display_name: profile?.displayName || users[idx].email.split("@")[0], ...(metadata || {}) }
+        },
+        access_token: "mock-token",
+        refresh_token: "mock-refresh-token"
+      };
+      this.setSessionUser(newSession);
+      return { data: { user: newSession.user }, error: null };
+    }
+
+    if (metadata && session?.user) {
+      const updatedSession = {
+        ...session,
+        user: { ...session.user, user_metadata: { ...(session.user.user_metadata || {}), ...metadata } }
+      };
+      localStorage.setItem("mock_supabase_session", JSON.stringify(updatedSession));
+      this.triggerListeners("USER_UPDATED", updatedSession);
+      return { data: { user: updatedSession.user }, error: null };
+    }
+
+    return { data: { user: session?.user ?? null }, error: null };
   }
 
   async signOut() {
@@ -853,6 +1029,46 @@ class MockAuth {
   }
 }
 
+// ─── Notification generation (mock mirror of the SQL triggers) ─────────────
+// The real backend creates notifications via database triggers; the mock DB
+// has no triggers, so the query builder / cast_vote call this instead. The
+// rules match supabase_notifications_migration.sql exactly: never notify
+// people about their own actions, downvotes don't notify, etc.
+const mockActorName = (uid: string | undefined): string => {
+  if (!uid) return "Someone";
+  const profiles: { uid: string; displayName?: string; username?: string }[] =
+    JSON.parse(localStorage.getItem("mock_supabase_profiles") || "[]");
+  const profile = profiles.find((pr) => pr.uid === uid);
+  return profile?.displayName || profile?.username || "Someone";
+};
+
+const pushMockNotification = (n: {
+  userId?: string;
+  actorUid?: string;
+  type: string;
+  entityId?: string;
+  contextId?: string;
+  message: string;
+}) => {
+  if (!n.userId || !n.actorUid || n.userId === n.actorUid) return;
+  const rows = JSON.parse(localStorage.getItem("mock_supabase_notifications") || "[]");
+  rows.push({
+    id: self.crypto.randomUUID(),
+    userId: n.userId,
+    actorUid: n.actorUid,
+    type: n.type,
+    entityId: n.entityId ?? null,
+    contextId: n.contextId ?? null,
+    message: n.message,
+    isRead: false,
+    createdAt: new Date().toISOString(),
+  });
+  localStorage.setItem("mock_supabase_notifications", JSON.stringify(rows));
+};
+
+const mockTable = <T,>(name: string): T[] =>
+  JSON.parse(localStorage.getItem(`mock_supabase_${name}`) || "[]") as T[];
+
 export class MockSupabaseClient {
   auth = new MockAuth();
 
@@ -861,13 +1077,86 @@ export class MockSupabaseClient {
   }
 
   async rpc(fnName: string, args: any) {
+    // ── Moderation RPCs (mirror supabase_reports_and_moderation_migration.sql)
+    if (fnName === "moderate_report" || fnName === "set_user_verified_pro" || fnName === "set_user_role") {
+      type MockProfileRow = { uid: string; role?: string; isVerifiedPro?: boolean };
+      const profiles: MockProfileRow[] = JSON.parse(localStorage.getItem("mock_supabase_profiles") || "[]");
+      const session = JSON.parse(localStorage.getItem("mock_supabase_session") || "null");
+      const callerUid: string | undefined = session?.user?.id || session?.user?.uid || session?.uid || session?.id;
+      const caller = profiles.find((pr) => pr.uid === callerUid);
+      const callerRole = caller?.role || "member";
+      const saveProfiles = () =>
+        localStorage.setItem("mock_supabase_profiles", JSON.stringify(profiles));
+
+      if (fnName === "moderate_report") {
+        if (callerRole !== "admin" && callerRole !== "moderator") {
+          return { data: null, error: { message: "Only moderators can moderate reports" } };
+        }
+        const reports: { id: string; entityType: string; entityId: string; status?: string; resolvedBy?: string | null; updatedAt?: string }[] = JSON.parse(localStorage.getItem("mock_supabase_reports") || "[]");
+        const idx = reports.findIndex((r) => r.id === args.report_id);
+        if (idx < 0) return { data: null, error: { message: "Report not found" } };
+        const report = reports[idx];
+
+        if (args.remove_content) {
+          if (report.entityType === "post" || report.entityType === "comment") {
+            const table = report.entityType === "post" ? "posts" : "comments";
+            const rows: { id: string; isDeleted?: boolean }[] = JSON.parse(localStorage.getItem(`mock_supabase_${table}`) || "[]");
+            const ei = rows.findIndex((r) => r.id === report.entityId);
+            if (ei >= 0) {
+              rows[ei].isDeleted = true;
+              localStorage.setItem(`mock_supabase_${table}`, JSON.stringify(rows));
+            }
+          } else if (report.entityType === "lead") {
+            const leads: { id: string; status?: string }[] = JSON.parse(localStorage.getItem("mock_supabase_leads") || "[]");
+            const li = leads.findIndex((l) => l.id === report.entityId);
+            if (li >= 0) {
+              leads[li].status = "closed";
+              localStorage.setItem("mock_supabase_leads", JSON.stringify(leads));
+            }
+          }
+        }
+
+        reports[idx] = {
+          ...report,
+          status: args.new_status,
+          resolvedBy: args.new_status === "open" ? null : callerUid,
+          updatedAt: new Date().toISOString(),
+        };
+        localStorage.setItem("mock_supabase_reports", JSON.stringify(reports));
+        return { data: null, error: null };
+      }
+
+      // Verified Pro + roles are admin-only, same as the real RPCs.
+      if (callerRole !== "admin") {
+        return {
+          data: null,
+          error: { message: `Only admins can ${fnName === "set_user_role" ? "change roles" : "change Verified Pro status"}` },
+        };
+      }
+
+      const targetIdx = profiles.findIndex((pr) => pr.uid === args.target_uid);
+      if (targetIdx < 0) return { data: null, error: { message: "User not found" } };
+
+      if (fnName === "set_user_verified_pro") {
+        profiles[targetIdx].isVerifiedPro = !!args.verified;
+      } else {
+        if (args.target_uid === callerUid && args.new_role !== "admin") {
+          return { data: null, error: { message: "Admins cannot demote themselves" } };
+        }
+        profiles[targetIdx].role = args.new_role;
+      }
+      saveProfiles();
+      return { data: null, error: null };
+    }
+
+
     // Local equivalent of the cast_vote SECURITY DEFINER RPC: compute the
     // delta from the stored vote, then update vote + entity + reputation.
     if (fnName === "cast_vote") {
       const { entity_id, entity_type, voter_uid, new_vote } = args;
       const tableKey = entity_type === "post" ? "posts" : "comments";
       type MockVote = { id?: string; userId: string; entityType: string; entityId: string; voteValue: number };
-      type MockEntity = { id: string; score?: number; ups?: number; downs?: number; authorUid?: string };
+      type MockEntity = { id: string; score?: number; ups?: number; downs?: number; authorUid?: string; postId?: string };
       type MockProfile = { uid: string; reputation?: number };
       const votes: MockVote[] = JSON.parse(localStorage.getItem("mock_supabase_votes") || "[]");
       const entities: MockEntity[] = JSON.parse(localStorage.getItem(`mock_supabase_${tableKey}`) || "[]");
@@ -901,6 +1190,17 @@ export class MockSupabaseClient {
           profiles[authorIdx].reputation = (profiles[authorIdx].reputation || 0) + diff;
           localStorage.setItem("mock_supabase_profiles", JSON.stringify(profiles));
         }
+      }
+
+      if (new_vote === 1 && previousVote !== 1 && authorUid && authorUid !== voter_uid) {
+        pushMockNotification({
+          userId: authorUid,
+          actorUid: voter_uid,
+          type: "upvote",
+          entityId: entity_id,
+          contextId: entity_type === "post" ? entity_id : entities[entityIdx].postId,
+          message: `${mockActorName(voter_uid)} upvoted your ${entity_type}`,
+        });
       }
 
       localStorage.setItem("mock_supabase_votes", JSON.stringify(votes));

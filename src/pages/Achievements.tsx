@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNowStrict } from "date-fns";
 import { motion } from "framer-motion";
-import { BookOpen, Calendar, Flame, Heart, Lock, MessageSquare, Star, Trophy, Zap, type LucideIcon } from "lucide-react";
+import { BadgeCheck, BookOpen, Calendar, Flame, Heart, Lock, MessageSquare, Star, Trophy, Zap, type LucideIcon } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { getUserProfile, getUserResourcesCount } from "@/lib/users";
@@ -110,6 +110,19 @@ const Achievements = () => {
               <div className="mt-1 font-heading text-2xl font-bold text-foreground">{s.value}</div>
             </div>
           ))}
+        </div>
+
+        {/* Verified Pro path: eligibility is automatic, granting is reviewed */}
+        <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-brand/30 bg-brand/5 p-4">
+          <BadgeCheck className="h-5 w-5 shrink-0 text-brand" />
+          <p className="min-w-0 flex-1 text-sm leading-relaxed text-muted-foreground">
+            <span className="font-semibold text-foreground">Verified Pro</span> is earned, not
+            bought: reach <span className="font-semibold text-foreground">1,000 reputation</span>{" "}
+            (Trusted Voice) and an admin reviews your contributions before granting the badge.
+            {reputation >= 1000
+              ? " You're past the reputation threshold — you're eligible for review."
+              : ` You need ${(1000 - reputation).toLocaleString()} more reputation to become eligible.`}
+          </p>
         </div>
 
         <div className="mb-6 flex items-center gap-6 border-b border-border">

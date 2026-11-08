@@ -1,25 +1,64 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, Link, Navigate, useLocation } from "react-router-dom";
 import { supabase, isDemoMode } from "../lib/supabase";
-import { ensureUserProfile } from "../lib/users";
+import { ensureUserProfile, checkUsernameAvailability } from "../lib/users";
+import { postAuthRedirect, resendConfirmationEmail, authErrorMessage, normalizeUsername, isValidUsername } from "../lib/auth";
+import { useAuth } from "../hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowLeft, UserCheck } from "lucide-react";
+import { ArrowLeft, UserCheck, CheckCircle2, Loader2, MailCheck, XCircle } from "lucide-react";
 
 export default function Signup() {
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
+  const [confirmationSentTo, setConfirmationSentTo] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user, loading: authLoading } = useAuth();
+  const redirectTo = postAuthRedirect(location.state);
+
+  // Live username availability check (debounced), same rules as Settings.
+  useEffect(() => {
+    if (!username) {
+      setUsernameStatus("idle");
+      return;
+    }
+    if (!isValidUsername(username)) {
+      setUsernameStatus("invalid");
+      return;
+    }
+    setUsernameStatus("checking");
+    const timeoutId = setTimeout(async () => {
+      try {
+        const available = await checkUsernameAvailability(username);
+        setUsernameStatus(available ? "available" : "taken");
+      } catch {
+        setUsernameStatus("idle");
+      }
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [username]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !password) {
+    if (!name || !username || !email || !password) {
       toast.error("Please fill in all fields.");
+      return;
+    }
+    if (!isValidUsername(username)) {
+      toast.error("Username must be 3-15 lowercase letters, numbers, or underscores.");
+      return;
+    }
+    if (usernameStatus === "taken") {
+      toast.error("That username is already taken. Please choose another.");
       return;
     }
 
@@ -29,7 +68,8 @@ export default function Signup() {
         email,
         password,
         options: {
-          data: { display_name: name },
+          data: { display_name: name, username },
+          emailRedirectTo: `${window.location.origin}/login`,
         },
       });
 
@@ -38,19 +78,17 @@ export default function Signup() {
       if (data?.user) {
         await ensureUserProfile({
           ...data.user,
-          user_metadata: { display_name: name },
+          user_metadata: { ...(data.user.user_metadata || {}), display_name: name, username },
         });
       }
 
       if (data?.user && !data?.session) {
-        toast.info(
-          "Account created! If email confirmation is enabled on your Supabase project, check your inbox to confirm. Otherwise, you can log in now.",
-          { duration: 6000 }
-        );
-        navigate("/login");
+        // Email confirmation is enabled: the account exists but cannot be
+        // used until the inbox link is clicked. Say exactly that.
+        setConfirmationSentTo(email);
       } else {
-        toast.success("Account created successfully!");
-        navigate("/");
+        toast.success("Account created. Let's set up your profile!");
+        navigate("/onboarding", { replace: true });
       }
     } catch (error: any) {
       if (error?.message?.includes("Failed to fetch")) {
@@ -109,13 +147,58 @@ export default function Signup() {
       }
 
       toast.success("Logged in as Demo Freelancer!");
-      navigate("/");
+      navigate(redirectTo, { replace: true });
     } catch (error: any) {
       toast.error(error.message || "Demo login failed.");
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleResendConfirmation = async () => {
+    if (!confirmationSentTo) return;
+    setResending(true);
+    try {
+      await resendConfirmationEmail(confirmationSentTo);
+      toast.success("Confirmation email sent again. Check your inbox.");
+    } catch (error) {
+      toast.error(authErrorMessage(error, "Could not resend the confirmation email."));
+    } finally {
+      setResending(false);
+    }
+  };
+
+  // Already signed in? Skip the form.
+  if (!authLoading && user) {
+    return <Navigate to={redirectTo} replace />;
+  }
+
+  if (confirmationSentTo) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-1 text-center">
+            <MailCheck className="mx-auto h-10 w-10 text-brand" />
+            <CardTitle className="text-2xl font-bold tracking-tight">Check your email</CardTitle>
+            <CardDescription>
+              We sent a confirmation link to{" "}
+              <span className="font-medium text-foreground">{confirmationSentTo}</span>. Click it to
+              verify your account, then log in. The link expires after a while — if it does, come
+              back and we'll send a new one.
+            </CardDescription>
+          </CardHeader>
+          <CardFooter className="flex flex-col gap-3">
+            <Button className="w-full" onClick={handleResendConfirmation} disabled={resending}>
+              {resending ? "Sending..." : "Resend confirmation email"}
+            </Button>
+            <Button variant="outline" className="w-full" onClick={() => navigate("/login")}>
+              Go to log in
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
@@ -158,6 +241,29 @@ export default function Signup() {
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium select-none">@</span>
+                <Input
+                  id="username"
+                  placeholder="your_handle"
+                  className="pl-7"
+                  value={username}
+                  onChange={(e) => setUsername(normalizeUsername(e.target.value))}
+                  required
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
+                  {usernameStatus === "checking" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                  {usernameStatus === "available" && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+                  {(usernameStatus === "taken" || usernameStatus === "invalid") && <XCircle className="h-4 w-4 text-destructive" />}
+                </div>
+              </div>
+              {usernameStatus === "available" && <p className="text-xs text-emerald-600">Username is available!</p>}
+              {usernameStatus === "taken" && <p className="text-xs text-destructive">That username is already taken.</p>}
+              {usernameStatus === "invalid" && <p className="text-xs text-destructive">Must be 3-15 lowercase letters, numbers, or underscores.</p>}
+              {usernameStatus === "idle" && <p className="text-xs text-muted-foreground">This is your public @handle. You can change it later in Settings.</p>}
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
@@ -182,9 +288,15 @@ export default function Signup() {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-3">
-            <Button className="w-full" type="submit" disabled={isLoading}>
+            <Button className="w-full" type="submit" disabled={isLoading || usernameStatus === "taken" || usernameStatus === "invalid"}>
               {isLoading ? "Creating account..." : "Sign up"}
             </Button>
+            <p className="text-center text-xs text-muted-foreground">
+              By signing up you agree to our{" "}
+              <Link to="/terms" className="text-brand hover:underline">Terms of Service</Link>{" "}
+              and{" "}
+              <Link to="/privacy" className="text-brand hover:underline">Privacy Policy</Link>.
+            </p>
 
             {isDemoMode && (
               <Button

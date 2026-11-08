@@ -19,6 +19,7 @@ export type UserProfile = {
   createdAt: any;
   avatarUrl?: string;
   isVerifiedPro?: boolean;
+  role?: "admin" | "moderator" | "member";
   hasSeenVeteranCelebration?: boolean;
   favoriteTopics?: string[];
 };
@@ -198,16 +199,27 @@ export const isVeteran = (reputation: number) => {
 
 export const checkUsernameAvailability = async (username: string) => {
   if (!username) return false;
-  const isValidFormat = /^[a-zA-Z0-9_]{3,15}$/.test(username);
+  const clean = username.toLowerCase();
+  const isValidFormat = /^[a-z0-9_]{3,15}$/.test(clean);
   if (!isValidFormat) return false;
 
-  const { data } = await supabase
+  // A handle is taken if it is in the registry OR already on a profile —
+  // the two can drift, and profiles.username is the unique constraint
+  // that actually fails at insert time.
+  const { data: registered } = await supabase
     .from("usernames")
     .select("username")
-    .eq("username", username.toLowerCase())
-    .single();
+    .eq("username", clean)
+    .maybeSingle();
+  if (registered) return false;
 
-  return !data;
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("uid")
+    .ilike("username", clean)
+    .maybeSingle();
+
+  return !profile;
 };
 
 export const claimUsername = async (uid: string, desiredUsername: string, currentUsername?: string) => {

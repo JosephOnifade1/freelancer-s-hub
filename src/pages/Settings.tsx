@@ -8,7 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { getUserProfile, UserProfile, checkUsernameAvailability, claimUsername } from "@/lib/users";
-import { supabase } from "@/lib/supabase";
+import { supabase, isDemoMode } from "@/lib/supabase";
+import { requestPasswordReset, resendConfirmationEmail } from "@/lib/auth";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 
 const Section = ({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) => (
@@ -33,6 +34,8 @@ const Settings = () => {
   
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   
+  const [sendingReset, setSendingReset] = useState(false);
+  const [resendingConfirm, setResendingConfirm] = useState(false);
   const [available, setAvailable] = useState(true);
   const [emailNotif, setEmailNotif] = useState(true);
   const [mentions, setMentions] = useState(true);
@@ -131,11 +134,65 @@ const Settings = () => {
         />
 
         <div className="space-y-5">
-          <Section title="Account" description="Update your login email and password.">
+          <Section title="Account" description="Your login email and password.">
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" defaultValue={user?.email || ""} disabled />
-              <p className="text-xs text-muted-foreground">Email changing is disabled in demo mode.</p>
+              {user?.email_confirmed_at || isDemoMode ? (
+                <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Email verified
+                </p>
+              ) : (
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="flex items-center gap-1 text-xs text-amber-600">
+                    <XCircle className="h-3.5 w-3.5" /> Email not verified yet
+                  </p>
+                  <button
+                    type="button"
+                    disabled={resendingConfirm || !user?.email}
+                    onClick={async () => {
+                      if (!user?.email) return;
+                      setResendingConfirm(true);
+                      try {
+                        await resendConfirmationEmail(user.email);
+                        toast({ title: "Confirmation email sent", description: "Check your inbox and click the link to verify." });
+                      } catch (error) {
+                        toast({ title: "Could not resend", description: error instanceof Error ? error.message : undefined, variant: "destructive" });
+                      } finally {
+                        setResendingConfirm(false);
+                      }
+                    }}
+                    className="text-xs font-medium text-brand hover:underline disabled:opacity-50"
+                  >
+                    {resendingConfirm ? "Sending..." : "Resend confirmation email"}
+                  </button>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                To change your email or password, use a password reset link — it verifies you own
+                the inbox.
+              </p>
+              <div>
+                <button
+                  type="button"
+                  disabled={sendingReset || !user?.email}
+                  onClick={async () => {
+                    if (!user?.email) return;
+                    setSendingReset(true);
+                    try {
+                      await requestPasswordReset(user.email);
+                      toast({ title: "Reset link sent", description: `If an account exists for ${user.email}, a password reset link is on its way.` });
+                    } catch (error) {
+                      toast({ title: "Could not send reset link", description: error instanceof Error ? error.message : undefined, variant: "destructive" });
+                    } finally {
+                      setSendingReset(false);
+                    }
+                  }}
+                  className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
+                >
+                  {sendingReset ? "Sending..." : "Send password reset email"}
+                </button>
+              </div>
             </div>
           </Section>
 

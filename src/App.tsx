@@ -18,6 +18,10 @@ import ProfileDetail from "./pages/Profile.tsx";
 import UserMeRedirect from "./pages/UserMeRedirect.tsx";
 import LeadsBoard from "./pages/LeadsBoard.tsx";
 import Applications from "./pages/Applications.tsx";
+import Notifications from "./pages/Notifications.tsx";
+import Privacy from "./pages/Privacy.tsx";
+import Terms from "./pages/Terms.tsx";
+import Admin from "./pages/Admin.tsx";
 import LeadDetail from "./pages/LeadDetail.tsx";
 import CreateLead from "./pages/CreateLead.tsx";
 import Settings from "./pages/Settings.tsx";
@@ -27,6 +31,9 @@ import CommunityDetail from "./pages/CommunityDetail.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Login from "./pages/Login.tsx";
 import Signup from "./pages/Signup.tsx";
+import ForgotPassword from "./pages/ForgotPassword.tsx";
+import ResetPassword from "./pages/ResetPassword.tsx";
+import Onboarding from "./pages/Onboarding.tsx";
 import Landing from "./pages/Landing.tsx";
 import Drafts from "./pages/Drafts.tsx";
 
@@ -107,12 +114,15 @@ const App = () => (
               <Route path="/" element={<RootRoute />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
 
               {/* Public marketing / info pages */}
               <Route path="/pricing" element={<StandaloneComingSoon title="Pricing" description="Our pricing plans will be available soon." />} />
               <Route path="/status"  element={<StandaloneComingSoon title="System Status" description="Detailed uptime monitoring is being built." />} />
-              <Route path="/privacy" element={<StandaloneComingSoon title="Privacy Policy" description="Our privacy policy is currently being drafted." />} />
-              <Route path="/terms"   element={<StandaloneComingSoon title="Terms of Service" description="Our terms of service are currently being drafted." />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms"   element={<Terms />} />
 
               {/* ── Authenticated: feed views ───────────────────────────── */}
               <Route path="/new"          element={<ProtectedRoute><NewFeed /></ProtectedRoute>} />
@@ -147,6 +157,8 @@ const App = () => (
               <Route path="/l/post"    element={<ProtectedRoute><CreateLead /></ProtectedRoute>} />
               <Route path="/l/:leadId" element={<ProtectedRoute><LeadDetail /></ProtectedRoute>} />
               <Route path="/applications" element={<ProtectedRoute><Applications /></ProtectedRoute>} />
+              <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+              <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
 
               {/* ── Authenticated: personal pages ───────────────────────── */}
               <Route path="/bookmarks"    element={<ProtectedRoute><Bookmarks /></ProtectedRoute>} />
