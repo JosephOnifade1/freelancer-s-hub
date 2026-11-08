@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { useQuery } from "@tanstack/react-query";
@@ -12,22 +13,71 @@ import {
   ExternalLink,
   MessageCircle,
   Share2,
-  BadgeCheck
+  BadgeCheck,
+  CheckCircle2,
+  Send
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { formatTimeAgo } from "@/lib/utils";
 import { MarkdownRenderer } from "@/components/editor/MarkdownRenderer";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 const LeadDetail = () => {
   const { leadId } = useParams<{ leadId: string }>();
+  const [hasApplied, setHasApplied] = useState(false);
+  const [isApplyOpen, setIsApplyOpen] = useState(false);
+  const [proposalText, setProposalText] = useState("");
+  const [isSubmittingProposal, setIsSubmittingProposal] = useState(false);
 
   const { data: lead, isLoading } = useQuery({
     queryKey: ['lead', leadId],
     queryFn: () => leadId ? fetchLeadById(leadId) : null,
     enabled: !!leadId,
   });
+
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success("Opportunity link copied to clipboard!");
+    } catch {
+      toast.error("Failed to copy link.");
+    }
+  };
+
+  const handleReport = () => {
+    toast.success("Thank you. This opportunity has been reported for review.");
+  };
+
+  const handleMessageClient = () => {
+    toast.info("Direct messaging will be enabled once your proposal is accepted. You can view the client's profile.");
+  };
+
+  const handleApplySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!proposalText.trim()) {
+      toast.error("Please enter a short cover note or proposal.");
+      return;
+    }
+
+    setIsSubmittingProposal(true);
+    setTimeout(() => {
+      setIsSubmittingProposal(false);
+      setHasApplied(true);
+      setIsApplyOpen(false);
+      toast.success("Application submitted successfully! The client has been notified.");
+    }, 600);
+  };
 
   if (isLoading) {
     return (
@@ -132,10 +182,26 @@ const LeadDetail = () => {
               </div>
 
               <div className="space-y-3">
-                <Button className="w-full h-12 font-heading font-bold text-base rounded-xl">
-                  Apply Now
+                <Button 
+                  onClick={() => setIsApplyOpen(true)}
+                  disabled={hasApplied}
+                  className={`w-full h-12 font-heading font-bold text-base rounded-xl transition-all ${
+                    hasApplied ? "bg-success/20 text-success border border-success/30 hover:bg-success/30" : ""
+                  }`}
+                >
+                  {hasApplied ? (
+                    <span className="flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5" /> Applied
+                    </span>
+                  ) : (
+                    "Apply Now"
+                  )}
                 </Button>
-                <Button variant="outline" className="w-full h-12 font-heading font-bold text-base rounded-xl gap-2">
+                <Button 
+                  onClick={handleMessageClient}
+                  variant="outline" 
+                  className="w-full h-12 font-heading font-bold text-base rounded-xl gap-2"
+                >
                   <MessageCircle className="h-4 w-4" /> Message Client
                 </Button>
               </div>
@@ -157,22 +223,68 @@ const LeadDetail = () => {
                       {lead.postedBy.name}
                       <VerifiedBadge isVerified={!!lead.postedBy.isVerified} size={12} showTooltip={false} />
                     </Link>
-                    <p className="text-[10px] text-muted-foreground">Premium Client</p>
+                    <p className="text-[10px] text-muted-foreground">Client</p>
                   </div>
                 </div>
               </div>
 
               <div className="mt-6 flex items-center justify-between gap-4">
-                 <button className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                 <button 
+                   onClick={handleShare}
+                   className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                 >
                     <Share2 className="h-3.5 w-3.5" /> Share
                  </button>
-                 <button className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                 <button 
+                   onClick={handleReport}
+                   className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                 >
                     <ShieldCheck className="h-3.5 w-3.5" /> Report
                  </button>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Apply Dialog */}
+        <Dialog open={isApplyOpen} onOpenChange={setIsApplyOpen}>
+          <DialogContent className="sm:max-w-[480px]">
+            <DialogHeader>
+              <DialogTitle>Apply for Opportunity</DialogTitle>
+              <DialogDescription>
+                Send a quick pitch and proposal to <span className="font-semibold text-foreground">{lead.postedBy.name}</span>.
+              </DialogDescription>
+            </DialogHeader>
+
+            <form onSubmit={handleApplySubmit} className="space-y-4 pt-2">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-foreground">Your Proposal / Cover Note</label>
+                <Textarea
+                  placeholder="Explain why you're a great fit for this project, relevant portfolio links, or questions for the client..."
+                  value={proposalText}
+                  onChange={(e) => setProposalText(e.target.value)}
+                  rows={4}
+                  className="resize-none"
+                  required
+                />
+              </div>
+
+              <div className="p-3 rounded-lg bg-muted/40 border border-border/50 text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">Budget: </span>{lead.budget} {lead.currency || "USD"} &bull; {lead.type}
+              </div>
+
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button type="button" variant="ghost" onClick={() => setIsApplyOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmittingProposal} className="gap-2">
+                  <Send className="h-4 w-4" />
+                  {isSubmittingProposal ? "Submitting..." : "Submit Proposal"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
 import { Plus, Filter, MoreHorizontal, ChevronDown, Check, SlidersHorizontal, Info, Calendar as CalendarIcon, List as ListIcon, LayoutGrid, Wand2, Trash2, CheckCircle2, Send, MessageSquare, ArrowUpRight, ExternalLink, Sparkles } from "lucide-react";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
@@ -9,7 +10,9 @@ import {
   getBoardLeads, 
   saveBoardLead, 
   updateBoardLeadStage, 
-  deleteBoardLead 
+  deleteBoardLead,
+  fetchLeads,
+  syncSupabaseLeadsToBoard
 } from "@/lib/leads";
 import { 
   DropdownMenu, 
@@ -57,6 +60,17 @@ const CATEGORIES = [
 
 export default function LeadsBoard() {
   const [leads, setLeads] = useState<BoardLead[]>(() => getBoardLeads());
+  const { data: remoteLeads } = useQuery({
+    queryKey: ['leads'],
+    queryFn: fetchLeads,
+  });
+
+  useEffect(() => {
+    if (remoteLeads && remoteLeads.length > 0) {
+      const merged = syncSupabaseLeadsToBoard(remoteLeads);
+      setLeads([...merged]);
+    }
+  }, [remoteLeads]);
   const [viewMode, setViewMode] = useState<ViewMode>("Board");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [sortBy, setSortBy] = useState("Last Updated");
@@ -371,7 +385,13 @@ export default function LeadsBoard() {
                                     </DropdownMenuSubContent>
                                   </DropdownMenuSub>
 
-                                  <DropdownMenuItem onClick={() => handleDeleteLead(lead.id)} className="text-destructive">
+                                  <DropdownMenuItem asChild>
+                                    <Link to={`/l/${lead.id}`} className="flex items-center cursor-pointer">
+                                      <ExternalLink className="h-3.5 w-3.5 mr-2" /> View Details
+                                    </Link>
+                                  </DropdownMenuItem>
+
+                                  <DropdownMenuItem onClick={() => handleDeleteLead(lead.id)} className="text-destructive cursor-pointer">
                                     <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
@@ -379,9 +399,11 @@ export default function LeadsBoard() {
                             </div>
 
                             {/* Summary / Description */}
-                            <p className="text-xs text-muted-foreground/90 leading-snug line-clamp-2">
-                              {lead.title}
-                            </p>
+                            <Link to={`/l/${lead.id}`} className="block group/link">
+                              <p className="text-xs text-muted-foreground/90 leading-snug line-clamp-2 group-hover/link:text-foreground transition-colors">
+                                {lead.title}
+                              </p>
+                            </Link>
 
                             {/* Value and Time row */}
                             <div className="flex items-center justify-between text-[11px] pt-0.5">
@@ -466,7 +488,11 @@ export default function LeadsBoard() {
                                 <span>{lead.company}</span>
                               </div>
                             </td>
-                            <td className="p-3.5 text-muted-foreground max-w-xs truncate">{lead.title}</td>
+                            <td className="p-3.5 text-muted-foreground max-w-xs truncate">
+                              <Link to={`/l/${lead.id}`} className="hover:text-foreground transition-colors font-medium">
+                                {lead.title}
+                              </Link>
+                            </td>
                             <td className="p-3.5">
                               <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${stageInfo?.badgeColor} bg-muted`}>
                                 <span className={`h-1.5 w-1.5 rounded-full ${stageInfo?.dotColor}`} />

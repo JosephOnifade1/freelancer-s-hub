@@ -114,6 +114,8 @@ export const getUserProfile = async (identifier: string) => {
   if (!clean) return null;
 
   try {
+    let profileToReturn: UserProfile | null = null;
+
     // 1. UID (only query the uuid column with something shaped like a uuid)
     if (UUID_RE.test(clean)) {
       const { data: byUid } = await supabase
@@ -121,43 +123,56 @@ export const getUserProfile = async (identifier: string) => {
         .select("*")
         .eq("uid", clean)
         .maybeSingle();
-      if (byUid) return byUid as UserProfile;
+      if (byUid) profileToReturn = byUid as UserProfile;
     }
 
     // 2. Username, case-insensitive. ilike treats _ and % as wildcards, so escape them.
-    const escaped = clean.replace(/[\\%_]/g, "\\$&");
-    const { data: byUsername } = await supabase
-      .from("profiles")
-      .select("*")
-      .ilike("username", escaped)
-      .maybeSingle();
-    if (byUsername) return byUsername as UserProfile;
-
-    // 3. Username registry
-    const { data: userRow } = await supabase
-      .from("usernames")
-      .select("uid")
-      .ilike("username", escaped)
-      .maybeSingle();
-
-    if (userRow?.uid) {
-      const { data: profileByUid } = await supabase
+    if (!profileToReturn) {
+      const escaped = clean.replace(/[\\%_]/g, "\\$&");
+      const { data: byUsername } = await supabase
         .from("profiles")
         .select("*")
-        .eq("uid", userRow.uid)
+        .ilike("username", escaped)
         .maybeSingle();
-      if (profileByUid) return profileByUid as UserProfile;
+      if (byUsername) profileToReturn = byUsername as UserProfile;
+    }
+
+    // 3. Username registry
+    if (!profileToReturn) {
+      const escaped = clean.replace(/[\\%_]/g, "\\$&");
+      const { data: userRow } = await supabase
+        .from("usernames")
+        .select("uid")
+        .ilike("username", escaped)
+        .maybeSingle();
+
+      if (userRow?.uid) {
+        const { data: profileByUid } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("uid", userRow.uid)
+          .maybeSingle();
+        if (profileByUid) profileToReturn = profileByUid as UserProfile;
+      }
     }
 
     // 4. The signed-in user's own profile (covers "me" and a missing profile row)
-    const { data: sessionData } = await supabase.auth.getSession();
-    const sessionUser = sessionData?.session?.user;
-    if (sessionUser) {
-      const sessionEmailName = sessionUser.email?.split("@")[0];
-      if (clean === "me" || clean === sessionUser.id || clean.toLowerCase() === sessionEmailName?.toLowerCase()) {
-        const ensured = await ensureUserProfile(sessionUser);
-        if (ensured) return ensured;
+    if (!profileToReturn) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const sessionUser = sessionData?.session?.user;
+      if (sessionUser) {
+        const sessionEmailName = sessionUser.email?.split("@")[0];
+        if (clean === "me" || clean === sessionUser.id || clean.toLowerCase() === sessionEmailName?.toLowerCase()) {
+          const ensured = await ensureUserProfile(sessionUser);
+          if (ensured) profileToReturn = ensured;
+        }
       }
+    }
+
+    if (profileToReturn) {
+      const savedMap = await getSavedPostIds(profileToReturn.uid);
+      profileToReturn.savedPosts = savedMap;
+      return profileToReturn;
     }
   } catch (err) {
     console.warn("getUserProfile exception:", err);
@@ -255,6 +270,26 @@ export const getUidByUsername = async (username: string) => {
   return profile?.uid ?? null;
 };
 
+export const getSavedPostIds = async (uid: string): Promise<Record<string, boolean>> => {
+  if (!uid) return {};
+  try {
+    const { data, error } = await supabase
+      .from("saved_posts")
+      .select("postId")
+      .eq("userId", uid);
+
+    if (error || !data) return {};
+    const map: Record<string, boolean> = {};
+    for (const row of data) {
+      if (row.postId) map[row.postId] = true;
+    }
+    return map;
+  } catch (err) {
+    console.warn("getSavedPostIds error:", err);
+    return {};
+  }
+};
+
 export const toggleBookmark = async (uid: string, postId: string) => {
   if (!uid || !postId) return false;
 
@@ -263,7 +298,7 @@ export const toggleBookmark = async (uid: string, postId: string) => {
     .select("postId")
     .eq("userId", uid)
     .eq("postId", postId)
-    .single();
+    .maybeSingle();
 
   if (existing) {
     await supabase.from("saved_posts").delete().eq("userId", uid).eq("postId", postId);
