@@ -19,6 +19,9 @@ export default {
       fontFamily: {
         heading: ["Inter", "system-ui", "sans-serif"],
         body: ["Inter", "system-ui", "sans-serif"],
+        // Display face for marketing headlines only (landing page). The app
+        // itself keeps Inter via font-heading/font-body.
+        display: ["Space Grotesk", "Inter", "system-ui", "sans-serif"],
         mono: ["JetBrains Mono", "ui-monospace", "monospace"],
       },
       colors: {
