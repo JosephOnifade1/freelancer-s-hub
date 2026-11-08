@@ -17,6 +17,7 @@ import Achievements from "./pages/Achievements.tsx";
 import ProfileDetail from "./pages/Profile.tsx";
 import UserMeRedirect from "./pages/UserMeRedirect.tsx";
 import LeadsBoard from "./pages/LeadsBoard.tsx";
+import Applications from "./pages/Applications.tsx";
 import LeadDetail from "./pages/LeadDetail.tsx";
 import CreateLead from "./pages/CreateLead.tsx";
 import Settings from "./pages/Settings.tsx";
@@ -145,6 +146,7 @@ const App = () => (
               <Route path="/l"         element={<ProtectedRoute><LeadsBoard /></ProtectedRoute>} />
               <Route path="/l/post"    element={<ProtectedRoute><CreateLead /></ProtectedRoute>} />
               <Route path="/l/:leadId" element={<ProtectedRoute><LeadDetail /></ProtectedRoute>} />
+              <Route path="/applications" element={<ProtectedRoute><Applications /></ProtectedRoute>} />
 
               {/* ── Authenticated: personal pages ───────────────────────── */}
               <Route path="/bookmarks"    element={<ProtectedRoute><Bookmarks /></ProtectedRoute>} />

@@ -1,0 +1,251 @@
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AppLayout } from "@/components/AppLayout";
+import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  fetchMyApplications,
+  fetchReceivedApplications,
+  updateApplicationStatus,
+  type ApplicationStatus,
+  type LeadApplication,
+} from "@/lib/applications";
+import { formatTimeAgo } from "@/lib/utils";
+import { Briefcase, Check, Inbox, Loader2, Send, X } from "lucide-react";
+import { toast } from "sonner";
+
+const STATUS_STYLES: Record<ApplicationStatus, string> = {
+  pending: "bg-warning/15 text-warning border-warning/30",
+  accepted: "bg-success/15 text-success border-success/30",
+  rejected: "bg-destructive/15 text-destructive border-destructive/30",
+  withdrawn: "bg-muted text-muted-foreground border-border",
+};
+
+function StatusBadge({ status }: { status: ApplicationStatus }) {
+  return (
+    <span className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 font-body text-[11px] font-semibold capitalize ${STATUS_STYLES[status]}`}>
+      {status}
+    </span>
+  );
+}
+
+const Applications = () => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [tab, setTab] = useState<"received" | "sent">("received");
+
+  const { data: received = [], isLoading: loadingReceived } = useQuery({
+    queryKey: ["receivedApplications", user?.uid],
+    queryFn: () => (user?.uid ? fetchReceivedApplications(user.uid) : []),
+    enabled: !!user?.uid,
+  });
+
+  const { data: sent = [], isLoading: loadingSent } = useQuery({
+    queryKey: ["myApplications", user?.uid],
+    queryFn: () => (user?.uid ? fetchMyApplications(user.uid) : []),
+    enabled: !!user?.uid,
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: ApplicationStatus }) =>
+      updateApplicationStatus(id, status),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["receivedApplications"] });
+      queryClient.invalidateQueries({ queryKey: ["myApplications"] });
+      toast.success(
+        variables.status === "accepted"
+          ? "Application accepted. The freelancer can see the update on the lead."
+          : variables.status === "rejected"
+            ? "Application rejected."
+            : "Application withdrawn."
+      );
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to update application."),
+  });
+
+  const isLoading = tab === "received" ? loadingReceived : loadingSent;
+  const active = tab === "received" ? received : sent;
+  const pendingReceived = received.filter((a) => a.status === "pending").length;
+
+  return (
+    <AppLayout>
+      <div className="mx-auto max-w-4xl px-4 py-6">
+        <PageHeader
+          title="Applications"
+          subtitle="Review proposals for your leads, and track the ones you've sent."
+        />
+
+        {/* Tabs */}
+        <div className="mt-2 flex gap-2">
+          <button
+            onClick={() => setTab("received")}
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 font-body text-sm font-medium transition-colors ${
+              tab === "received" ? "bg-primary text-primary-foreground" : "bg-muted/50 text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Inbox className="h-4 w-4" /> Received
+            {pendingReceived > 0 && (
+              <span className="rounded-full bg-warning px-1.5 font-mono text-[10px] font-bold text-warning-foreground">
+                {pendingReceived}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setTab("sent")}
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 font-body text-sm font-medium transition-colors ${
+              tab === "sent" ? "bg-primary text-primary-foreground" : "bg-muted/50 text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Send className="h-4 w-4" /> Sent
+          </button>
+        </div>
+
+        <div className="mt-6 space-y-4">
+          {isLoading ? (
+            <div className="flex h-[40vh] items-center justify-center">
+              <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
+            </div>
+          ) : active.length === 0 ? (
+            tab === "received" ? (
+              <EmptyState
+                icon={Inbox}
+                title="No applications yet"
+                description="When freelancers apply to leads you post, their proposals will show up here for review."
+                action={
+                  <Link to="/l/post" className="rounded-lg bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground hover:opacity-90">
+                    Post a lead
+                  </Link>
+                }
+              />
+            ) : (
+              <EmptyState
+                icon={Briefcase}
+                title="You haven't applied to anything"
+                description="Browse the Leads Board and send your first proposal — it'll be tracked here."
+                action={
+                  <Link to="/l" className="rounded-lg bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground hover:opacity-90">
+                    Browse leads
+                  </Link>
+                }
+              />
+            )
+          ) : (
+            active.map((app) => (
+              <ApplicationCard
+                key={app.id}
+                app={app}
+                mode={tab}
+                busy={statusMutation.isPending}
+                onStatus={(status) => statusMutation.mutate({ id: app.id, status })}
+              />
+            ))
+          )}
+        </div>
+      </div>
+    </AppLayout>
+  );
+};
+
+function ApplicationCard({
+  app,
+  mode,
+  busy,
+  onStatus,
+}: {
+  app: LeadApplication;
+  mode: "received" | "sent";
+  busy: boolean;
+  onStatus: (status: ApplicationStatus) => void;
+}) {
+  const applicant = app.applicant;
+
+  return (
+    <article className="rounded-xl border border-border bg-card p-5">
+      <div className="flex flex-wrap items-start gap-3">
+        {mode === "received" && applicant ? (
+          <Link to={`/f/${applicant.username || applicant.uid}`} className="flex min-w-0 items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted font-heading text-sm font-bold text-foreground">
+              {applicant.avatarUrl ? (
+                <img src={applicant.avatarUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                applicant.name.charAt(0).toUpperCase()
+              )}
+            </span>
+            <span className="min-w-0">
+              <span className="flex items-center gap-1.5 font-heading text-sm font-bold text-foreground">
+                {applicant.name}
+                <VerifiedBadge isVerified={applicant.isVerifiedPro} size={13} showTooltip={false} />
+              </span>
+              <span className="block font-body text-xs text-muted-foreground">
+                f/{applicant.username} · {applicant.reputation} rep
+              </span>
+            </span>
+          </Link>
+        ) : (
+          <div className="min-w-0">
+            <p className="font-body text-xs text-muted-foreground">Applied {formatTimeAgo(app.createdAt)}</p>
+          </div>
+        )}
+
+        <div className="ml-auto flex items-center gap-2.5">
+          {mode === "received" && (
+            <span className="font-body text-xs text-muted-foreground">{formatTimeAgo(app.createdAt)}</span>
+          )}
+          <StatusBadge status={app.status} />
+        </div>
+      </div>
+
+      {app.lead && (
+        <p className="mt-3 font-body text-sm text-muted-foreground">
+          for{" "}
+          <Link to={`/l/${app.lead.id}`} className="font-semibold text-foreground hover:text-brand">
+            {app.lead.title}
+          </Link>{" "}
+          <span className="font-mono text-xs text-success">
+            {app.lead.budget} {app.lead.currency}
+          </span>
+        </p>
+      )}
+
+      <p className="mt-3 whitespace-pre-wrap font-body text-sm leading-relaxed text-foreground/90">
+        {app.proposal}
+      </p>
+
+      {mode === "received" && app.status === "pending" && (
+        <div className="mt-4 flex gap-2 border-t border-border/60 pt-4">
+          <button
+            onClick={() => onStatus("accepted")}
+            disabled={busy}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-success px-4 py-2 font-body text-sm font-semibold text-success-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            <Check className="h-4 w-4" /> Accept
+          </button>
+          <button
+            onClick={() => onStatus("rejected")}
+            disabled={busy}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 font-body text-sm font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+          >
+            <X className="h-4 w-4" /> Reject
+          </button>
+        </div>
+      )}
+
+      {mode === "sent" && app.status === "pending" && (
+        <div className="mt-4 border-t border-border/60 pt-4">
+          <button
+            onClick={() => onStatus("withdrawn")}
+            disabled={busy}
+            className="font-body text-sm font-medium text-muted-foreground transition-colors hover:text-destructive disabled:opacity-50"
+          >
+            Withdraw application
+          </button>
+        </div>
+      )}
+    </article>
+  );
+}
+
+export default Applications;

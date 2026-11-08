@@ -72,8 +72,11 @@ export function VoteControls({ entityId, authorUid, score, type = "post", postId
       queryClient.invalidateQueries({ queryKey: ['posts'] });
     } catch (e: any) {
       console.error(e);
+      // The RPC rejected the vote — roll the optimistic update back so the
+      // UI never claims a score the server doesn't have.
+      setVote(vote);
+      setDisplayScore((prev) => prev - delta);
       toast.error(e.message || "Failed to vote");
-      // Could revert state here
     }
   };
 

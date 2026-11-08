@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { supabase } from "../lib/supabase";
+import { supabase, isDemoMode } from "../lib/supabase";
 import { ensureUserProfile } from "../lib/users";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +52,12 @@ export default function Login() {
   };
 
   const handleDemoLogin = async () => {
+    // Demo account exists only in demo mode (local mock DB). Against a real
+    // backend this would create a shared, publicly-known account.
+    if (!isDemoMode) {
+      toast.error("Demo sign-in is only available in demo mode.");
+      return;
+    }
     setIsLoading(true);
     const demoEmail = "demo@borynx.com";
     const demoPassword = "DemoPassword123!";
@@ -158,16 +164,18 @@ export default function Login() {
               {isLoading ? "Logging in..." : "Log in"}
             </Button>
 
-            <Button
-              type="button"
-              variant="secondary"
-              className="w-full gap-2"
-              onClick={handleDemoLogin}
-              disabled={isLoading}
-            >
-              <UserCheck className="h-4 w-4" />
-              Quick Demo Sign In
-            </Button>
+            {isDemoMode && (
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full gap-2"
+                onClick={handleDemoLogin}
+                disabled={isLoading}
+              >
+                <UserCheck className="h-4 w-4" />
+                Quick Demo Sign In
+              </Button>
+            )}
 
             <div className="relative w-full my-1">
               <div className="absolute inset-0 flex items-center">

@@ -63,8 +63,10 @@ export const addComment = async (
 
   if (error) throw new Error(error.message);
 
-  // Increment comment count on post
-  await supabase.rpc("increment_comment_count", { post_id: postId });
+  // Increment comment count on post. The comment itself is already saved, so
+  // a counter failure is logged loudly rather than reported as a failed post.
+  const { error: rpcError } = await supabase.rpc("increment_comment_count", { post_id: postId });
+  if (rpcError) console.warn("increment_comment_count failed:", rpcError.message);
 
   return data?.id as string;
 };
