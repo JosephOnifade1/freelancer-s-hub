@@ -45,10 +45,8 @@ export const fetchComments = async (postId: string): Promise<CommentData[]> => {
     .eq("postId", postId)
     .order("createdAt", { ascending: true });
 
-  if (error || !data) {
-    console.warn("Could not fetch comments from Supabase backend:", error?.message || error);
-    return [];
-  }
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Could not load comments.");
 
   return (data as CommentRow[]).map((c) => ({
     id: c.id,
@@ -69,15 +67,21 @@ export const addComment = async (
   postId: string,
   commentData: Omit<CommentData, "id" | "createdAt" | "score">
 ) => {
-  // allowComments is enforced by RLS on the real backend; this check gives
-  // the same behavior (and a clear message) in demo mode, where there is
-  // no RLS. Comments stay readable when off — only new ones are blocked.
-  const { data: postRow } = await supabase
+  // allowComments / deleted state are enforced by RLS on the real backend;
+  // this check gives the same behavior (and a clear message) in demo mode,
+  // where there is no RLS. Comments stay readable when off — only new ones
+  // are blocked — and a removed post is frozen entirely.
+  const { data: postRow, error: postError } = await supabase
     .from("posts")
-    .select("allowComments")
+    .select("allowComments, isDeleted")
     .eq("id", postId)
     .maybeSingle();
-  if (postRow && postRow.allowComments === false) {
+  if (postError) throw new Error(postError.message);
+  if (!postRow) throw new Error("Post not found or not accessible.");
+  if (postRow.isDeleted) {
+    throw new Error("This post has been removed, so comments are closed.");
+  }
+  if (postRow.allowComments === false) {
     throw new Error("Comments are turned off for this post.");
   }
 
@@ -97,11 +101,9 @@ export const addComment = async (
 
   if (error) throw new Error(error.message);
 
-  // Increment comment count on post. The comment itself is already saved, so
-  // a counter failure is logged loudly rather than reported as a failed post.
-  const { error: rpcError } = await supabase.rpc("increment_comment_count", { post_id: postId });
-  if (rpcError) console.warn("increment_comment_count failed:", rpcError.message);
-
+  // posts.commentCount is maintained by the trg_post_comment_count database
+  // trigger (and mirrored in the mock), so it can no longer drift when a
+  // client-side counter call fails or is skipped.
   return data?.id as string;
 };
 
@@ -133,7 +135,8 @@ export const fetchCommentsByAuthor = async (profile: {
     .eq("isDeleted", false)
     .order("createdAt", { ascending: false });
 
-  if (error) return [];
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Could not load author comments.");
 
   return (data as CommentRow[]).map((c) => ({
     id: c.id,

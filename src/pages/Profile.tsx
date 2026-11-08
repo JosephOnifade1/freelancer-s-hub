@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { VoteControls } from "@/components/VoteControls";
-import { MapPin, Calendar, MessageSquare, Camera, Loader2, MoreHorizontal, Trash2, Edit2, ArrowLeft, Check, Link as LinkIcon } from "lucide-react";
+import { MapPin, Calendar, Camera, Loader2, Edit2, ArrowLeft, Check, Link as LinkIcon } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { PostCard, PostData } from "@/components/PostCard";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,113 +9,14 @@ import { useAuth } from "@/hooks/auth-context";
 import { getUserProfile, toggleFollow, updateUserAvatar, isVeteran } from "@/lib/users";
 import { uploadImage } from "@/lib/uploads";
 import { fetchPosts } from "@/lib/posts";
+import { QueryErrorState } from "@/components/QueryErrorState";
 import { fetchAllCommunities, getUserCommunities } from "@/lib/communities";
-import { fetchCommentsByAuthor, updateComment, softDeleteComment, CommentData } from "@/lib/comments";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { formatTimeAgo } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 type Tab = "Threads" | "Resources" | "B-Spaces" | "Bookmarks";
-
-const ProfileCommentCard = ({ comment, isOwnProfile }: { comment: CommentData & { postId: string }, isOwnProfile: boolean }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editBody, setEditBody] = useState(comment.body);
-  const queryClient = useQueryClient();
-
-  const updateMutation = useMutation({
-    mutationFn: async () => updateComment(comment.postId, comment.id, editBody),
-    onSuccess: () => {
-      setIsEditing(false);
-      queryClient.invalidateQueries({ queryKey: ['userComments'] });
-      toast.success("Comment updated");
-    },
-    onError: () => toast.error("Failed to update comment")
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async () => softDeleteComment(comment.postId, comment.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['userComments'] });
-      toast.success("Comment deleted");
-    },
-    onError: () => toast.error("Failed to delete comment")
-  });
-
-  if (comment.isDeleted) {
-    return (
-      <div className="rounded-xl border border-dashed border-border/40 bg-card/60 p-4 opacity-60 flex gap-3 text-sm">
-        <MessageSquare className="h-4 w-4 text-muted-foreground/60 mt-1" />
-        <div>Comment removed • {formatTimeAgo(comment.createdAt)}</div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-xl border border-border/50 bg-card p-5 hover:border-border transition-colors shadow-sm flex gap-4">
-      <MessageSquare className="h-5 w-5 text-muted-foreground/60 shrink-0 mt-1" />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between mb-1">
-          <div className="text-xs text-muted-foreground">
-            Commented on{" "}
-            <Link to={`/p/${comment.postId}`} className="font-medium text-foreground hover:text-brand transition-colors">
-              a post
-            </Link>{" "}
-            • {formatTimeAgo(comment.createdAt)}
-            {comment.isEdited && <span className="italic ml-1">(edited)</span>}
-          </div>
-          
-          {isOwnProfile && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="rounded-md p-1 text-muted-foreground hover:bg-secondary transition-colors">
-                  <MoreHorizontal className="h-4 w-4" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-36 text-xs">
-                <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                  <Edit2 className="h-3.5 w-3.5 mr-2" /> Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => deleteMutation.mutate()} className="text-destructive">
-                  <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-
-        {isEditing ? (
-          <div className="mt-2">
-            <textarea
-              value={editBody}
-              onChange={(e) => setEditBody(e.target.value)}
-              className="w-full resize-none rounded-md bg-background border border-border p-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand/50"
-              rows={3}
-            />
-            <div className="flex justify-end gap-2 mt-2">
-              <button onClick={() => setIsEditing(false)} className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground">
-                Cancel
-              </button>
-              <button 
-                onClick={() => updateMutation.mutate()} 
-                disabled={updateMutation.isPending || !editBody.trim()}
-                className="px-3 py-1 bg-primary text-primary-foreground text-xs rounded hover:opacity-90 disabled:opacity-50 font-medium"
-              >
-                {updateMutation.isPending ? "Saving..." : "Save"}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-line mt-1">
-            {comment.body}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-};
 
 export default function Profile() {
   const { uid, username, handle } = useParams();
@@ -140,15 +41,9 @@ export default function Profile() {
   const [bioInput, setBioInput] = useState("");
   const [isSavingBio, setIsSavingBio] = useState(false);
 
-  const { data: allPosts = [] } = useQuery({
+  const { data: allPosts = [], isError: postsError, refetch: refetchPosts } = useQuery({
     queryKey: ['posts'],
     queryFn: fetchPosts
-  });
-
-  const { data: userComments = [] } = useQuery({
-    queryKey: ['userComments', profile?.uid],
-    queryFn: () => profile ? fetchCommentsByAuthor(profile) : [],
-    enabled: !!profile
   });
 
   const { data: allCommunities = [] } = useQuery({
@@ -491,7 +386,9 @@ export default function Profile() {
             {/* Main Content Area based on Tab */}
             <div className="space-y-4">
               {activeTab === "Threads" && (
-                userPosts.length === 0 ? (
+                postsError ? (
+                  <QueryErrorState title="Couldn't load posts" onRetry={() => refetchPosts()} />
+                ) : userPosts.length === 0 ? (
                   <div className="rounded-2xl border border-border/40 bg-card p-10 text-center space-y-2">
                     <p className="font-heading font-bold text-foreground ">No posts yet</p>
                     <p className="text-sm text-muted-foreground">
@@ -504,7 +401,9 @@ export default function Profile() {
               )}
 
               {activeTab === "Resources" && (
-                resourcePosts.length === 0 ? (
+                postsError ? (
+                  <QueryErrorState title="Couldn't load resources" onRetry={() => refetchPosts()} />
+                ) : resourcePosts.length === 0 ? (
                   <div className="rounded-xl border border-border/40 bg-card p-10 text-center text-sm text-muted-foreground shadow-sm">
                     No resources shared yet.
                   </div>
@@ -545,7 +444,9 @@ export default function Profile() {
               )}
 
               {activeTab === "Bookmarks" && (
-                savedPostsList.length === 0 ? (
+                postsError ? (
+                  <QueryErrorState title="Couldn't load bookmarked posts" onRetry={() => refetchPosts()} />
+                ) : savedPostsList.length === 0 ? (
                   <div className="rounded-xl border border-border/40 bg-card p-10 text-center text-sm text-muted-foreground shadow-sm">
                     No bookmarks saved yet.
                   </div>

@@ -2,7 +2,7 @@ import { supabase } from "./supabase";
 
 /**
  * Voting goes through the `cast_vote` SECURITY DEFINER RPC
- * (see supabase_schema.sql / supabase_architecture_hardening.sql).
+ * (see supabase_schema.sql / supabase_post_interaction_hardening_migration.sql).
  *
  * The server — never the client — reads the previous vote, computes the
  * score/ups/downs deltas, updates the post/comment, and adjusts the

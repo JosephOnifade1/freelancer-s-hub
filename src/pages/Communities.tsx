@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Compass, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
+import { QueryErrorState } from "@/components/QueryErrorState";
 import { CreateCommunityModal } from "@/components/modals/CreateCommunityModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +29,7 @@ const Communities = () => {
   const [sortBy, setSortBy] = useState<SortKey>("members");
   const [visible, setVisible] = useState(PAGE_SIZE);
 
-  const { data: communities = [], isLoading } = useQuery({
+  const { data: communities = [], isLoading, isError: spacesError, refetch: refetchSpaces } = useQuery({
     queryKey: ["communities"],
     queryFn: fetchAllCommunities,
   });
@@ -147,13 +148,16 @@ const Communities = () => {
             </div>
 
             <div className="divide-y divide-border rounded-xl border border-border bg-card">
-              {isLoading && <p className="p-10 text-center text-sm text-muted-foreground">Loading spaces</p>}
-              {!isLoading && list.length === 0 && (
+              {spacesError ? (
+                <QueryErrorState title="Couldn't load spaces" onRetry={() => refetchSpaces()} />
+              ) : isLoading ? (
+                <p className="p-10 text-center text-sm text-muted-foreground">Loading spaces</p>
+              ) : list.length === 0 && (
                 <p className="p-10 text-center text-sm text-muted-foreground">
                   {search ? `No spaces match "${search}".` : "No spaces in this category yet."}
                 </p>
               )}
-              {list.slice(0, visible).map((space, i) => {
+              {!spacesError && list.slice(0, visible).map((space, i) => {
                 const Icon = getCommunityStyle(space.category).icon;
                 const isJoined = joined.has(space.slug);
                 return (

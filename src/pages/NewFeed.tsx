@@ -4,10 +4,11 @@ import { FeedSidebar } from "@/components/FeedSidebar";
 import { PageHeader } from "@/components/PageHeader";
 import { useQuery } from "@tanstack/react-query";
 import { fetchPosts } from "@/lib/posts";
+import { QueryErrorState } from "@/components/QueryErrorState";
 import { Loader2 } from "lucide-react";
 
 const NewFeed = () => {
-  const { data: posts = [], isLoading } = useQuery({
+  const { data: posts = [], isLoading, isError: postsError, refetch: refetchPosts } = useQuery({
     queryKey: ['posts'],
     queryFn: fetchPosts
   });
@@ -24,7 +25,9 @@ const NewFeed = () => {
               subtitle="The freshest posts from freelancers, sorted by time."
             />
             <div className="space-y-3">
-              {isLoading ? (
+              {postsError ? (
+                <QueryErrorState title="Couldn't load new posts" onRetry={() => refetchPosts()} />
+              ) : isLoading ? (
                 <div className="flex justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>

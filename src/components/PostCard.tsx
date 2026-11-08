@@ -105,6 +105,7 @@ export function PostCard({ post, index }: PostCardProps) {
       setIsEditing(false);
       queryClient.invalidateQueries({ queryKey: ['posts'] });
       queryClient.invalidateQueries({ queryKey: ['post', post.id] });
+      if (post.communitySlug) queryClient.invalidateQueries({ queryKey: ['communityPosts', post.communitySlug] });
       toast.success("Post updated");
     },
     onError: () => toast.error("Failed to update post")
@@ -115,6 +116,7 @@ export function PostCard({ post, index }: PostCardProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['posts'] });
       queryClient.invalidateQueries({ queryKey: ['post', post.id] });
+      if (post.communitySlug) queryClient.invalidateQueries({ queryKey: ['communityPosts', post.communitySlug] });
       toast.success("Post deleted");
     },
     onError: () => toast.error("Failed to delete post")

@@ -358,10 +358,11 @@ create policy "Authors can update/delete their posts" on public.posts
     )
   );
 
--- NOTE: post counters (views/score/commentCount) are updated only through
--- SECURITY DEFINER RPCs (increment_post_views, cast_vote, ...). There is
--- deliberately NO general update policy here: RLS is row-level, so a
--- permissive "update counters" policy would let anyone rewrite any column.
+-- NOTE: view/score counters are maintained by SECURITY DEFINER RPCs
+-- (increment_post_views, cast_vote), while commentCount is maintained by a
+-- SECURITY DEFINER trigger below. There is deliberately NO general-purpose
+-- counter update policy: RLS is row-level, so such a policy would let anyone
+-- rewrite other columns too.
 
 -- polls RLS
 alter table public.polls enable row level security;
@@ -427,7 +428,14 @@ create policy "Auth users can create comments" on public.comments
     and public.can_view_post("postId")
     and exists (
       select 1 from public.posts p
-      where p."id" = "postId" and p."allowComments"
+      where p."id" = "postId" and p."allowComments" and p."isDeleted" is not true
+    )
+    and (
+      "parentId" is null
+      or exists (
+        select 1 from public.comments parent
+        where parent."id" = comments."parentId" and parent."postId" = comments."postId"
+      )
     )
   );
 
@@ -668,16 +676,6 @@ begin
 end;
 $$ language plpgsql security definer;
 
--- Increment Comment Count
-create or replace function public.increment_comment_count(post_id uuid)
-returns void as $$
-begin
-  update public.posts
-  set "commentCount" = coalesce("commentCount", 0) + 1
-  where id = post_id;
-end;
-$$ language plpgsql security definer;
-
 -- Increment Followers
 create or replace function public.increment_followers(target_uid uuid)
 returns void as $$
@@ -756,6 +754,82 @@ end;
 $$ language plpgsql security definer;
 
 
+create or replace function public.maintain_post_comment_count()
+returns trigger as $$
+begin
+  if TG_OP = 'INSERT' then
+    if NEW."isDeleted" is not true then
+      -- The UPDATE locks the post row: if a concurrent delete/closure wins
+      -- first, the insert fails and rolls back instead of adding a reply to
+      -- an already-frozen post.
+      update public.posts
+      set "commentCount" = coalesce("commentCount", 0) + 1
+      where "id" = NEW."postId" and "isDeleted" is not true and "allowComments" is true;
+      if not found then
+        raise exception 'Comments are closed for this post';
+      end if;
+    end if;
+    return NEW;
+  end if;
+
+  if TG_OP = 'DELETE' then
+    if OLD."isDeleted" is not true then
+      update public.posts
+      set "commentCount" = greatest(0, coalesce("commentCount", 0) - 1)
+      where "id" = OLD."postId";
+    end if;
+    return OLD;
+  end if;
+
+  -- UPDATE: moving a comment between posts (defensive; the app never
+  -- does this) or soft-delete / restore transitions.
+  if OLD."postId" is distinct from NEW."postId" then
+    if OLD."isDeleted" is not true then
+      update public.posts
+      set "commentCount" = greatest(0, coalesce("commentCount", 0) - 1)
+      where "id" = OLD."postId";
+    end if;
+    if NEW."isDeleted" is not true then
+      update public.posts
+      set "commentCount" = coalesce("commentCount", 0) + 1
+      where "id" = NEW."postId" and "isDeleted" is not true and "allowComments" is true;
+      if not found then
+        raise exception 'Comments are closed for this post';
+      end if;
+    end if;
+  elsif coalesce(OLD."isDeleted", false) <> coalesce(NEW."isDeleted", false) then
+    if NEW."isDeleted" is true then
+      update public.posts
+      set "commentCount" = greatest(0, coalesce("commentCount", 0) - 1)
+      where "id" = NEW."postId";
+    else
+      update public.posts
+      set "commentCount" = coalesce("commentCount", 0) + 1
+      where "id" = NEW."postId";
+    end if;
+  end if;
+
+  return NEW;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_post_comment_count on public.comments;
+create trigger trg_post_comment_count
+  after insert or delete or update of "isDeleted", "postId" on public.comments
+  for each row execute function public.maintain_post_comment_count();
+
+-- Reconcile counters with the new semantics (non-deleted comments).
+update public.posts p
+set "commentCount" = (
+  select count(*)::integer
+  from public.comments c
+  where c."postId" = p."id" and c."isDeleted" is not true
+);
+
+-- The client no longer calls this; the trigger above owns the counter.
+drop function if exists public.increment_comment_count(uuid);
+
+
 -- Cast Vote (atomic, server-computed)
 -- The client supplies only (entity, desired vote). This function reads the
 -- previous vote, derives the author from the entity itself, computes all
@@ -776,6 +850,9 @@ returns void as $$
 declare
   previous_vote integer := 0;
   entity_author uuid;
+  entity_post_id uuid;
+  entity_is_deleted boolean := false;
+  parent_post_is_deleted boolean := false;
   score_delta integer;
   ups_delta integer;
   downs_delta integer;
@@ -784,14 +861,25 @@ begin
     raise exception 'Not authorized to vote as another user';
   end if;
 
-  if new_vote not in (-1, 0, 1) then
+  if new_vote is null or new_vote not in (-1, 0, 1) then
     raise exception 'Invalid vote value: %', new_vote;
   end if;
 
+  -- Row locks make deletion / visibility edits and a vote serialize:
+  -- once a post or comment is removed, later votes see the removed state.
   if entity_type = 'post' then
-    select "authorUid" into entity_author from public.posts where id = entity_id;
+    select "authorUid", "id", coalesce("isDeleted", false)
+      into entity_author, entity_post_id, entity_is_deleted
+    from public.posts
+    where id = entity_id
+    for update;
   elsif entity_type = 'comment' then
-    select "authorUid" into entity_author from public.comments where id = entity_id;
+    select c."authorUid", c."postId", coalesce(c."isDeleted", false), coalesce(p."isDeleted", false)
+      into entity_author, entity_post_id, entity_is_deleted, parent_post_is_deleted
+    from public.comments c
+    join public.posts p on p."id" = c."postId"
+    where c."id" = entity_id
+    for update of c, p;
   else
     raise exception 'Unsupported vote entity type: %', entity_type;
   end if;
@@ -800,9 +888,30 @@ begin
     raise exception 'Vote target not found';
   end if;
 
+  if entity_is_deleted or parent_post_is_deleted then
+    raise exception 'Cannot vote on deleted content';
+  end if;
+
+  -- SECURITY DEFINER bypasses RLS, so visibility must be checked here.
+  if not public.can_view_post(entity_post_id) then
+    raise exception 'Not authorized to vote on this content';
+  end if;
+
+  if entity_author = voter_uid then
+    raise exception 'You cannot vote on your own content';
+  end if;
+
+  -- Serialize votes by the same voter on the same entity for the rest of
+  -- this transaction; without this, two concurrent calls can both read
+  -- "no previous vote" and apply the same delta twice.
+  perform pg_advisory_xact_lock(
+    hashtextextended(voter_uid::text || ':' || entity_type || ':' || entity_id::text, 0)
+  );
+
   select "voteValue" into previous_vote
   from public.votes
-  where "userId" = voter_uid and "entityType" = entity_type and "entityId" = entity_id;
+  where "userId" = voter_uid and "entityType" = entity_type and "entityId" = entity_id
+  for update;
   previous_vote := coalesce(previous_vote, 0);
 
   if previous_vote = new_vote then
