@@ -1,26 +1,21 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowBigDown,
   ArrowBigUp,
   ArrowRight,
+  ArrowUpRight,
   BadgeCheck,
   Briefcase,
   Check,
   Code2,
-  Flame,
-  Lock,
   Megaphone,
   MessageSquare,
   Palette,
   PenTool,
-  ShieldCheck,
-  Star,
-  Trophy,
   Users,
   Video,
-  X,
-  Zap,
   type LucideIcon,
 } from "lucide-react";
 import { fetchAllCommunities, type CommunityData } from "@/lib/communities";
@@ -31,12 +26,19 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
-/* ─── Fallback B-Spaces ──────────────────────────────────────────────────────
-   Mirrors the seed data in supabase_schema.sql / mockSupabase.ts. Used only
-   until the live fetch resolves (communities have a public-read RLS policy),
-   or if Supabase is unreachable — the page never renders empty.
-   Member counts are intentionally omitted here: they are only shown when
-   they come back from the live query, never hardcoded. */
+/* ══════════════════════════════════════════════════════════════════════════
+   Design notes (premium pass, daily.dev-inspired discipline):
+   - Flat surfaces only. No glow blobs, glassmorphism, gradient text, or
+     floating badge clusters — the product UI carries the page.
+   - One radius (rounded-lg/xl), hairline borders, generous whitespace.
+   - --brand (purple) is spent only on interactive accents: active tab,
+     links, vote arrows. Primary buttons are plain primary (white on dark).
+   - Type system: Space Grotesk (font-display) for headlines, Inter for
+     body, JetBrains Mono (font-mono) for labels, budgets and counts.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Fallback mirrors the seed in supabase_schema.sql. Live data replaces it
+   (communities are public-read); member counts render only from live data. */
 const FALLBACK_SPACES: CommunityData[] = [
   { slug: "design", name: "Design", description: "UI, UX, branding, illustration.", category: "Design", topics: ["ui", "ux", "branding"], memberCount: 0, ownerId: "system", createdAt: "" },
   { slug: "dev", name: "Freelance Dev", description: "Web, mobile, full-stack devs going solo.", category: "Development", topics: ["web", "mobile", "backend"], memberCount: 0, ownerId: "system", createdAt: "" },
@@ -55,149 +57,313 @@ const SPACE_ICONS: Record<string, LucideIcon> = {
   consulting: Briefcase,
 };
 
-/* ─── Illustrative preview content ───────────────────────────────────────────
-   Product-preview mock, in the shape of the real PostCard / LeadCard UI.
-   Discussion topics mirror the kind of posts Borynx is built for. */
+/* Illustrative preview content in the shape of the real PostCard/LeadCard. */
 const PREVIEW_POSTS = [
   {
     space: "dev",
     author: "Maya",
+    verified: true,
     title: "I tripled my freelance rate in 6 months — here's exactly how",
-    excerpt:
-      "I stopped pitching hours and started pitching outcomes. The repositioning — not new tech — is what moved me from $40/hr to $120/hr…",
+    excerpt: "I stopped pitching hours and started pitching outcomes. The repositioning — not new tech — moved me from $40/hr to $120/hr.",
     score: 128,
     comments: 42,
     tags: ["pricing", "growth"],
-    verified: true,
   },
   {
     space: "consulting",
     author: "Sam",
+    verified: false,
     title: "How do you handle clients who ghost after the discovery call?",
-    excerpt:
-      "Four great calls this month, then silence. What's your follow-up cadence for high-ticket clients?",
+    excerpt: "Four great calls this month, then silence. What's your follow-up cadence for high-ticket clients?",
     score: 86,
     comments: 37,
     tags: ["clients"],
-    verified: false,
+  },
+  {
+    space: "design",
+    author: "Ada",
+    verified: true,
+    title: "The portfolio teardown that doubled my inbound leads",
+    excerpt: "I cut 14 projects down to 4 case studies with numbers attached. Everything changed after that.",
+    score: 64,
+    comments: 21,
+    tags: ["portfolio", "clients"],
   },
 ];
 
 const EXAMPLE_LEADS = [
-  {
-    title: "React Native Developer for Fitness App",
-    budget: "$5,000 – $8,000",
-    meta: "Remote · Project · 3 months",
-    skills: ["React Native", "TypeScript"],
-  },
-  {
-    title: "UI/UX Designer for Web3 Landing Page",
-    budget: "$2,000",
-    meta: "Remote · Bounty · Fast turnaround",
-    skills: ["Figma", "UI Design"],
-  },
+  { title: "React Native Developer for Fitness App", budget: "$5,000 – $8,000", meta: "Remote · Project", skills: ["React Native", "TypeScript"] },
+  { title: "UI/UX Designer for Web3 Landing Page", budget: "$2,000", meta: "Remote · Bounty", skills: ["Figma", "UI Design"] },
+  { title: "SEO Consultant for SaaS Blog Audit", budget: "$1,500", meta: "Remote · Retainer", skills: ["SEO", "Content"] },
 ];
 
-const JOIN_CTA = "Join Borynx free";
+const MILESTONES = [
+  { name: "Rising Voice", rep: "100", note: "Your answers start getting noticed." },
+  { name: "Trusted Voice", rep: "1,000", note: "A profile clients can trust at a glance." },
+  { name: "Veteran Freelancer", rep: "5,000", note: "The top tier of community standing." },
+];
 
-function JoinButton({ className = "" }: { className?: string }) {
+function GoogleMark() {
   return (
-    <Link
-      to="/signup"
-      className={`inline-flex items-center justify-center gap-2 rounded-full bg-brand px-7 py-3.5 font-heading text-sm font-bold text-brand-foreground shadow-lg shadow-brand/25 transition-all hover:bg-brand/90 hover:shadow-brand/40 active:scale-95 ${className}`}
-    >
-      {JOIN_CTA} <ArrowRight className="h-4 w-4" />
-    </Link>
+    <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+      <path fill="#4285F4" d="M23.5 12.3c0-.9-.1-1.5-.3-2.2H12v4.3h6.5c-.1 1.1-.8 2.7-2.4 3.8l3.7 2.9c2.3-2.1 3.7-5.2 3.7-8.8z" />
+      <path fill="#34A853" d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-3.7-2.9c-1 .7-2.4 1.2-4.2 1.2-3.2 0-5.9-2.1-6.8-5.1L1.3 17.2C3.3 21.2 7.3 24 12 24z" />
+      <path fill="#FBBC05" d="M5.2 14.3c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3L1.3 6.8C.5 8.4 0 10.1 0 12s.5 3.6 1.3 5.2l3.9-2.9z" />
+      <path fill="#EA4335" d="M12 4.7c1.8 0 3 .8 3.7 1.4l3.3-3.2C17.9 1.1 15.2 0 12 0 7.3 0 3.3 2.8 1.3 6.8l3.9 2.9c.9-2.9 3.6-5 6.8-5z" />
+    </svg>
   );
 }
 
-/* Presentational stand-in for PostCard: same vote-pill / b-space / tag layout,
-   but non-interactive so anonymous visitors don't hit login toasts. */
-function PreviewPost({ post }: { post: (typeof PREVIEW_POSTS)[number] }) {
+/* ─── Feed row (one post, hairline-separated — no card-in-card) ──────────── */
+function PostRow({ post, last = false }: { post: (typeof PREVIEW_POSTS)[number]; last?: boolean }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:border-muted-foreground/40">
-      <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-        <span className="flex items-center gap-1.5">
-          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-muted font-heading text-[9px] font-bold text-foreground">
-            {post.space.charAt(0).toUpperCase()}
-          </span>
-          <span className="font-body text-xs font-bold text-foreground">b/{post.space}</span>
-        </span>
-        <span className="text-[11px] text-muted-foreground">·</span>
-        <span className="flex items-center gap-1 font-body text-[11px] text-muted-foreground">
-          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-brand/20 font-heading text-[9px] font-bold text-brand">
-            {post.author.charAt(0)}
-          </span>
-          f/{post.author}
-          {post.verified && <BadgeCheck size={12} className="text-brand" aria-label="Verified Pro" />}
-        </span>
+    <article className={`flex gap-3 px-4 py-4 sm:px-5 ${last ? "" : "border-b border-border/60"}`}>
+      <div className="flex w-8 shrink-0 flex-col items-center gap-0.5 pt-0.5" aria-hidden="true">
+        <ArrowBigUp className="h-5 w-5 text-muted-foreground" />
+        <span className="font-mono text-xs font-semibold text-foreground">{post.score}</span>
+        <ArrowBigDown className="h-5 w-5 text-muted-foreground" />
       </div>
-
-      <h3 className="font-heading text-[15px] font-semibold leading-snug text-foreground">{post.title}</h3>
-      <p className="mt-1 line-clamp-2 font-body text-sm leading-relaxed text-muted-foreground">{post.excerpt}</p>
-
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        {post.tags.map((tag) => (
-          <span key={tag} className="rounded-full bg-muted px-2.5 py-0.5 font-body text-[11px] font-medium text-muted-foreground">
-            #{tag}
+      <div className="min-w-0 flex-1">
+        <p className="flex flex-wrap items-center gap-x-1.5 font-body text-[11px] text-muted-foreground">
+          <span className="font-semibold text-foreground">b/{post.space}</span>
+          <span aria-hidden="true">·</span>
+          <span className="inline-flex items-center gap-1">
+            f/{post.author}
+            {post.verified && <BadgeCheck size={12} className="text-brand" aria-label="Verified Pro" />}
           </span>
-        ))}
+        </p>
+        <h3 className="mt-1 font-body text-[15px] font-semibold leading-snug text-foreground">{post.title}</h3>
+        <p className="mt-0.5 line-clamp-2 font-body text-sm leading-relaxed text-muted-foreground">{post.excerpt}</p>
+        <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="inline-flex items-center gap-1.5 font-body text-xs text-muted-foreground">
+            <MessageSquare className="h-3.5 w-3.5" /> {post.comments}
+          </span>
+          {post.tags.map((tag) => (
+            <span key={tag} className="font-mono text-[11px] text-muted-foreground">#{tag}</span>
+          ))}
+        </p>
       </div>
-
-      <div className="mt-2.5 flex items-center gap-2">
-        <span className="flex items-center gap-0.5 rounded-full border border-border bg-muted/40 px-1 py-0.5" aria-hidden="true">
-          <span className="p-1 text-muted-foreground"><ArrowBigUp className="h-4 w-4" /></span>
-          <span className="px-1 font-heading text-xs font-bold text-foreground">{post.score}</span>
-          <span className="p-1 text-muted-foreground"><ArrowBigDown className="h-4 w-4" /></span>
-        </span>
-        <span className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-body text-xs font-medium text-muted-foreground">
-          <MessageSquare className="h-4 w-4" /> {post.comments}
-        </span>
-      </div>
-    </div>
+    </article>
   );
 }
 
-function LeadPreviewCard({ lead, locked = false }: { lead?: (typeof EXAMPLE_LEADS)[number]; locked?: boolean }) {
-  if (locked) {
-    return (
-      <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-4" aria-hidden="true">
-        <div className="space-y-2 blur-[6px]">
-          <div className="h-4 w-3/4 rounded bg-muted" />
-          <div className="h-3 w-1/2 rounded bg-muted" />
-          <div className="h-3 w-2/3 rounded bg-muted" />
-        </div>
-        <div className="absolute inset-0 flex items-center justify-center gap-2 font-body text-xs font-semibold text-foreground">
-          <Lock className="h-4 w-4 text-brand" /> Members-only lead
-        </div>
-      </div>
-    );
-  }
-  if (!lead) return null;
+function LeadRow({ lead, last = false }: { lead: (typeof EXAMPLE_LEADS)[number]; last?: boolean }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:border-brand/50">
-      <div className="flex items-start justify-between gap-3">
-        <h3 className="font-heading text-[15px] font-semibold leading-snug text-foreground">{lead.title}</h3>
-        <span className="shrink-0 rounded-full bg-success/15 px-2.5 py-1 font-heading text-xs font-bold text-success">{lead.budget}</span>
+    <div className={`flex items-start justify-between gap-4 px-4 py-4 sm:px-5 ${last ? "" : "border-b border-border/60"}`}>
+      <div className="min-w-0">
+        <h3 className="font-body text-[15px] font-semibold leading-snug text-foreground">{lead.title}</h3>
+        <p className="mt-0.5 font-body text-xs text-muted-foreground">
+          {lead.meta} · {lead.skills.join(" · ")}
+        </p>
       </div>
-      <p className="mt-1 font-body text-xs text-muted-foreground">{lead.meta}</p>
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        {lead.skills.map((skill) => (
-          <span key={skill} className="rounded-full bg-muted px-2.5 py-0.5 font-body text-[11px] font-medium text-muted-foreground">
-            {skill}
-          </span>
-        ))}
-        <Link to="/signup" className="ml-auto font-heading text-xs font-bold text-brand hover:underline">
-          Apply →
+      <div className="shrink-0 text-right">
+        <p className="font-mono text-sm font-semibold text-success">{lead.budget}</p>
+        <Link to="/signup" className="mt-0.5 inline-block font-body text-xs font-semibold text-brand hover:underline">
+          Apply
         </Link>
       </div>
     </div>
   );
 }
 
+/* ─── Hero product frame: the app itself, flat and full-bleed ───────────── */
+function AppPreview({ spaces }: { spaces: CommunityData[] }) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-border bg-card text-left">
+      {/* window chrome */}
+      <div className="flex h-11 items-center gap-3 border-b border-border px-4">
+        <span className="flex gap-1.5" aria-hidden="true">
+          <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
+          <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
+          <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
+        </span>
+        <span className="mx-auto hidden items-center gap-2 font-mono text-[11px] text-muted-foreground sm:flex">
+          borynx<span className="text-muted-foreground/50">/ feed</span>
+        </span>
+        <span className="ml-auto font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70 sm:ml-0">Preview</span>
+      </div>
+
+      <div className="grid md:grid-cols-[200px_1fr] lg:grid-cols-[200px_1fr_272px]">
+        {/* sidebar */}
+        <aside className="hidden border-r border-border px-3 py-4 md:block">
+          <p className="px-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70">Feed</p>
+          <ul className="mt-2 space-y-0.5 font-body text-[13px]">
+            <li className="rounded-md bg-muted px-2 py-1.5 font-medium text-foreground">Hot</li>
+            <li className="rounded-md px-2 py-1.5 text-muted-foreground">Best</li>
+            <li className="rounded-md px-2 py-1.5 text-muted-foreground">New</li>
+            <li className="rounded-md px-2 py-1.5 text-muted-foreground">Following</li>
+          </ul>
+          <p className="mt-5 px-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70">B-Spaces</p>
+          <ul className="mt-2 space-y-0.5 font-body text-[13px] text-muted-foreground">
+            {spaces.slice(0, 5).map((s) => (
+              <li key={s.slug} className="rounded-md px-2 py-1.5">b/{s.slug}</li>
+            ))}
+          </ul>
+        </aside>
+
+        {/* feed */}
+        <div>
+          <div className="flex items-center gap-4 border-b border-border px-4 py-3 sm:px-5">
+            <span className="font-body text-[13px] font-semibold text-foreground">Hot</span>
+            <span className="font-body text-[13px] text-muted-foreground">Best</span>
+            <span className="font-body text-[13px] text-muted-foreground">New</span>
+            <span className="ml-auto rounded-md bg-primary px-3 py-1.5 font-body text-xs font-semibold text-primary-foreground">New post</span>
+          </div>
+          {PREVIEW_POSTS.map((post, i) => (
+            <PostRow key={post.title} post={post} last={i === PREVIEW_POSTS.length - 1} />
+          ))}
+        </div>
+
+        {/* right rail */}
+        <aside className="hidden border-l border-border lg:block">
+          <p className="border-b border-border px-4 py-3 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70">
+            Latest leads
+          </p>
+          {EXAMPLE_LEADS.slice(0, 2).map((lead) => (
+            <div key={lead.title} className="border-b border-border/60 px-4 py-3.5">
+              <p className="font-body text-[13px] font-semibold leading-snug text-foreground">{lead.title}</p>
+              <p className="mt-1 font-mono text-xs text-success">{lead.budget}</p>
+              <p className="mt-0.5 font-body text-[11px] text-muted-foreground">{lead.meta}</p>
+            </div>
+          ))}
+          <div className="px-4 py-4">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70">Your reputation</p>
+            <p className="mt-2 flex items-center gap-1.5 font-body text-[13px] font-semibold text-foreground">
+              Trusted Voice <BadgeCheck size={13} className="text-brand" />
+            </p>
+            <div className="mt-2 h-1 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+              <div className="h-full w-2/3 bg-brand" />
+            </div>
+            <p className="mt-1.5 font-mono text-[11px] text-muted-foreground">640 / 1,000 rep</p>
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Showcase tabs ─────────────────────────────────────────────────────── */
+type TabId = "feed" | "spaces" | "leads" | "reputation";
+
+const TABS: { id: TabId; label: string; heading: string; body: string; bullets: string[] }[] = [
+  {
+    id: "feed",
+    label: "Feed",
+    heading: "A feed ranked by freelancers, for freelancers.",
+    body: "Pricing, clients, tools, taxes — the conversations that actually move a solo business, sorted Hot, Best, or New. No algorithmic rage-bait.",
+    bullets: ["Discussions, questions, resources & polls", "Follow people, filter by tag", "Upvotes surface what works"],
+  },
+  {
+    id: "spaces",
+    label: "B-Spaces",
+    heading: "Small rooms. Higher signal.",
+    body: "B-Spaces are niche communities for your craft. Ask the question you'd never post in public, and get answers from people doing the same work.",
+    bullets: ["A space for every discipline", "Member-only posts when it matters", "Create a space for your niche"],
+  },
+  {
+    id: "leads",
+    label: "Leads",
+    heading: "Work, without the bidding war.",
+    body: "Clients and freelancers post projects, bounties, and retainers with budgets up front. Apply with your profile — never with paid credits.",
+    bullets: ["Budgets shown on every lead", "Apply with your Borynx profile", "Track applications on one board"],
+  },
+  {
+    id: "reputation",
+    label: "Reputation",
+    heading: "Proof of expertise, not claims of it.",
+    body: "Helpful posts earn upvotes, reputation, and badges on your public profile — a link you can send the next time a client asks why you.",
+    bullets: ["Milestones at 100 / 1,000 / 5,000 rep", "Badges live on your profile & posts", "Verified Pro for standout contributors"],
+  },
+];
+
+function TabPanel({ tab, spaces, spacesLive }: { tab: TabId; spaces: CommunityData[]; spacesLive: boolean }) {
+  if (tab === "feed") {
+    return (
+      <div>
+        {PREVIEW_POSTS.map((post, i) => (
+          <PostRow key={post.title} post={post} last={i === PREVIEW_POSTS.length - 1} />
+        ))}
+      </div>
+    );
+  }
+  if (tab === "spaces") {
+    return (
+      <div className="grid sm:grid-cols-2">
+        {spaces.map((space, i) => {
+          const Icon = SPACE_ICONS[space.slug] ?? Users;
+          return (
+            <div
+              key={space.slug}
+              className={`flex gap-3 px-4 py-4 sm:px-5 ${i % 2 === 0 ? "sm:border-r" : ""} ${i < spaces.length - (spaces.length % 2 === 0 ? 2 : 1) ? "border-b" : ""} border-border/60`}
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border text-foreground">
+                <Icon className="h-4 w-4" />
+              </span>
+              <div className="min-w-0">
+                <p className="font-body text-sm font-semibold text-foreground">
+                  {space.name} <span className="ml-1 font-mono text-[11px] font-normal text-muted-foreground">b/{space.slug}</span>
+                </p>
+                <p className="mt-0.5 line-clamp-2 font-body text-[13px] leading-relaxed text-muted-foreground">{space.description}</p>
+                {spacesLive && space.memberCount > 0 && (
+                  <p className="mt-1 font-mono text-[11px] text-muted-foreground">{space.memberCount.toLocaleString()} members</p>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+  if (tab === "leads") {
+    return (
+      <div>
+        {EXAMPLE_LEADS.map((lead, i) => (
+          <LeadRow key={lead.title} lead={lead} last={i === EXAMPLE_LEADS.length - 1} />
+        ))}
+        <p className="border-t border-border/60 px-4 py-3 font-body text-xs text-muted-foreground sm:px-5">
+          Example leads. Full details are visible to members.
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div>
+      <div className="flex items-center gap-3 border-b border-border/60 px-4 py-4 sm:px-5">
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-muted font-display text-sm font-semibold text-foreground">M</span>
+        <div>
+          <p className="flex items-center gap-1.5 font-body text-sm font-semibold text-foreground">
+            Maya R. <BadgeCheck size={14} className="text-brand" />
+          </p>
+          <p className="font-mono text-[11px] text-muted-foreground">f/Maya · React Native & fintech dashboards</p>
+        </div>
+        <span className="ml-auto text-right">
+          <span className="block font-mono text-sm font-semibold text-foreground">640</span>
+          <span className="block font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70">reputation</span>
+        </span>
+      </div>
+      {MILESTONES.map((m, i) => (
+        <div key={m.name} className={`flex items-center gap-3 px-4 py-3.5 sm:px-5 ${i < MILESTONES.length - 1 ? "border-b border-border/60" : ""}`}>
+          {i === 0 ? (
+            <Check className="h-4 w-4 shrink-0 text-success" aria-label="Unlocked" />
+          ) : (
+            <span className="h-4 w-4 shrink-0 rounded-full border border-border" aria-hidden="true" />
+          )}
+          <p className="font-body text-sm font-medium text-foreground">{m.name}</p>
+          <p className="hidden font-body text-[13px] text-muted-foreground sm:block">{m.note}</p>
+          <p className="ml-auto font-mono text-xs text-muted-foreground">{m.rep} rep</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ─── Page ──────────────────────────────────────────────────────────────── */
 const Landing = () => {
+  const reduceMotion = useReducedMotion();
   const [spaces, setSpaces] = useState<CommunityData[]>(FALLBACK_SPACES);
   const [spacesLive, setSpacesLive] = useState(false);
+  const [tab, setTab] = useState<TabId>("feed");
+  const activeTab = TABS.find((t) => t.id === tab) ?? TABS[0];
 
   useEffect(() => {
     let cancelled = false;
@@ -209,412 +375,255 @@ const Landing = () => {
         }
       })
       .catch(() => {
-        /* offline / mock fallback stays in place */
+        /* fallback stays */
       });
     return () => {
       cancelled = true;
     };
   }, []);
 
+  const rise = (delay = 0) => ({
+    initial: { opacity: 0, y: reduceMotion ? 0 : 14 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.55, delay, ease: [0.22, 1, 0.36, 1] as const },
+  });
+
   return (
-    <div className="landing-theme min-h-screen w-full bg-background font-body text-foreground">
-      {/* ── Navigation ─────────────────────────────────────────────────── */}
-      <nav className="fixed inset-x-0 top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <a href="#top" className="group flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded">
-              <img src="/logo-transparent.png" alt="Borynx" className="h-full w-full scale-[1.3] object-cover transition-transform group-hover:scale-[1.4]" />
-            </span>
-            <span className="font-heading text-xl font-bold tracking-tight text-foreground">Borynx</span>
+    <div className="landing-theme min-h-screen w-full bg-background font-body text-foreground antialiased">
+      {/* ── Nav ──────────────────────────────────────────────────────── */}
+      <nav className="fixed inset-x-0 top-0 z-50 border-b border-border/60 bg-background/85 backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+          <a href="#top" className="flex items-center gap-2.5">
+            <img src="/logo-transparent.png" alt="" className="h-7 w-7 rounded-md object-cover" />
+            <span className="font-display text-[17px] font-600 font-semibold tracking-tight">Borynx</span>
           </a>
-
-          <div className="hidden items-center gap-8 font-body text-sm font-medium md:flex">
-            <a href="#spaces" className="text-muted-foreground transition-colors hover:text-foreground">B-Spaces</a>
-            <a href="#leads" className="text-muted-foreground transition-colors hover:text-foreground">Leads</a>
-            <a href="#how-it-works" className="text-muted-foreground transition-colors hover:text-foreground">How it works</a>
-            <a href="#faq" className="text-muted-foreground transition-colors hover:text-foreground">FAQ</a>
+          <div className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
+            <a href="#product" className="transition-colors hover:text-foreground">Product</a>
+            <a href="#spaces" className="transition-colors hover:text-foreground">B-Spaces</a>
+            <a href="#leads" className="transition-colors hover:text-foreground">Leads</a>
+            <a href="#faq" className="transition-colors hover:text-foreground">FAQ</a>
           </div>
-
-          <div className="flex items-center gap-4 font-body text-sm font-medium">
-            <Link to="/login" className="text-foreground transition-opacity hover:opacity-70">Log in</Link>
-            <Link
-              to="/signup"
-              className="hidden rounded-full bg-brand px-5 py-2.5 font-heading font-bold text-brand-foreground shadow-md shadow-brand/25 transition-all hover:bg-brand/90 sm:block"
-            >
-              {JOIN_CTA}
+          <div className="flex items-center gap-2.5">
+            <Link to="/login" className="rounded-lg px-3.5 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted">
+              Log in
+            </Link>
+            <Link to="/signup" className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90">
+              Join free
             </Link>
           </div>
         </div>
       </nav>
 
-      {/* ── Hero ───────────────────────────────────────────────────────── */}
-      <header id="top" className="relative overflow-hidden px-6 pb-16 pt-32 md:pt-36">
-        <div className="pointer-events-none absolute -top-32 left-1/2 h-96 w-[42rem] max-w-none -translate-x-1/2 rounded-full bg-brand/15 blur-3xl" aria-hidden="true" />
-        <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-2">
-          <div className="animate-fade-in text-center lg:text-left">
-            <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand/10 px-3.5 py-1.5 font-body text-xs font-semibold text-brand">
-              <Users className="h-3.5 w-3.5" />
-              For designers, developers, writers, marketers &amp; consultants
-            </p>
-            <h1 className="font-heading text-4xl font-bold leading-[1.08] tracking-tight text-foreground sm:text-5xl md:text-6xl">
-              Where freelancers talk business —{" "}
-              <span className="text-brand">and find their next client.</span>
-            </h1>
-            <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-muted-foreground lg:mx-0">
-              Borynx is a high-signal community for freelancers. Swap pricing and client
-              playbooks in niche B-Spaces, build a reputation that proves your expertise,
-              and apply to real project leads — no race-to-the-bottom bidding.
-            </p>
-            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row lg:justify-start sm:justify-center">
-              <JoinButton className="w-full sm:w-auto" />
-              <a
-                href="#how-it-works"
-                className="inline-flex w-full items-center justify-center rounded-full border border-border px-7 py-3.5 font-heading text-sm font-bold text-foreground transition-colors hover:bg-muted sm:w-auto"
+      {/* ── Hero ─────────────────────────────────────────────────────── */}
+      <header id="top" className="px-6 pb-20 pt-36 sm:pt-40">
+        <div className="mx-auto max-w-6xl">
+          <div className="mx-auto max-w-3xl text-center">
+            <motion.p {...rise(0)} className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+              For designers · developers · writers · marketers
+            </motion.p>
+            <motion.h1
+              {...rise(0.08)}
+              className="mt-5 font-display text-[42px] font-semibold leading-[1.04] tracking-[-0.03em] text-foreground sm:text-6xl lg:text-[68px]"
+            >
+              Where freelancers talk business — and find their next client.
+            </motion.h1>
+            <motion.p {...rise(0.16)} className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
+              Swap pricing and client playbooks in niche B-Spaces, build reputation that
+              proves your expertise, and apply to real leads. No race-to-the-bottom bidding.
+            </motion.p>
+
+            <motion.div {...rise(0.24)} className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Link
+                to="/signup"
+                className="inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-lg bg-primary px-6 text-[15px] font-semibold text-primary-foreground transition-opacity hover:opacity-90 sm:w-auto"
               >
-                See how it works
-              </a>
-            </div>
-            <p className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 font-body text-xs text-muted-foreground lg:justify-start">
-              <span className="flex items-center gap-1"><Check className="h-3.5 w-3.5 text-success" /> Free to join</span>
-              <span className="flex items-center gap-1"><Check className="h-3.5 w-3.5 text-success" /> Sign up with Google</span>
-              <span className="flex items-center gap-1"><Check className="h-3.5 w-3.5 text-success" /> No bidding credits, ever</span>
-            </p>
+                <GoogleMark /> Continue with Google
+              </Link>
+              <Link
+                to="/signup"
+                className="inline-flex h-12 w-full items-center justify-center rounded-lg border border-border px-6 text-[15px] font-semibold text-foreground transition-colors hover:bg-muted sm:w-auto"
+              >
+                Join with email
+              </Link>
+            </motion.div>
+            <motion.p {...rise(0.3)} className="mt-4 font-mono text-[11px] uppercase tracking-widest text-muted-foreground/80">
+              Free to join · No bidding credits, ever
+            </motion.p>
           </div>
 
-          {/* Product preview: feed + overlapping lead card */}
-          <div className="relative animate-fade-in">
-            <div className="rounded-3xl border border-border bg-background/60 p-3 shadow-2xl shadow-black/40 backdrop-blur">
-              <div className="mb-3 flex items-center gap-2 px-1 pt-1">
-                <span className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 font-body text-xs font-semibold text-foreground">
-                  <Flame className="h-3.5 w-3.5 text-warning" /> Hot
-                </span>
-                <span className="rounded-full px-3 py-1.5 font-body text-xs font-medium text-muted-foreground">Best</span>
-                <span className="rounded-full px-3 py-1.5 font-body text-xs font-medium text-muted-foreground">New</span>
-                <span className="ml-auto font-body text-[11px] text-muted-foreground">Preview</span>
-              </div>
-              <div className="space-y-3">
-                {PREVIEW_POSTS.map((post) => (
-                  <PreviewPost key={post.title} post={post} />
-                ))}
-              </div>
-            </div>
+          <motion.div {...rise(0.35)} className="mx-auto mt-16 max-w-5xl">
+            <AppPreview spaces={spaces} />
+          </motion.div>
 
-            <div className="relative z-10 mx-3 -mt-4 sm:mx-6">
-              <LeadPreviewCard lead={EXAMPLE_LEADS[0]} />
-            </div>
-
-            <div className="absolute -right-2 -top-4 hidden items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2 shadow-xl sm:flex">
-              <BadgeCheck className="h-4 w-4 text-brand" />
-              <span className="font-body text-xs font-semibold text-foreground">
-                Verified Pro <span className="font-normal text-muted-foreground">· reputation you can show clients</span>
+          <motion.p
+            {...rise(0.4)}
+            className="mt-10 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center font-mono text-xs text-muted-foreground"
+          >
+            <span className="text-muted-foreground/70">{spaces.length} B-Spaces:</span>
+            {spaces.map((s, i) => (
+              <span key={s.slug}>
+                <a href="#spaces" className="transition-colors hover:text-brand">b/{s.slug}</a>
+                {i < spaces.length - 1 && <span className="ml-3 text-muted-foreground/40">/</span>}
               </span>
-            </div>
-          </div>
+            ))}
+          </motion.p>
         </div>
       </header>
 
-      {/* ── B-Spaces strip ─────────────────────────────────────────────── */}
-      <section className="border-y border-border/50 bg-muted/20 px-6 py-6">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-8 gap-y-3">
-          <span className="font-heading text-xs font-bold uppercase tracking-widest text-muted-foreground">
-            {spaces.length} niche B-Spaces
-          </span>
-          {spaces.map((space) => (
-            <a key={space.slug} href="#spaces" className="font-body text-sm font-medium text-muted-foreground transition-colors hover:text-brand">
-              b/{space.slug}
-            </a>
+      {/* ── Three pillars, as text — not icon cards ──────────────────── */}
+      <section className="border-y border-border/60 px-6">
+        <div className="mx-auto grid max-w-6xl sm:grid-cols-3">
+          {[
+            { title: "Discuss", body: "Ask what you can't ask in public. Get answers from people doing the same work." },
+            { title: "Belong", body: "Join a B-Space for your craft — or start one. Small rooms, higher signal." },
+            { title: "Earn", body: "Apply to leads with the profile and reputation you've already built." },
+          ].map((pillar, i) => (
+            <div key={pillar.title} className={`py-10 sm:px-8 ${i === 0 ? "sm:pl-0" : ""} ${i > 0 ? "border-t border-border/60 sm:border-l sm:border-t-0" : ""}`}>
+              <h2 className="font-display text-lg font-semibold tracking-tight text-foreground">
+                <span className="mr-2.5 font-mono text-xs font-normal text-brand">0{i + 1}</span>
+                {pillar.title}
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{pillar.body}</p>
+            </div>
           ))}
         </div>
       </section>
 
-      {/* ── Problem ────────────────────────────────────────────────────── */}
-      <section className="px-6 py-20">
+      {/* ── Product showcase (tabs) ──────────────────────────────────── */}
+      <section id="product" className="scroll-mt-24 px-6 py-24">
         <div className="mx-auto max-w-6xl">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-              Freelancing is solo. Growing doesn&rsquo;t have to be.
-            </h2>
-            <p className="mt-4 leading-relaxed text-muted-foreground">
-              Right now your business advice is scattered across four apps — and none of
-              them were built for people who sell their skills.
-            </p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">The product</p>
+          <h2 className="mt-4 max-w-2xl font-display text-4xl font-semibold tracking-[-0.02em] text-foreground sm:text-[40px] sm:leading-[1.1]">
+            Everything a freelancer needs. In one place.
+          </h2>
+
+          <div className="mt-10 flex gap-7 overflow-x-auto border-b border-border" role="tablist" aria-label="Product areas">
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                role="tab"
+                aria-selected={tab === t.id}
+                onClick={() => setTab(t.id)}
+                className={`-mb-px whitespace-nowrap border-b-2 pb-3 font-body text-sm font-medium transition-colors ${
+                  tab === t.id
+                    ? "border-brand text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
-          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+
+          <div className="mt-10 grid items-start gap-10 lg:grid-cols-[320px_1fr]">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`copy-${tab}`}
+                initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: reduceMotion ? 0 : -6 }}
+                transition={{ duration: 0.25 }}
+              >
+                <h3 className="font-display text-[22px] font-semibold leading-snug tracking-tight text-foreground">{activeTab.heading}</h3>
+                <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">{activeTab.body}</p>
+                <ul className="mt-5 space-y-2.5">
+                  {activeTab.bullets.map((bullet) => (
+                    <li key={bullet} className="flex gap-2.5 text-sm text-muted-foreground">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" /> {bullet}
+                    </li>
+                  ))}
+                </ul>
+                <Link to="/signup" className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline">
+                  Join Borynx free <ArrowRight className="h-4 w-4" />
+                </Link>
+              </motion.div>
+            </AnimatePresence>
+
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`panel-${tab}`}
+                role="tabpanel"
+                initial={{ opacity: 0, y: reduceMotion ? 0 : 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: reduceMotion ? 0 : -8 }}
+                transition={{ duration: 0.28 }}
+                className="overflow-hidden rounded-xl border border-border bg-card"
+              >
+                <TabPanel tab={tab} spaces={spaces} spacesLive={spacesLive} />
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          {/* plain-language band under the showcase */}
+          <div id="leads" className="mt-16 grid scroll-mt-24 gap-8 border-t border-border/60 pt-10 sm:grid-cols-3">
             {[
-              { where: "Reddit", pain: "Great threads, buried under noise — and nothing to do with your craft half the time." },
-              { where: "X / Twitter", pain: "Hot takes in public, real numbers kept private. Hard to ask an honest pricing question." },
-              { where: "Discord", pain: "Good people, disappearing conversations. Nothing is searchable a week later." },
-              { where: "Upwork & marketplaces", pain: "Pay for credits, race to the bottom on price, and the client owns the relationship." },
-            ].map((item) => (
-              <div key={item.where} className="rounded-2xl border border-border bg-card p-5">
-                <h3 className="font-heading text-sm font-bold text-foreground">{item.where}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.pain}</p>
+              { k: "0 credits", v: "to apply to any lead. Budgets are shown up front, always." },
+              { k: "100 → 5,000", v: "reputation range, from Rising Voice to Veteran Freelancer." },
+              { k: `${spaces.length} spaces`, v: "live in the directory — design, dev, writing, marketing, video, consulting." },
+            ].map((stat) => (
+              <div key={stat.k}>
+                <p className="font-display text-2xl font-semibold tracking-tight text-foreground">{stat.k}</p>
+                <p className="mt-1.5 max-w-[26ch] text-sm leading-relaxed text-muted-foreground">{stat.v}</p>
               </div>
             ))}
           </div>
-          <p className="mx-auto mt-10 max-w-2xl text-center font-heading text-lg font-semibold text-foreground">
-            Borynx puts the discussion, the community, and the work{" "}
-            <span className="text-brand">in one place — built only for freelancers.</span>
-          </p>
         </div>
       </section>
 
-      {/* ── How it works: three pillars ────────────────────────────────── */}
-      <section id="how-it-works" className="scroll-mt-24 border-t border-border/50 bg-muted/20 px-6 py-20">
-        <div className="mx-auto max-w-6xl">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">Talk business. Find your people. Get hired.</h2>
-            <p className="mt-4 text-muted-foreground">Three things, one account.</p>
-          </div>
-
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand/15 text-brand">
-                <MessageSquare className="h-5 w-5" />
-              </div>
-              <h3 className="mt-4 font-heading text-lg font-bold text-foreground">1 · Discuss</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Ask the questions you can&rsquo;t ask in public — pricing, ghosting clients,
-                scope creep, taxes — and get answers from people doing the same work.
-              </p>
-              <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-                {["Hot, Best & New feeds", "Polls, resources & rich posts", "Follow freelancers you learn from"].map((li) => (
-                  <li key={li} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />{li}</li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand/15 text-brand">
-                <Users className="h-5 w-5" />
-              </div>
-              <h3 className="mt-4 font-heading text-lg font-bold text-foreground">2 · Belong</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Join B-Spaces for your craft — or start your own. Smaller rooms, higher
-                signal, people who actually understand your day.
-              </p>
-              <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-                {["Spaces for design, dev, writing & more", "Create a space for your niche", "Member-only posts when you need privacy"].map((li) => (
-                  <li key={li} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />{li}</li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="rounded-2xl border border-brand/40 bg-card p-6 shadow-lg shadow-brand/5">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand text-brand-foreground">
-                <Briefcase className="h-5 w-5" />
-              </div>
-              <h3 className="mt-4 font-heading text-lg font-bold text-foreground">3 · Earn</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Browse the Leads Board and apply with the profile and reputation you&rsquo;ve
-                already built. Clients can post leads too — no credits, no bidding war.
-              </p>
-              <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-                {["Project, bounty & retainer leads", "Apply with your Borynx profile", "Track everything on one board"].map((li) => (
-                  <li key={li} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />{li}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── B-Spaces (live from Supabase) ──────────────────────────────── */}
-      <section id="spaces" className="scroll-mt-24 px-6 py-20">
+      {/* ── B-Spaces directory ───────────────────────────────────────── */}
+      <section id="spaces" className="scroll-mt-24 border-t border-border/60 px-6 py-24">
         <div className="mx-auto max-w-6xl">
           <div className="flex flex-wrap items-end justify-between gap-4">
-            <div className="max-w-xl">
-              <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">Find your B-Space</h2>
-              <p className="mt-3 text-muted-foreground">
-                Niche communities for every craft. Join the ones that match your work —
-                your feed gets better with every space you add.
-              </p>
+            <div>
+              <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Communities</p>
+              <h2 className="mt-4 font-display text-4xl font-semibold tracking-[-0.02em] text-foreground">Find your B-Space.</h2>
             </div>
-            <span className="flex items-center gap-2 font-body text-xs text-muted-foreground">
-              <span className={`h-2 w-2 rounded-full ${spacesLive ? "bg-success" : "bg-warning"}`} />
-              {spacesLive ? "Live from the community directory" : "Showing starter spaces"}
-            </span>
+            <p className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
+              <span className={`h-1.5 w-1.5 rounded-full ${spacesLive ? "bg-success" : "bg-warning"}`} aria-hidden="true" />
+              {spacesLive ? "Live directory" : "Starter spaces"}
+            </p>
           </div>
 
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-10 grid gap-px overflow-hidden rounded-xl border border-border bg-border/60 sm:grid-cols-2 lg:grid-cols-3">
             {spaces.map((space) => {
               const Icon = SPACE_ICONS[space.slug] ?? Users;
               return (
-                <div key={space.slug} className="group flex flex-col rounded-2xl border border-border bg-card p-5 transition-colors hover:border-brand/50">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-foreground">
-                      <Icon className="h-5 w-5" />
+                <Link
+                  key={space.slug}
+                  to="/signup"
+                  className="group bg-card p-6 transition-colors hover:bg-muted/40"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-foreground">
+                    <Icon className="h-[18px] w-[18px]" />
+                  </span>
+                  <h3 className="mt-4 font-display text-[17px] font-semibold tracking-tight text-foreground">
+                    {space.name}
+                    <span className="ml-2 font-mono text-xs font-normal text-muted-foreground">b/{space.slug}</span>
+                  </h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{space.description}</p>
+                  <p className="mt-4 flex items-center justify-between">
+                    <span className="font-mono text-[11px] text-muted-foreground">
+                      {spacesLive && space.memberCount > 0
+                        ? `${space.memberCount.toLocaleString()} members`
+                        : space.topics.slice(0, 3).map((t) => `#${t}`).join("  ")}
                     </span>
-                    <div>
-                      <h3 className="font-heading text-base font-bold leading-tight text-foreground">{space.name}</h3>
-                      <p className="font-body text-xs text-muted-foreground">b/{space.slug}</p>
-                    </div>
-                    {spacesLive && space.memberCount > 0 && (
-                      <span className="ml-auto font-body text-xs tabular-nums text-muted-foreground">
-                        {space.memberCount.toLocaleString()} {space.memberCount === 1 ? "member" : "members"}
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-3 flex-1 text-sm leading-relaxed text-muted-foreground">{space.description}</p>
-                  {space.topics?.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {space.topics.slice(0, 3).map((topic) => (
-                        <span key={topic} className="rounded-full bg-muted px-2 py-0.5 font-body text-[11px] font-medium text-muted-foreground">
-                          #{topic}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <Link to="/signup" className="mt-4 font-heading text-sm font-bold text-brand hover:underline">
-                    Join b/{space.slug} →
-                  </Link>
-                </div>
+                    <ArrowUpRight className="h-4 w-4 text-muted-foreground transition-all group-hover:translate-x-0.5 group-hover:text-brand" />
+                  </p>
+                </Link>
               );
             })}
           </div>
         </div>
       </section>
 
-      {/* ── Leads spotlight ────────────────────────────────────────────── */}
-      <section id="leads" className="scroll-mt-24 border-t border-border/50 bg-card px-6 py-20">
-        <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2">
+      {/* ── FAQ ──────────────────────────────────────────────────────── */}
+      <section id="faq" className="scroll-mt-24 border-t border-border/60 px-6 py-24">
+        <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[320px_1fr]">
           <div>
-            <p className="font-heading text-xs font-bold uppercase tracking-widest text-brand">Leads Board</p>
-            <h2 className="mt-3 font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-              Work that comes to you — without the bidding war.
-            </h2>
-            <p className="mt-4 leading-relaxed text-muted-foreground">
-              Clients and fellow freelancers post projects, bounties, and retainers on the
-              Leads Board. You apply with your Borynx profile — your posts, badges, and
-              reputation do the pitching.
-            </p>
-            <ul className="mt-6 space-y-3 text-sm text-muted-foreground">
-              {[
-                "No credits or connect fees to apply",
-                "Budgets shown up front on every lead",
-                "Post your own lead when you need a hand",
-                "Kanban and list views to track applications",
-              ].map((li) => (
-                <li key={li} className="flex gap-2.5">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" /> {li}
-                </li>
-              ))}
-            </ul>
-            <div className="mt-8">
-              <JoinButton />
-            </div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">FAQ</p>
+            <h2 className="mt-4 font-display text-4xl font-semibold tracking-[-0.02em] text-foreground">Questions, answered.</h2>
           </div>
-
-          <div className="space-y-3">
-            <p className="font-body text-[11px] font-medium uppercase tracking-widest text-muted-foreground">Example leads</p>
-            {EXAMPLE_LEADS.map((lead) => (
-              <LeadPreviewCard key={lead.title} lead={lead} />
-            ))}
-            <LeadPreviewCard locked />
-            <p className="text-center font-body text-xs text-muted-foreground">
-              Full lead details are visible to members.{" "}
-              <Link to="/signup" className="font-semibold text-brand hover:underline">Join free to browse →</Link>
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Reputation ─────────────────────────────────────────────────── */}
-      <section className="px-6 py-20">
-        <div className="mx-auto max-w-6xl">
-          <div className="mx-auto max-w-2xl text-center">
-            <p className="flex items-center justify-center gap-2 font-heading text-xs font-bold uppercase tracking-widest text-brand">
-              <ShieldCheck className="h-4 w-4" /> Reputation
-            </p>
-            <h2 className="mt-3 font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-              Your expertise, visible — not just claimed.
-            </h2>
-            <p className="mt-4 text-muted-foreground">
-              Anyone can write &ldquo;expert&rdquo; in a bio. On Borynx, helpful posts and
-              answers earn upvotes, reputation, and badges that sit on your public profile —
-              ready to link the next time a client asks why they should hire you.
-            </p>
-          </div>
-
-          <div className="mx-auto mt-12 max-w-3xl">
-            <div className="relative">
-              <div className="absolute left-0 right-0 top-5 hidden h-px bg-border md:block" aria-hidden="true" />
-              <div className="relative grid gap-8 md:grid-cols-3">
-                {[
-                  { icon: Zap, title: "Rising Voice", detail: "100 reputation — your answers start getting noticed." },
-                  { icon: Star, title: "Trusted Voice", detail: "1,000 reputation — a profile clients can trust at a glance." },
-                  { icon: Trophy, title: "Veteran Freelancer", detail: "5,000 reputation — the top tier of community standing." },
-                ].map((step) => (
-                  <div key={step.title} className="text-center">
-                    <span className="relative z-10 mx-auto flex h-10 w-10 items-center justify-center rounded-full border border-brand/40 bg-background text-brand">
-                      <step.icon className="h-5 w-5" />
-                    </span>
-                    <h3 className="mt-3 font-heading text-sm font-bold text-foreground">{step.title}</h3>
-                    <p className="mx-auto mt-1 max-w-[16rem] text-sm leading-relaxed text-muted-foreground">{step.detail}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <p className="mt-10 flex items-center justify-center gap-2 text-center font-body text-sm text-muted-foreground">
-              <BadgeCheck className="h-4 w-4 shrink-0 text-brand" />
-              Standout contributors also carry the <span className="font-semibold text-foreground">Verified Pro</span> badge on their profile and posts.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Comparison ─────────────────────────────────────────────────── */}
-      <section className="border-t border-border/50 bg-muted/20 px-6 py-20">
-        <div className="mx-auto max-w-4xl">
-          <h2 className="text-center font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-            Why not just use what you already have?
-          </h2>
-          <div className="mt-10 overflow-x-auto rounded-2xl border border-border bg-card">
-            <table className="w-full min-w-[560px] text-left font-body text-sm">
-              <thead>
-                <tr className="border-b border-border text-foreground">
-                  <th className="px-5 py-4 font-heading font-bold"> </th>
-                  <th className="px-5 py-4 font-heading font-bold text-brand">Borynx</th>
-                  <th className="px-5 py-4 font-heading font-bold">Reddit</th>
-                  <th className="px-5 py-4 font-heading font-bold">Upwork</th>
-                  <th className="px-5 py-4 font-heading font-bold">Discord</th>
-                </tr>
-              </thead>
-              <tbody className="text-muted-foreground">
-                {[
-                  ["Freelancers only", true, false, true, false],
-                  ["Niche spaces by craft", true, true, false, true],
-                  ["Job leads built in", true, false, true, false],
-                  ["No bidding credits", true, true, false, true],
-                  ["Reputation on your profile", true, false, true, false],
-                  ["Searchable, lasting discussions", true, true, false, false],
-                ].map(([label, ...cells]) => (
-                  <tr key={label as string} className="border-b border-border/50 last:border-0">
-                    <td className="px-5 py-3.5 font-medium text-foreground">{label}</td>
-                    {(cells as boolean[]).map((cell, i) => (
-                      <td key={i} className="px-5 py-3.5">
-                        {cell ? (
-                          <Check className="h-4 w-4 text-success" aria-label="Yes" />
-                        ) : (
-                          <X className="h-4 w-4 text-muted-foreground/50" aria-label="No" />
-                        )}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      {/* ── FAQ ────────────────────────────────────────────────────────── */}
-      <section id="faq" className="scroll-mt-24 px-6 py-20">
-        <div className="mx-auto max-w-3xl">
-          <h2 className="text-center font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-            Questions, answered
-          </h2>
-          <Accordion type="single" collapsible className="mt-10">
+          <Accordion type="single" collapsible>
             {[
               {
                 q: "Is Borynx free?",
@@ -622,27 +631,27 @@ const Landing = () => {
               },
               {
                 q: "Who can join? I'm just starting out.",
-                a: "Any freelancer — designers, developers, writers, marketers, video editors, consultants, and more. You don't need years of experience; B-Spaces are exactly where beginners ask the questions that get them to their next level.",
+                a: "Any freelancer — designers, developers, writers, marketers, video editors, consultants, and more. B-Spaces are exactly where beginners ask the questions that get them to the next level.",
               },
               {
                 q: "How do leads work?",
-                a: "Anyone with an account can post a lead — a project, bounty, or retainer — with the budget shown up front. Freelancers apply with their Borynx profile, and you can track everything from the Leads Board. There are no credits or fees to apply.",
+                a: "Anyone with an account can post a lead — a project, bounty, or retainer — with the budget shown up front. Freelancers apply with their Borynx profile, and there are no credits or fees to apply.",
               },
               {
-                q: "Can I post work if I'm hiring?",
+                q: "Can I hire through Borynx?",
                 a: "Yes. Post a lead describing the project, budget, and skills you need, and freelancers with public profiles and reputation history can apply.",
               },
               {
                 q: "What is reputation, and what is Verified Pro?",
-                a: "When other members upvote your posts and comments, you earn reputation. Milestones unlock badges — Rising Voice at 100, Trusted Voice at 1,000, and Veteran Freelancer at 5,000. Verified Pro is a badge shown on the profiles and posts of vetted, high-quality contributors.",
+                a: "Upvotes on your posts and comments earn reputation. Milestones unlock badges — Rising Voice at 100, Trusted Voice at 1,000, Veteran Freelancer at 5,000. Verified Pro marks vetted, high-quality contributors on their profile and posts.",
               },
               {
                 q: "Can I create a community for my niche?",
-                a: "Yes — members can create new B-Spaces. If your craft or city doesn't have a space yet, you can start it and invite others in.",
+                a: "Yes — members can create new B-Spaces. If your craft or city doesn't have a space yet, start it and invite others in.",
               },
             ].map((item, i) => (
               <AccordionItem key={item.q} value={`faq-${i}`}>
-                <AccordionTrigger className="text-left font-heading text-base font-semibold text-foreground">
+                <AccordionTrigger className="py-5 text-left font-body text-[15px] font-semibold text-foreground">
                   {item.q}
                 </AccordionTrigger>
                 <AccordionContent className="leading-relaxed text-muted-foreground">{item.a}</AccordionContent>
@@ -652,64 +661,71 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* ── Final CTA ──────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden border-t border-border/50 bg-card px-6 py-24">
-        <div className="pointer-events-none absolute left-1/2 top-1/2 h-72 w-[36rem] max-w-none -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/15 blur-3xl" aria-hidden="true" />
-        <div className="relative z-10 mx-auto max-w-3xl space-y-7 text-center">
-          <h2 className="font-heading text-4xl font-bold tracking-tight text-foreground md:text-5xl">
-            Your next client, peer, or playbook is one post away.
+      {/* ── Final CTA ────────────────────────────────────────────────── */}
+      <section className="border-t border-border/60 px-6 py-24">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="font-display text-4xl font-semibold tracking-[-0.02em] text-foreground sm:text-5xl">
+            Your next client is one post away.
           </h2>
-          <p className="mx-auto max-w-xl text-muted-foreground">
+          <p className="mx-auto mt-4 max-w-md leading-relaxed text-muted-foreground">
             Join the freelancers building their businesses in the open on Borynx.
           </p>
-          <div className="flex justify-center">
-            <JoinButton />
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Link
+              to="/signup"
+              className="inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-lg bg-primary px-6 text-[15px] font-semibold text-primary-foreground transition-opacity hover:opacity-90 sm:w-auto"
+            >
+              <GoogleMark /> Continue with Google
+            </Link>
+            <Link
+              to="/signup"
+              className="inline-flex h-12 w-full items-center justify-center gap-1.5 rounded-lg border border-border px-6 text-[15px] font-semibold text-foreground transition-colors hover:bg-muted sm:w-auto"
+            >
+              Join Borynx free <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
-          <p className="font-body text-xs text-muted-foreground">Free to join · No bidding credits · Unsubscribe from boredom anytime</p>
+          <p className="mt-4 font-mono text-[11px] uppercase tracking-widest text-muted-foreground/80">
+            Free to join · No bidding credits
+          </p>
         </div>
       </section>
 
-      {/* ── Footer ─────────────────────────────────────────────────────── */}
-      <footer className="border-t border-border/50 bg-card pb-8 pt-16">
-        <div className="mx-auto max-w-6xl px-6">
-          <div className="mb-14 flex flex-col justify-between gap-10 md:flex-row">
-            <div className="space-y-4 md:w-1/3">
-              <a href="#top" className="flex items-center gap-2">
-                <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded">
-                  <img src="/logo-transparent.png" alt="Borynx" className="h-full w-full scale-[1.3] object-cover" />
-                </span>
-                <span className="font-heading text-xl font-bold tracking-tight text-foreground">Borynx</span>
-              </a>
-              <p className="text-sm text-muted-foreground">
-                Where freelancers talk business — and find their next client.
-              </p>
-              <p className="text-sm font-medium text-muted-foreground">Built for freelancers, by freelancers.</p>
+      {/* ── Footer ───────────────────────────────────────────────────── */}
+      <footer className="border-t border-border/60 px-6 py-12">
+        <div className="mx-auto flex max-w-6xl flex-col justify-between gap-8 sm:flex-row sm:items-start">
+          <div>
+            <a href="#top" className="flex items-center gap-2.5">
+              <img src="/logo-transparent.png" alt="" className="h-7 w-7 rounded-md object-cover" />
+              <span className="font-display text-[17px] font-semibold tracking-tight">Borynx</span>
+            </a>
+            <p className="mt-3 max-w-[30ch] text-sm leading-relaxed text-muted-foreground">
+              Where freelancers talk business — and find their next client.
+            </p>
+          </div>
+          <nav className="flex gap-16 text-sm" aria-label="Footer">
+            <div>
+              <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/70">Product</p>
+              <ul className="mt-3.5 space-y-2.5 text-muted-foreground">
+                <li><a href="#product" className="transition-colors hover:text-foreground">Overview</a></li>
+                <li><a href="#spaces" className="transition-colors hover:text-foreground">B-Spaces</a></li>
+                <li><a href="#leads" className="transition-colors hover:text-foreground">Leads</a></li>
+                <li><a href="#faq" className="transition-colors hover:text-foreground">FAQ</a></li>
+              </ul>
             </div>
-
-            <nav className="md:w-1/3" aria-label="Product">
-              <h3 className="mb-5 font-heading font-bold text-foreground">Product</h3>
-              <ul className="space-y-3 text-sm">
-                <li><a href="#spaces" className="text-muted-foreground transition-colors hover:text-foreground">B-Spaces</a></li>
-                <li><a href="#leads" className="text-muted-foreground transition-colors hover:text-foreground">Leads Board</a></li>
-                <li><a href="#how-it-works" className="text-muted-foreground transition-colors hover:text-foreground">How it works</a></li>
-                <li><a href="#faq" className="text-muted-foreground transition-colors hover:text-foreground">FAQ</a></li>
+            <div>
+              <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/70">Account</p>
+              <ul className="mt-3.5 space-y-2.5 text-muted-foreground">
+                <li><Link to="/signup" className="transition-colors hover:text-foreground">Join free</Link></li>
+                <li><Link to="/login" className="transition-colors hover:text-foreground">Log in</Link></li>
+                <li><Link to="/privacy" className="transition-colors hover:text-foreground">Privacy</Link></li>
+                <li><Link to="/terms" className="transition-colors hover:text-foreground">Terms</Link></li>
               </ul>
-            </nav>
-
-            <nav className="md:w-1/3" aria-label="Account and legal">
-              <h3 className="mb-5 font-heading font-bold text-foreground">Get started</h3>
-              <ul className="space-y-3 text-sm">
-                <li><Link to="/signup" className="text-muted-foreground transition-colors hover:text-foreground">{JOIN_CTA}</Link></li>
-                <li><Link to="/login" className="text-muted-foreground transition-colors hover:text-foreground">Log in</Link></li>
-                <li><Link to="/privacy" className="text-muted-foreground transition-colors hover:text-foreground">Privacy</Link></li>
-                <li><Link to="/terms" className="text-muted-foreground transition-colors hover:text-foreground">Terms</Link></li>
-              </ul>
-            </nav>
-          </div>
-
-          <div className="border-t border-border/50 pt-8 text-center">
-            <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} Borynx. All rights reserved.</p>
-          </div>
+            </div>
+          </nav>
+        </div>
+        <div className="mx-auto mt-10 flex max-w-6xl flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-6">
+          <p className="text-[13px] text-muted-foreground">© {new Date().getFullYear()} Borynx. All rights reserved.</p>
+          <p className="font-mono text-[11px] text-muted-foreground/70">Built for freelancers, by freelancers.</p>
         </div>
       </footer>
     </div>
