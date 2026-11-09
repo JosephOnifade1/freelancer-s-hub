@@ -434,13 +434,30 @@ const CreatePost = () => {
         queryClient.invalidateQueries({ queryKey: ['posts'] });
       }
 
-      // Retry only the files that have not already been saved. An upload
-      // failure must never say "Post published with attachments" or re-post.
+      // Upload documents one at a time. A failure on one file never blocks
+      // the others — successfully uploaded files are removed from the queue,
+      // failed files stay for retry. An upload failure must never say
+      // "Post published with attachments" or re-post.
+      const uploadedNames: string[] = [];
+      const failedFiles: File[] = [];
       for (const file of attachedFiles) {
-        await uploadPostDocuments(postId, [file]);
-        setAttachedFiles((current) => current.filter((candidate) => candidate !== file));
+        const result = await uploadPostDocuments(postId, [file]);
+        if (result.uploaded.length > 0) {
+          uploadedNames.push(file.name);
+          setAttachedFiles((current) => current.filter((candidate) => candidate !== file));
+        } else {
+          failedFiles.push(file);
+          result.failed.forEach((fl) => toast.error(`${fl.file.name}: ${fl.error}`));
+        }
       }
-      toast({ title: "Post published", description: attachedFiles.length ? "Post and documents are ready to view." : "Your post is live." });
+
+      const remaining = attachedFiles.length - uploadedNames.length;
+      toast({
+        title: "Post published",
+        description: remaining
+          ? `${uploadedNames.length} document${uploadedNames.length === 1 ? "" : "s"} uploaded, ${remaining} still need attention.`
+          : "Post and documents are ready to view.",
+      });
       navigate(selectedSpace.kind === "space" && selectedSpace.communitySlug
         ? `/b/${selectedSpace.communitySlug}/p/${postId}` : `/p/${postId}`);
     } catch (error: unknown) {

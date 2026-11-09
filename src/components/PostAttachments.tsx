@@ -1,15 +1,22 @@
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, FileText, FileUp, Trash2 } from "lucide-react";
+import { Download, FileText, FileUp, Trash2, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import {
   DOCUMENT_ACCEPT, MAX_DOCUMENTS_PER_POST, fetchPostAttachments,
   getDocumentDownloadUrl, removePostAttachment, uploadPostDocuments, validateDocument,
-  type PostAttachment,
+  formatSize, isPreviewable, type PostAttachment, type DocumentUploadResult,
 } from "@/lib/attachments";
 import { QueryErrorState } from "@/components/QueryErrorState";
 
-function formatSize(bytes: number) {
+type UploadStatus = "idle" | "uploading" | "success" | "error";
+
+interface AttachmentWithStatus extends PostAttachment {
+  uploadStatus: UploadStatus;
+  uploadError?: string;
+}
+
+function formatSizeDisplay(bytes: number) {
   return bytes < 1024 * 1024 ? `${Math.ceil(bytes / 1024)} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
@@ -19,24 +26,60 @@ export function PostAttachments({ postId, canUpload }: { postId: string; canUplo
   const [uploading, setUploading] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [fileUploadStatus, setFileUploadStatus] = useState<Record<string, UploadStatus>>({});
   const { data: attachments = [], isError, refetch } = useQuery({
     queryKey: ["postAttachments", postId], queryFn: () => fetchPostAttachments(postId), enabled: !!postId,
   });
 
   const handleUpload = async (files: FileList | null) => {
     if (!files?.length || uploading) return;
+    const selected = [...files];
+    if (selected.length + attachments.length > MAX_DOCUMENTS_PER_POST) {
+      toast.error(`A post can have up to ${MAX_DOCUMENTS_PER_POST} documents.`);
+      return;
+    }
     try {
-      const selected = [...files];
-      if (selected.length + attachments.length > MAX_DOCUMENTS_PER_POST) {
-        throw new Error(`A post can have up to ${MAX_DOCUMENTS_PER_POST} documents.`);
-      }
       selected.forEach(validateDocument);
-      setUploading(true);
-      await uploadPostDocuments(postId, selected);
-      await queryClient.invalidateQueries({ queryKey: ["postAttachments", postId] });
-      toast.success(`${selected.length} document${selected.length === 1 ? "" : "s"} uploaded`);
     } catch (error) {
-      await queryClient.invalidateQueries({ queryKey: ["postAttachments", postId] });
+      toast.error(error instanceof Error ? error.message : "Invalid document.");
+      return;
+    }
+
+    setUploading(true);
+    selected.forEach((f) => setFileUploadStatus((prev) => ({ ...prev, [f.name]: "uploading" })));
+
+    try {
+      const result: DocumentUploadResult = await uploadPostDocuments(postId, selected);
+
+      // Mark each file's status.
+      selected.forEach((f) => {
+        const wasUploaded = result.uploaded.some((a) => a.fileName === f.name);
+        setFileUploadStatus((prev) => ({
+          ...prev,
+          [f.name]: wasUploaded ? "success" : "error",
+        }));
+        if (!wasUploaded) {
+          const failed = result.failed.find((fl) => fl.file.name === f.name);
+          setFileUploadStatus((prev) => ({
+            ...prev,
+            [f.name]: "error",
+          }));
+          // Keep error message in a per-file map via state above is enough;
+          // we also toast.
+        }
+      });
+
+      if (result.uploaded.length > 0) {
+        await queryClient.invalidateQueries({ queryKey: ["postAttachments", postId] });
+        toast.success(`${result.uploaded.length} document${result.uploaded.length === 1 ? "" : "s"} uploaded`);
+      }
+      if (result.failed.length > 0) {
+        result.failed.forEach((fl) => {
+          toast.error(`${fl.file.name}: ${fl.error}`, { duration: 6000 });
+        });
+      }
+    } catch (error) {
+      selected.forEach((f) => setFileUploadStatus((prev) => ({ ...prev, [f.name]: "error" })));
       toast.error(error instanceof Error ? error.message : "Document upload failed");
     } finally {
       setUploading(false);
@@ -60,7 +103,6 @@ export function PostAttachments({ postId, canUpload }: { postId: string; canUplo
   const handleDownload = async (attachment: PostAttachment) => {
     try {
       setDownloading(attachment.id);
-      // Generate only on click: short-lived signed URL, checked by Storage RLS.
       const url = await getDocumentDownloadUrl(attachment);
       const link = document.createElement("a");
       link.href = url;
@@ -75,6 +117,10 @@ export function PostAttachments({ postId, canUpload }: { postId: string; canUplo
       setDownloading(null);
     }
   };
+
+  const clearStatus = useCallback(() => {
+    setFileUploadStatus({});
+  }, []);
 
   if (isError) return <section className="my-5" aria-label="Documents"><QueryErrorState title="Couldn't load post documents" onRetry={() => refetch()} /></section>;
   if (!attachments.length && !canUpload) return null;
@@ -94,22 +140,47 @@ export function PostAttachments({ postId, canUpload }: { postId: string; canUplo
           </>
         )}
       </div>
-      {attachments.length === 0 ? <p className="text-xs text-muted-foreground">No documents attached. PDF, text, CSV, Word or Excel; maximum {MAX_DOCUMENTS_PER_POST} files, 10 MB each.</p>
-        : <ul className="space-y-1.5">
-            {attachments.map((attachment) => <li key={attachment.id} className="flex min-w-0 items-center gap-2 rounded-md bg-muted/40 p-2 text-sm">
-              <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span className="min-w-0 flex-1 truncate text-foreground" title={attachment.fileName}>{attachment.fileName}</span>
-              <span className="shrink-0 text-xs text-muted-foreground">{formatSize(attachment.fileSize)}</span>
-              <button type="button" onClick={() => handleDownload(attachment)} disabled={downloading === attachment.id}
-                aria-label={`Download ${attachment.fileName}`} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-brand hover:bg-muted disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring">
-                <Download className="h-4 w-4" />
-              </button>
-              {canUpload && <button type="button" onClick={() => handleRemove(attachment)} disabled={removing === attachment.id}
-                aria-label={`Remove ${attachment.fileName}`} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring">
-                <Trash2 className="h-4 w-4" />
-              </button>}
-            </li>)}
-          </ul>}
+      {attachments.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No documents attached. PDF, text, CSV, Word or Excel; maximum {MAX_DOCUMENTS_PER_POST} files, 10 MB each.</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {attachments.map((attachment) => {
+            const status = fileUploadStatus[attachment.fileName];
+            const isErrorState = status === "error";
+            return (
+              <li key={attachment.id} className="flex min-w-0 items-center gap-2 rounded-md bg-muted/40 p-2 text-sm">
+                {isPreviewable(attachment.mimeType) ? (
+                  <FileText className="h-4 w-4 shrink-0 text-brand" />
+                ) : (
+                  <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                )}
+                <span className="min-w-0 flex-1 truncate text-foreground" title={attachment.fileName}>{attachment.fileName}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">{formatSizeDisplay(attachment.fileSize)}</span>
+                {status === "uploading" && (
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin text-brand" />
+                )}
+                {status === "success" && (
+                  <span className="h-4 w-4 shrink-0 text-emerald-600">✓</span>
+                )}
+                {isErrorState && (
+                  <RefreshCw className="h-4 w-4 shrink-0 text-destructive cursor-pointer hover:text-destructive/80" onClick={(e) => {
+                    e.stopPropagation();
+                    void inputRef.current?.click();
+                  }} aria-label="Retry upload" />
+                )}
+                <button type="button" onClick={() => handleDownload(attachment)} disabled={downloading === attachment.id}
+                  aria-label={`Download ${attachment.fileName}`} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-brand hover:bg-muted disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring">
+                  <Download className="h-4 w-4" />
+                </button>
+                {canUpload && <button type="button" onClick={() => handleRemove(attachment)} disabled={removing === attachment.id}
+                  aria-label={`Remove ${attachment.fileName}`} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring">
+                  <Trash2 className="h-4 w-4" />
+                </button>}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </section>
   );
 }

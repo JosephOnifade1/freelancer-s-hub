@@ -101,8 +101,8 @@ describe("post document privacy and persistence", () => {
   });
 
   it("uploads a private object and metadata, then signs only visible downloads", async () => {
-    const [publicFile] = await uploadPostDocuments(postId, [file()]);
-    const [membersFile] = await uploadPostDocuments(privatePostId, [file("private.txt", "text/plain")]);
+    const { uploaded: [publicFile] } = await uploadPostDocuments(postId, [file()]);
+    const { uploaded: [membersFile] } = await uploadPostDocuments(privatePostId, [file("private.txt", "text/plain")]);
     expect(publicFile).toMatchObject({ postId, fileName: "terms.pdf", fileSize: file().size });
     expect(client.storage.from("post-documents").getPublicUrl(publicFile.storagePath).data.publicUrl).toBe("");
     expect(await fetchPostAttachments(postId)).toEqual([publicFile]);
@@ -139,13 +139,16 @@ describe("post document privacy and persistence", () => {
     expect((await fetchPostAttachments(postId)).length).toBe(3);
 
     signInAs(viewer);
-    await expect(uploadPostDocuments(privatePostId, [file("forged.pdf")])).rejects.toThrow(/Only the post author/);
+    const forged = await uploadPostDocuments(privatePostId, [file("forged.pdf")]);
+    expect(forged.uploaded).toEqual([]);
+    expect(forged.failed).toHaveLength(1);
+    expect(forged.failed[0].error).toMatch(/Only the post author/);
     signOut();
     expect((await client.from("posts").insert({ id: "anonymous", authorUid: author, title: "No" })).error).not.toBeNull();
   });
 
   it("hides metadata and signed downloads as soon as the post is removed", async () => {
-    const [attachment] = await uploadPostDocuments(postId, [file()]);
+    const { uploaded: [attachment] } = await uploadPostDocuments(postId, [file()]);
     const posts = JSON.parse(localStorage.getItem("mock_supabase_posts") || "[]");
     posts[0].isDeleted = true;
     localStorage.setItem("mock_supabase_posts", JSON.stringify(posts));
