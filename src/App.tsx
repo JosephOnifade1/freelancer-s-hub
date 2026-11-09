@@ -11,7 +11,6 @@ import { lazy, Suspense, type CSSProperties } from "react";
 
 const Index = lazy(() => import("./pages/Index.tsx"));
 const NewFeed = lazy(() => import("./pages/NewFeed.tsx"));
-const Following = lazy(() => import("./pages/Following.tsx"));
 const Popular = lazy(() => import("./pages/Popular.tsx"));
 const TagFeed = lazy(() => import("./pages/TagFeed.tsx"));
 const Communities = lazy(() => import("./pages/Communities.tsx"));
@@ -20,6 +19,7 @@ const Achievements = lazy(() => import("./pages/Achievements.tsx"));
 const ProfileDetail = lazy(() => import("./pages/Profile.tsx"));
 const UserMeRedirect = lazy(() => import("./pages/UserMeRedirect.tsx"));
 const LeadsBoard = lazy(() => import("./pages/LeadsBoard.tsx"));
+const Pipeline = lazy(() => import("./pages/Pipeline.tsx"));
 const Applications = lazy(() => import("./pages/Applications.tsx"));
 const Notifications = lazy(() => import("./pages/Notifications.tsx"));
 const Privacy = lazy(() => import("./pages/Privacy.tsx"));
@@ -130,38 +130,29 @@ const App = () => (
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms"   element={<Terms />} />
 
-              {/* ── Authenticated: feed views ───────────────────────────── */}
-              <Route path="/new"          element={<ProtectedRoute><NewFeed /></ProtectedRoute>} />
-              <Route path="/following"    element={<ProtectedRoute><Following /></ProtectedRoute>} />
-              <Route path="/popular"      element={<ProtectedRoute><Popular /></ProtectedRoute>} />
+              {/* Read-only public content. Writes remain behind ProtectedRoute and RLS. */}
+              <Route path="/new"          element={<NewFeed />} />
+              <Route path="/following"    element={<ProtectedRoute><Navigate to="/?feed=following" replace /></ProtectedRoute>} />
+              <Route path="/popular"      element={<Popular />} />
               <Route path="/submit"       element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
-              <Route path="/tag/:tagName" element={<ProtectedRoute><TagFeed /></ProtectedRoute>} />
+              <Route path="/tag/:tagName" element={<TagFeed />} />
 
-              {/* ── Authenticated: Borynx Spaces (communities) ─────────── */}
-              {/* /b is not a real standalone page — redirect to the communities list */}
-              <Route path="/communities"        element={<ProtectedRoute><Communities /></ProtectedRoute>} />
+              {/* Public spaces, posts, profiles and real marketplace */}
+              <Route path="/communities"        element={<Communities />} />
               <Route path="/b"                  element={<Navigate to="/communities" replace />} />
-              <Route path="/b/:slug"            element={<ProtectedRoute><CommunityDetail /></ProtectedRoute>} />
-              <Route path="/b/:slug/p/:id"      element={<ProtectedRoute><PostDetail /></ProtectedRoute>} />
-
-              {/* ── Authenticated: Posts ────────────────────────────────── */}
-              {/* /p is not a real standalone page — redirect home */}
+              <Route path="/b/:slug"            element={<CommunityDetail />} />
+              <Route path="/b/:slug/p/:id"      element={<PostDetail />} />
               <Route path="/p"      element={<Navigate to="/" replace />} />
-              <Route path="/p/:id"  element={<ProtectedRoute><PostDetail /></ProtectedRoute>} />
-
-              {/* ── Authenticated: Freelancer profiles ─────────────────── */}
-              {/* /f and /u are prefix namespaces, not pages themselves */}
+              <Route path="/p/:id"  element={<PostDetail />} />
               <Route path="/f"      element={<Navigate to="/" replace />} />
-              <Route path="/f/me"   element={<UserMeRedirect />} />
-              <Route path="/f/:username" element={<ProtectedRoute><ErrorBoundary><ProfileDetail /></ErrorBoundary></ProtectedRoute>} />
-              {/* legacy /u/... links keep working */}
+              <Route path="/f/me"   element={<ProtectedRoute><UserMeRedirect /></ProtectedRoute>} />
+              <Route path="/f/:username" element={<ErrorBoundary><ProfileDetail /></ErrorBoundary>} />
               <Route path="/u"      element={<Navigate to="/" replace />} />
               <Route path="/u/:username" element={<LegacyProfileRedirect />} />
-
-              {/* ── Authenticated: Leads ────────────────────────────────── */}
-              <Route path="/l"         element={<ProtectedRoute><LeadsBoard /></ProtectedRoute>} />
+              <Route path="/l"         element={<LeadsBoard />} />
               <Route path="/l/post"    element={<ProtectedRoute><CreateLead /></ProtectedRoute>} />
-              <Route path="/l/:leadId" element={<ProtectedRoute><LeadDetail /></ProtectedRoute>} />
+              <Route path="/l/:leadId" element={<LeadDetail />} />
+              <Route path="/pipeline"  element={<ProtectedRoute><Pipeline /></ProtectedRoute>} />
               <Route path="/applications" element={<ProtectedRoute><Applications /></ProtectedRoute>} />
               <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />

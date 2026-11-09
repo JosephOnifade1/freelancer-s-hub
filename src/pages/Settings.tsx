@@ -11,6 +11,8 @@ import { getUserProfile, UserProfile, checkUsernameAvailability, claimUsername }
 import { supabase, isDemoMode } from "@/lib/supabase";
 import { requestPasswordReset, resendConfirmationEmail } from "@/lib/auth";
 import { getErrorMessage } from "@/lib/utils";
+import { QueryErrorState } from "@/components/QueryErrorState";
+import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 
 const Section = ({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) => (
@@ -25,38 +27,45 @@ const Section = ({ title, description, children }: { title: string; description?
 
 const Settings = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileLoadError, setProfileLoadError] = useState(false);
+  const [retry, setRetry] = useState(0);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  
+
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [originalUsername, setOriginalUsername] = useState("");
   const [bio, setBio] = useState("");
   const [website, setWebsite] = useState("");
-  
-  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
-  
+
+  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid" | "unavailable">("idle");
+
   const [sendingReset, setSendingReset] = useState(false);
   const [resendingConfirm, setResendingConfirm] = useState(false);
   const [available, setAvailable] = useState(true);
-  const [emailNotif, setEmailNotif] = useState(true);
-  const [mentions, setMentions] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
+    let active = true;
     if (user?.uid) {
-      getUserProfile(user.uid).then(p => {
-        if (p) {
-          setProfile(p);
-          setDisplayName(p.displayName || p.username || "");
-          setUsername(p.username || "");
-          setOriginalUsername(p.username || "");
-          setBio(p.bio || "");
-          setWebsite(p.website || "");
-          setAvailable(p.status === "Available");
-        }
-      });
+      setProfileLoading(true);
+      setProfileLoadError(false);
+      getUserProfile(user.uid).then((p) => {
+        if (!active) return;
+        if (!p) { setProfileLoadError(true); return; }
+        setProfile(p);
+        setDisplayName(p.displayName || p.username || "");
+        setUsername(p.username || "");
+        setOriginalUsername(p.username || "");
+        setBio(p.bio || "");
+        setWebsite(p.website || "");
+        setAvailable(p.status === "Available");
+      }).catch(() => { if (active) setProfileLoadError(true); })
+        .finally(() => { if (active) setProfileLoading(false); });
     }
-  }, [user]);
+    return () => { active = false; };
+  }, [user?.uid, retry]);
 
   useEffect(() => {
     if (!username || username === originalUsername) {
@@ -71,17 +80,20 @@ const Settings = () => {
     }
 
     setUsernameStatus("checking");
+    let active = true;
     const timeoutId = setTimeout(async () => {
-      const isAvailable = await checkUsernameAvailability(username);
-      setUsernameStatus(isAvailable ? "available" : "taken");
+      try {
+        const isAvailable = await checkUsernameAvailability(username);
+        if (active) setUsernameStatus(isAvailable ? "available" : "taken");
+      } catch { if (active) setUsernameStatus("unavailable"); }
     }, 500);
 
-    return () => clearTimeout(timeoutId);
+    return () => { active = false; clearTimeout(timeoutId); };
   }, [username, originalUsername]);
 
   const handleSave = async () => {
     if (!user?.uid) return;
-    
+
     if (username !== originalUsername && usernameStatus !== "available") {
       toast({ title: "Error", description: "Please choose a valid and available username.", variant: "destructive" });
       return;
@@ -101,14 +113,17 @@ const Settings = () => {
         status: available ? "Available" : "Busy"
       };
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("profiles")
         .update({ displayName, bio, website, status: updates.status })
-        .eq("uid", user.uid);
+        .eq("uid", user.uid)
+        .select("uid");
 
       if (error) throw new Error(error.message);
+      if (!data?.length) throw new Error("Profile not found or not editable.");
 
-      toast({ title: "Saved", description: "Your settings have been updated." });
+      queryClient.invalidateQueries({ queryKey: ["profile", user.uid] });
+      toast({ title: "Saved", description: "Your profile has been updated." });
     } catch (error) {
       toast({ title: "Error saving profile", description: getErrorMessage(error), variant: "destructive" });
     } finally {
@@ -116,7 +131,9 @@ const Settings = () => {
     }
   };
 
-  if (!profile) {
+  if (profileLoadError) return <AppLayout><div className="mx-auto max-w-xl px-4 py-16"><QueryErrorState title="Couldn't load settings" onRetry={() => setRetry((count) => count + 1)} /></div></AppLayout>;
+
+  if (profileLoading || !profile) {
     return (
       <AppLayout>
         <div className="flex justify-center items-center h-[50vh]">
@@ -131,7 +148,7 @@ const Settings = () => {
       <div className="mx-auto max-w-3xl px-4 py-6">
         <PageHeader
           title="Settings"
-          subtitle="Manage your account, profile, and notification preferences."
+          subtitle="Manage your account and public profile."
         />
 
         <div className="space-y-5">
@@ -170,8 +187,7 @@ const Settings = () => {
                 </div>
               )}
               <p className="text-xs text-muted-foreground">
-                To change your email or password, use a password reset link — it verifies you own
-                the inbox.
+                To change your password, request a reset link. Email changes are not available here.
               </p>
               <div>
                 <button
@@ -202,16 +218,16 @@ const Settings = () => {
               <Label htmlFor="displayName">Display Name</Label>
               <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
             </div>
-            
+
             <div className="grid gap-2 relative">
               <Label htmlFor="username">Username (@handle)</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium select-none">@</span>
-                <Input 
-                  id="username" 
-                  className="pl-7" 
-                  value={username} 
-                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))} 
+                <Input
+                  id="username"
+                  className="pl-7"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
                   {usernameStatus === "checking" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
@@ -223,6 +239,7 @@ const Settings = () => {
               {usernameStatus === "available" && <p className="text-xs text-success">Username is available!</p>}
               {usernameStatus === "taken" && <p className="text-xs text-destructive">Username is already taken.</p>}
               {usernameStatus === "invalid" && <p className="text-xs text-destructive">Must be 3-15 lowercase letters, numbers, or underscores.</p>}
+              {usernameStatus === "unavailable" && <p role="alert" className="text-xs text-destructive">Couldn't check username availability. Try again when connected.</p>}
             </div>
 
             <div className="grid gap-2">
@@ -244,9 +261,9 @@ const Settings = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-body text-sm font-medium text-foreground">Open to work</p>
-                <p className="font-body text-xs text-muted-foreground">A green badge will appear on your profile.</p>
+                <p className="font-body text-xs text-muted-foreground">Your work status appears on your public profile after you save.</p>
               </div>
-              <Switch checked={available} onCheckedChange={setAvailable} />
+              <Switch checked={available} onCheckedChange={setAvailable} aria-label="Open to work" />
             </div>
           </Section>
 

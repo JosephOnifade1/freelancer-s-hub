@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/auth-context";
 const Bookmarks = () => {
   const { user } = useAuth();
 
-  const { data: savedPostIds = {}, isLoading: isSavedLoading } = useQuery({
+  const { data: savedPostIds = {}, isLoading: isSavedLoading, isError: savedError, refetch: refetchSaved } = useQuery({
     queryKey: ['savedPosts', user?.uid],
     queryFn: () => user?.uid ? getSavedPostIds(user.uid) : {},
     enabled: !!user?.uid,
@@ -33,8 +33,8 @@ const Bookmarks = () => {
           title="Bookmarks"
           subtitle={`${bookmarked.length} saved post${bookmarked.length !== 1 ? 's' : ''}`}
         />
-        {postsError ? (
-          <QueryErrorState title="Couldn't load bookmarks" onRetry={() => refetchPosts()} />
+        {postsError || savedError ? (
+          <QueryErrorState title="Couldn't load bookmarks" onRetry={() => { refetchPosts(); refetchSaved(); }} />
         ) : isLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

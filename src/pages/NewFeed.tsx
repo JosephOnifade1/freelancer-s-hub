@@ -44,7 +44,7 @@ const NewFeed = () => {
           </div>
           <div className="hidden lg:block w-72 shrink-0">
             <div className="sticky top-20">
-              <FeedSidebar posts={posts} />
+              <FeedSidebar posts={posts} feedState={postsError ? "error" : isLoading ? "loading" : "ready"} />
             </div>
           </div>
         </div>

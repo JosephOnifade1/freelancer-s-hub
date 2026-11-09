@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { useParams, Link, useLocation } from "react-router-dom";
 import { VoteControls } from "@/components/VoteControls";
 import { MapPin, Calendar, Camera, Loader2, Edit2, ArrowLeft, Check, Link as LinkIcon } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
@@ -21,13 +21,14 @@ type Tab = "Threads" | "Resources" | "B-Spaces" | "Bookmarks";
 export default function Profile() {
   const { uid, username, handle } = useParams();
   const { user: currentUser } = useAuth();
+  const pageLocation = useLocation();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const rawParam = uid || username || handle;
   const targetIdentifier = (rawParam === "me" ? currentUser?.uid : rawParam) || currentUser?.uid;
 
-  const { data: profile, isLoading } = useQuery({
+  const { data: profile, isLoading, isError: profileError, refetch: refetchProfile } = useQuery({
     queryKey: ['profile', targetIdentifier],
     queryFn: () => targetIdentifier ? getUserProfile(targetIdentifier) : null,
     enabled: !!targetIdentifier,
@@ -37,49 +38,47 @@ export default function Profile() {
   const isOwnProfile = !!currentUser?.uid && (profileUid === currentUser.uid || profile?.uid === currentUser.uid);
 
   const [activeTab, setActiveTab] = useState<Tab>("Threads");
+  useEffect(() => setActiveTab("Threads"), [targetIdentifier]);
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [bioInput, setBioInput] = useState("");
   const [isSavingBio, setIsSavingBio] = useState(false);
 
-  const { data: allPosts = [], isError: postsError, refetch: refetchPosts } = useQuery({
+  const { data: allPosts = [], isLoading: loadingPosts, isError: postsError, refetch: refetchPosts } = useQuery({
     queryKey: ['posts'],
     queryFn: fetchPosts
   });
 
-  const { data: allCommunities = [] } = useQuery({
+  const { data: allCommunities = [], isError: communitiesError, refetch: refetchCommunities } = useQuery({
     queryKey: ["communities"],
     queryFn: fetchAllCommunities,
   });
 
-  const { data: joinedCommunities = [] } = useQuery({
+  const { data: joinedCommunities = [], isError: joinedError, refetch: refetchJoined } = useQuery({
     queryKey: ["userCommunities", profile?.uid],
     queryFn: () => (profile?.uid ? getUserCommunities(profile.uid) : []),
     enabled: !!profile?.uid,
   });
 
   // Filter posts created by this user
-  const userPosts = profile ? allPosts.filter((p) => 
-    !p.isDeleted && (
-      p.author?.uid === profile.uid || 
-      p.author?.name === profile.username || 
-      p.author?.name === profile.displayName
-    )
+  const userPosts = profile ? allPosts.filter((p) =>
+    !p.isDeleted && p.author?.uid === profile.uid
   ) : [];
-  
+
   const resourcePosts = userPosts.filter(p => p.type === 'resource');
-  const savedPostsList = profile ? allPosts.filter(p => profile.savedPosts?.[p.id]) : [];
+  const savedPostsList = isOwnProfile && profile ? allPosts.filter(p => profile.savedPosts?.[p.id]) : [];
 
   // Check if currentUser follows this user
-  const { data: followData } = useQuery({
+  const { data: followData, isError: followingError, refetch: refetchFollow } = useQuery({
     queryKey: ['isFollowing', currentUser?.uid, profileUid],
     queryFn: async () => {
       if (!currentUser?.uid || !profileUid) return null;
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("follows")
         .select("followingId")
         .eq("followerId", currentUser.uid)
         .eq("followingId", profileUid)
         .maybeSingle();
+      if (error) throw new Error(error.message);
       return data;
     },
     enabled: !!currentUser?.uid && !!profileUid && currentUser?.uid !== profileUid,
@@ -143,6 +142,8 @@ export default function Profile() {
     );
   }
 
+  if (profileError) return <AppLayout><div className="mx-auto max-w-xl px-4 py-16"><QueryErrorState title="Couldn't load this profile" onRetry={() => refetchProfile()} /></div></AppLayout>;
+
   if (!profile) {
     return (
       <AppLayout>
@@ -170,7 +171,7 @@ export default function Profile() {
   return (
     <AppLayout>
       <div className="mx-auto max-w-6xl px-3 sm:px-6 py-4">
-        
+
         {/* Top Header bar with back button & Profile title */}
         <div className="flex items-center gap-3 mb-4 text-foreground">
           <Link to="/" className="p-1.5 rounded-full hover:bg-secondary transition-colors">
@@ -180,19 +181,19 @@ export default function Profile() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
+
           {/* Main Content Column (Left - 8 cols) */}
           <div className="lg:col-span-8 space-y-6">
-            
+
             {/* Header Banner & Profile Card */}
             <div className="rounded-2xl border border-border/50 bg-card overflow-hidden shadow-md">
-              
+
               <div className="h-28 sm:h-36 w-full bg-muted" />
 
               {/* Avatar & Action Buttons Bar */}
               <div className="px-6 relative pb-6">
                 <div className="flex items-end justify-between -mt-16 sm:-mt-20 mb-4">
-                  
+
                   {/* Large Avatar */}
                   <div className="relative group">
                     <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-full border-4 border-card bg-muted overflow-hidden shadow-xl relative">
@@ -205,19 +206,18 @@ export default function Profile() {
                       )}
 
                       {isOwnProfile && (
-                        <div 
-                          className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
-                          onClick={() => fileInputRef.current?.click()}
-                        >
+                        <button type="button" aria-label="Change profile photo" title="Change profile photo"
+                          className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          onClick={() => fileInputRef.current?.click()}>
                           <Camera className="h-6 w-6 text-white" />
-                        </div>
+                        </button>
                       )}
                     </div>
-                    
-                    <input 
-                      type="file" 
-                      ref={fileInputRef} 
-                      className="hidden" 
+
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
                       accept="image/*"
                       onChange={handleAvatarChange}
                     />
@@ -232,17 +232,14 @@ export default function Profile() {
                       >
                         Edit profile
                       </Link>
+                    ) : !currentUser ? (
+                      <Link to="/login" state={{ from: pageLocation }} className="inline-flex min-h-10 items-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground">Sign in to follow</Link>
+                    ) : followingError ? (
+                      <button type="button" onClick={() => refetchFollow()} className="text-xs text-destructive hover:underline">Follow status unavailable. Retry</button>
                     ) : (
-                      <button
-                        onClick={() => followMutation.mutate()}
-                        disabled={followMutation.isPending}
-                        className={`px-4 py-2 rounded-md font-medium text-sm transition-colors ${
-                          isFollowing
-                            ? 'border border-border text-foreground hover:bg-muted'
-                            : 'bg-primary hover:bg-primary/90 text-primary-foreground'
-                        }`}
-                      >
-                        {followMutation.isPending ? "Updating..." : (isFollowing ? "Following" : "Follow")}
+                      <button onClick={() => followMutation.mutate()} disabled={followMutation.isPending}
+                        className={`min-h-10 rounded-md px-4 py-2 text-sm font-medium transition-colors ${isFollowing ? 'border border-border text-foreground hover:bg-muted' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`}>
+                        {followMutation.isPending ? "Updating..." : isFollowing ? "Following" : "Follow"}
                       </button>
                     )}
                   </div>
@@ -264,20 +261,20 @@ export default function Profile() {
                 {/* Bio text */}
                 {isEditingBio ? (
                   <div className="my-3 space-y-2">
-                    <Textarea 
+                    <Textarea
                       value={bioInput}
                       onChange={(e) => setBioInput(e.target.value)}
                       className="bg-background border-border/60 text-sm resize-none"
                       rows={3}
                     />
                     <div className="flex gap-2 justify-end">
-                      <button 
+                      <button
                         onClick={() => setIsEditingBio(false)}
                         className="px-3 py-1 rounded text-xs border border-border text-muted-foreground hover:text-foreground"
                       >
                         Cancel
                       </button>
-                      <button 
+                      <button
                         onClick={handleSaveBio}
                         disabled={isSavingBio}
                         className="px-3 py-1 rounded text-xs bg-primary text-primary-foreground font-medium"
@@ -287,12 +284,9 @@ export default function Profile() {
                     </div>
                   </div>
                 ) : (bio || isOwnProfile) ? (
-                  <p 
-                    className={`text-sm text-foreground/90 leading-relaxed mb-4 ${isOwnProfile ? "cursor-pointer hover:text-brand transition-colors" : ""}`}
-                    onClick={() => isOwnProfile && setIsEditingBio(true)}
-                  >
+                  <p className="mb-4 text-sm leading-relaxed text-foreground/90">
                     {bio || (isOwnProfile ? <span className="text-muted-foreground">Add a short bio so people know what you do.</span> : null)}
-                    {isOwnProfile && <Edit2 className="h-3 w-3 inline ml-2 text-muted-foreground opacity-60" />}
+                    {isOwnProfile && <button type="button" onClick={() => { setBioInput(bio); setIsEditingBio(true); }} className="ml-2 inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline"><Edit2 className="h-3 w-3" /> Edit bio</button>}
                   </p>
                 ) : null}
 
@@ -367,8 +361,8 @@ export default function Profile() {
             </div>
 
             {/* Tabs Row */}
-            <div className="border-b border-border/50 flex items-center gap-8 font-medium text-sm px-2">
-              {(["Threads", "Resources", "B-Spaces", "Bookmarks"] as Tab[]).map((tab) => (
+            <div className="flex items-center gap-6 overflow-x-auto border-b border-border/50 px-2 text-sm font-medium sm:gap-8">
+              {(["Threads", "Resources", "B-Spaces", ...(isOwnProfile ? ["Bookmarks"] : [])] as Tab[]).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -388,7 +382,7 @@ export default function Profile() {
               {activeTab === "Threads" && (
                 postsError ? (
                   <QueryErrorState title="Couldn't load posts" onRetry={() => refetchPosts()} />
-                ) : userPosts.length === 0 ? (
+                ) : loadingPosts ? <p role="status" className="py-8 text-center text-sm text-muted-foreground">Loading posts…</p> : userPosts.length === 0 ? (
                   <div className="rounded-2xl border border-border/40 bg-card p-10 text-center space-y-2">
                     <p className="font-heading font-bold text-foreground ">No posts yet</p>
                     <p className="text-sm text-muted-foreground">
@@ -403,7 +397,7 @@ export default function Profile() {
               {activeTab === "Resources" && (
                 postsError ? (
                   <QueryErrorState title="Couldn't load resources" onRetry={() => refetchPosts()} />
-                ) : resourcePosts.length === 0 ? (
+                ) : loadingPosts ? <p role="status" className="py-8 text-center text-sm text-muted-foreground">Loading resources…</p> : resourcePosts.length === 0 ? (
                   <div className="rounded-xl border border-border/40 bg-card p-10 text-center text-sm text-muted-foreground shadow-sm">
                     No resources shared yet.
                   </div>
@@ -413,7 +407,7 @@ export default function Profile() {
               )}
 
               {activeTab === "B-Spaces" && (
-                joinedSpaces.length === 0 ? (
+                communitiesError || joinedError ? <QueryErrorState title="Couldn't load spaces" onRetry={() => { refetchCommunities(); refetchJoined(); }} /> : joinedSpaces.length === 0 ? (
                   <div className="rounded-xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">
                     {isOwnProfile ? "You haven't joined any spaces yet." : "Not a member of any spaces yet."}
                   </div>
@@ -443,10 +437,10 @@ export default function Profile() {
                 )
               )}
 
-              {activeTab === "Bookmarks" && (
+              {isOwnProfile && activeTab === "Bookmarks" && (
                 postsError ? (
                   <QueryErrorState title="Couldn't load bookmarked posts" onRetry={() => refetchPosts()} />
-                ) : savedPostsList.length === 0 ? (
+                ) : loadingPosts ? <p role="status" className="py-8 text-center text-sm text-muted-foreground">Loading bookmarks…</p> : savedPostsList.length === 0 ? (
                   <div className="rounded-xl border border-border/40 bg-card p-10 text-center text-sm text-muted-foreground shadow-sm">
                     No bookmarks saved yet.
                   </div>
@@ -460,7 +454,7 @@ export default function Profile() {
 
           {/* Right Sidebar Column (4 Cards) */}
           <div className="lg:col-span-4 space-y-5">
-            
+
             {/* About: only fields that exist on the profile */}
             {(profile.status || location || website || profile.joined) && (
               <div className="rounded-xl border border-border bg-card p-5 space-y-3">

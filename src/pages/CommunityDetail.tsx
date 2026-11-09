@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -31,11 +31,12 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CommunityDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<Tab>("Feed");
 
-  const { data: community, isLoading } = useQuery({
+  const { data: community, isLoading, isError: communityError, refetch: refetchCommunity } = useQuery({
     queryKey: ["community", slug],
     queryFn: () => (slug ? fetchCommunity(slug) : null),
     enabled: !!slug,
@@ -47,13 +48,13 @@ const CommunityDetail = () => {
     enabled: !!slug,
   });
 
-  const { data: members = [] } = useQuery({
+  const { data: members = [], isError: membersError, refetch: refetchMembers } = useQuery({
     queryKey: ["communityMembers", slug],
     queryFn: () => (slug ? fetchCommunityMembers(slug) : []),
     enabled: !!slug,
   });
 
-  const { data: joinedSlugs = [] } = useQuery({
+  const { data: joinedSlugs = [], isError: membershipError, refetch: refetchMembership } = useQuery({
     queryKey: ["userCommunities", user?.uid],
     queryFn: () => (user?.uid ? getUserCommunities(user.uid) : []),
     enabled: !!user?.uid,
@@ -131,6 +132,8 @@ const CommunityDetail = () => {
     );
   }
 
+  if (communityError) return <AppLayout><div className="mx-auto max-w-xl px-4 py-16"><QueryErrorState title="Couldn't load this space" onRetry={() => refetchCommunity()} /></div></AppLayout>;
+
   if (!community) {
     return (
       <AppLayout>
@@ -203,7 +206,11 @@ const CommunityDetail = () => {
               <Button variant="outline" size="sm" onClick={copyInviteLink} className="gap-1.5">
                 <Link2 className="h-3.5 w-3.5" /> Copy link
               </Button>
-              {isJoined ? (
+              {!user ? (
+                <Button size="sm" asChild><Link to="/login" state={{ from: location }}>Sign in to join</Link></Button>
+              ) : membershipError ? (
+                <button type="button" onClick={() => refetchMembership()} className="text-xs text-destructive hover:underline">Couldn't check membership. Retry</button>
+              ) : isJoined ? (
                 <Button variant="outline" size="sm" disabled={leaveMutation.isPending} onClick={() => leaveMutation.mutate()}>
                   Joined
                 </Button>
@@ -257,10 +264,9 @@ const CommunityDetail = () => {
 
             {activeTab === "Members" && (
               <div className="divide-y divide-border rounded-xl border border-border bg-card">
-                {members.length === 0 && (
-                  <p className="p-10 text-center text-sm text-muted-foreground">No one has joined this space yet.</p>
-                )}
-                {members.map((m) => (
+                {membersError ? <QueryErrorState title="Couldn't load members" onRetry={() => refetchMembers()} />
+                  : members.length === 0 ? <p className="p-10 text-center text-sm text-muted-foreground">No one has joined this space yet.</p>
+                  : members.map((m) => (
                   <Link key={m.uid} to={memberLink(m)} className="flex items-center gap-3 p-3.5 transition-colors hover:bg-muted/50">
                     <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-muted font-heading text-sm font-bold">
                       {m.avatarUrl ? <img src={m.avatarUrl} alt="" className="h-full w-full object-cover" /> : memberName(m).charAt(0).toUpperCase()}
@@ -332,7 +338,9 @@ const CommunityDetail = () => {
                   </button>
                 )}
               </div>
-              {topMembers.length === 0 ? (
+              {membersError ? (
+                <p role="alert" className="text-xs text-destructive">Members unavailable. <button onClick={() => refetchMembers()} className="underline">Retry</button></p>
+              ) : topMembers.length === 0 ? (
                 <p className="text-xs text-muted-foreground">Members will show up here once people join.</p>
               ) : (
                 <ol className="space-y-2.5">

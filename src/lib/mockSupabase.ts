@@ -338,38 +338,9 @@ export const seedMockData = () => {
     }
   ];
 
-  const seedLeads = [
-    {
-      id: "l1",
-      title: "React Native Developer for Fitness App",
-      description: "We need an experienced developer to help us ship the first version of our mobile fitness app. 3-month contract.",
-      budget: "$5,000 - $8,000",
-      currency: "USD",
-      location: "Remote",
-      type: "Project",
-      status: "open",
-      skills: ["React Native", "TypeScript", "Tailwind CSS"],
-      isVerified: true,
-      postedByUid: "u1",
-      postedAt: new Date(Date.now() - 2 * 24 * 3600000).toISOString(),
-      applicantsCount: 12
-    },
-    {
-      id: "l2",
-      title: "UI/UX Designer for Web3 Landing Page",
-      description: "Looking for a modern visual designer to create a landing page for our new Web3 protocol. Fast turnaround needed.",
-      budget: "$2,000",
-      currency: "USD",
-      location: "Remote",
-      type: "Bounty",
-      status: "open",
-      skills: ["Figma", "UI Design", "3D assets"],
-      isVerified: false,
-      postedByUid: "u3",
-      postedAt: new Date(Date.now() - 1 * 24 * 3600000).toISOString(),
-      applicantsCount: 5
-    }
-  ];
+  // Opportunities are never seeded: the marketplace starts empty until a
+  // demo user explicitly posts one. Unlike demo posts, a sample job could be
+  // mistaken for an actual client looking for applications.
 
   const seedUsernames = seedProfiles.map(p => ({ username: p.username, uid: p.uid }));
 
@@ -384,7 +355,14 @@ export const seedMockData = () => {
   checkAndSeed("communities", seedCommunities);
   checkAndSeed("posts", seedPosts);
   checkAndSeed("comments", seedComments);
-  checkAndSeed("leads", seedLeads);
+  checkAndSeed("leads", []);
+  // Remove the two legacy illustrative jobs from older demo browsers, but
+  // leave any jobs created by demo users intact.
+  if (!localStorage.getItem("mock_lead_examples_removed_v1")) {
+    const leads = mockTable<{ id: string }>("leads").filter((lead) => !["l1", "l2"].includes(lead.id));
+    localStorage.setItem("mock_supabase_leads", JSON.stringify(leads));
+    localStorage.setItem("mock_lead_examples_removed_v1", "1");
+  }
 
   // One-time equivalent of the SQL commentCount backfill for browsers that
   // already have demo data (including legacy seeded fake counts).
@@ -397,7 +375,7 @@ export const seedMockData = () => {
     localStorage.setItem("mock_supabase_posts", JSON.stringify(posts));
     localStorage.setItem("mock_post_comment_count_reconciled_v1", "1");
   }
-  
+
   // usernames was originally stored as a {username: uid} map, which the
   // query builder (array-based) cannot read. Normalize legacy storage.
   try {
@@ -521,6 +499,32 @@ class MockQueryBuilder {
 
     if (this.operation === "select") {
       let filtered = [...data];
+      const viewerUid = getMockSessionUid();
+      const role = mockTable<{ uid: string; role?: string }>("profiles").find((p) => p.uid === viewerUid)?.role;
+      const canSeePostId = (postId: MockValue) => {
+        const post = mockTable<MockRow>("posts").find((item) => item.id === postId);
+        return !!post && mockCanViewPost(post, viewerUid, role);
+      };
+      if (this.tableName === "comments") filtered = filtered.filter((row) => canSeePostId(row.postId));
+      if (this.tableName === "polls") filtered = filtered.filter((row) => canSeePostId(row.postId));
+      if (this.tableName === "poll_options" || this.tableName === "poll_votes") {
+        filtered = filtered.filter((row) => {
+          const poll = mockTable<MockRow>("polls").find((p) => p.id === row.pollId);
+          return !!poll && canSeePostId(poll.postId);
+        });
+      }
+      if (this.tableName === "saved_posts" || this.tableName === "notifications") filtered = filtered.filter((row) => row.userId === viewerUid);
+      if (this.tableName === "lead_applications") filtered = filtered.filter((row) => {
+        const lead = mockTable<MockRow>("leads").find((item) => item.id === row.leadId);
+        return row.applicantUid === viewerUid || (!!viewerUid && lead?.postedByUid === viewerUid);
+      });
+      if (this.tableName === "reports") filtered = filtered.filter((row) => row.reporterUid === viewerUid || (!!viewerUid && (role === "admin" || role === "moderator")));
+      if (this.tableName === "lead_pipeline") filtered = filtered.filter((row) => row.userUid === viewerUid);
+      if (this.tableName === "post_attachments") filtered = filtered.filter((row) => mockCanReadAttachment(row, viewerUid));
+      // Real Supabase RLS also filters restricted content for direct queries.
+      if (this.tableName === "posts") {
+        filtered = filtered.filter((row) => mockCanViewPost(row, viewerUid, role));
+      }
       for (const filter of this.filters) {
         if (filter.type === "eq") {
           filtered = filtered.filter(row => row[filter.column!] == filter.value);
@@ -581,7 +585,7 @@ class MockQueryBuilder {
 
       const mapped = filtered.map(row => {
         const newRow = { ...row };
-        
+
         if (this.selectFields.includes("profiles")) {
           const profilesTable: MockRow[] = JSON.parse(localStorage.getItem("mock_supabase_profiles") || "[]");
           const authorUid = row.authorUid || row.postedByUid;
@@ -613,7 +617,7 @@ class MockQueryBuilder {
         : this.payload
           ? [this.payload]
           : [];
-      
+
       const newRecords = inserted.map(item => {
         const record = { ...item };
         if (!record.id) {
@@ -627,6 +631,52 @@ class MockQueryBuilder {
         }
         return record;
       });
+
+      const actorUid = getMockSessionUid();
+      for (const record of newRecords) {
+        if (this.tableName === "posts" && (!actorUid || record.authorUid !== actorUid) ||
+            this.tableName === "leads" && (!actorUid || record.postedByUid !== actorUid) ||
+            this.tableName === "community_members" && (!actorUid || record.userId !== actorUid) ||
+            this.tableName === "saved_posts" && (!actorUid || record.userId !== actorUid) ||
+            this.tableName === "poll_votes" && (!actorUid || record.userId !== actorUid)) {
+          return { data: null, error: { message: "Sign in to create or interact with content" } };
+        }
+      }
+      if (this.tableName === "lead_pipeline") {
+        const uid = getMockSessionUid();
+        for (const record of newRecords) {
+          if (!uid || record.userUid !== uid) return { data: null, error: { message: "Only the owner can add pipeline items" } };
+          if (record.leadId && data.some((row) => row.userUid === uid && row.leadId === record.leadId))
+            return { data: null, error: { code: "23505", message: "Opportunity already tracked" } };
+          record.stage = "new";
+          record.updatedAt = new Date().toISOString();
+        }
+      }
+      if (this.tableName === "post_attachments") {
+        const uid = getMockSessionUid();
+        for (const record of newRecords) {
+          const post = mockTable<MockRow>("posts").find((row) => row.id === record.postId);
+          if (!uid || record.uploaderUid !== uid || post?.authorUid !== uid || post?.isDeleted === true ||
+              !String(record.storagePath || "").startsWith(`${uid}/${record.postId}/`)) {
+            return { data: null, error: { message: "Not authorized to attach documents to this post" } };
+          }
+          const filename = String(record.fileName || "");
+          const allowed = ["application/pdf", "text/plain", "text/csv", "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"];
+          if (!filename || filename.length > 255 || !allowed.includes(String(record.mimeType)) ||
+              typeof record.fileSize !== "number" || record.fileSize < 1 || record.fileSize > 10 * 1024 * 1024) {
+            return { data: null, error: { message: "Invalid document details" } };
+          }
+          if (data.filter((row) => row.postId === record.postId).length + newRecords.filter((row) => row.postId === record.postId).indexOf(record) >= 3) {
+            return { data: null, error: { message: "A post can have at most 3 documents" } };
+          }
+          const store = JSON.parse(localStorage.getItem("mock_supabase_storage") || "{}");
+          if (!store["post-documents"]?.[String(record.storagePath)]) {
+            return { data: null, error: { message: "Upload the document before saving its details" } };
+          }
+        }
+      }
 
       if (this.tableName === "comments") {
         const insertError = (() => {
@@ -741,11 +791,9 @@ class MockQueryBuilder {
       const updatePayload: MockRow | null = Array.isArray(this.payload) ? null : this.payload;
       const updatedData = data.map(row => {
         const matches = this.filters.every(filter => {
-          if (filter.type === "eq") {
-            return row[filter.column!] == filter.value;
-          }
+          if (filter.type === "eq") return row[filter.column!] == filter.value;
           return false;
-        });
+        }) && (this.tableName !== "lead_pipeline" || row.userUid === getMockSessionUid());
 
         if (matches) {
           updatedCount++;
@@ -830,28 +878,24 @@ class MockQueryBuilder {
         if (leadsChanged) localStorage.setItem("mock_supabase_leads", JSON.stringify(leads));
       }
 
-      return { data: updatedData.filter((_, idx) => data[idx] !== updatedData[idx]), error: null };
+      const updatedRows = updatedData.filter((row, idx) => data[idx] !== row);
+      if (this.isSingle) return { data: updatedRows[0] || null, error: null };
+      return { data: updatedRows, error: null };
     }
 
     if (this.operation === "delete") {
-      const deletedRows = this.tableName === "comments"
-        ? data.filter(row => this.filters.every(filter => filter.type !== "eq" || row[filter.column!] == filter.value))
-        : [];
-      const filteredData = data.filter(row => {
-        const matches = this.filters.every(filter => {
-          if (filter.type === "eq") {
-            return row[filter.column!] == filter.value;
-          }
-          return false;
-        });
-        return !matches;
-      });
-
-      localStorage.setItem(key, JSON.stringify(filteredData));
-      for (const row of deletedRows) {
-        if (row.isDeleted !== true) adjustMockPostCommentCount(row.postId, -1);
+      const matches = (row: MockRow) => this.filters.every((filter) => filter.type !== "eq" || row[filter.column!] == filter.value)
+        && (this.tableName !== "lead_pipeline" || row.userUid === getMockSessionUid())
+        && (this.tableName !== "post_attachments" || row.uploaderUid === getMockSessionUid());
+      const deletedRows = data.filter(matches);
+      localStorage.setItem(key, JSON.stringify(data.filter((row) => !matches(row))));
+      if (this.tableName === "comments") {
+        for (const row of deletedRows) {
+          if (row.isDeleted !== true) adjustMockPostCommentCount(row.postId, -1);
+        }
       }
-      return { data: null, error: null };
+      if (this.isSingle) return { data: deletedRows[0] || null, error: null };
+      return { data: deletedRows, error: null };
     }
 
     if (this.operation === "upsert") {
@@ -865,9 +909,9 @@ class MockQueryBuilder {
       items.forEach(item => {
         let matchIdx = -1;
         if (this.tableName === "votes") {
-          matchIdx = data.findIndex(row => 
-            row.userId === item.userId && 
-            row.entityType === item.entityType && 
+          matchIdx = data.findIndex(row =>
+            row.userId === item.userId &&
+            row.entityType === item.entityType &&
             row.entityId === item.entityId
           );
         } else {
@@ -1257,6 +1301,13 @@ const mockCanViewPost = (post: MockRow, uid: string | null, role?: string): bool
   );
 };
 
+const mockCanReadAttachment = (attachment: MockRow, uid: string | null): boolean => {
+  const post = mockTable<MockRow>("posts").find((row) => row.id === attachment.postId);
+  if (!post || post.isDeleted === true) return false;
+  const role = mockTable<{ uid: string; role?: string }>("profiles").find((p) => p.uid === uid)?.role;
+  return mockCanViewPost(post, uid, role);
+};
+
 // Mirror of the trg_post_comment_count trigger: posts."commentCount" is
 // the number of non-deleted comments on the post, maintained on every
 // comment insert / soft-delete / restore / hard delete.
@@ -1288,7 +1339,27 @@ class MockStorageBucket {
     }
   }
 
-  async upload(path: string, file: File) {
+  async upload(path: string, file: File, options?: { contentType?: string; upsert?: boolean }) {
+    if (this.bucket === "avatars" || this.bucket === "post-images") {
+      if (!getMockSessionUid() || !path.startsWith(`${getMockSessionUid()}/`))
+        return { data: null, error: { message: "Sign in to upload to your own folder" } };
+    }
+    if (this.bucket === "post-documents") {
+      const uid = getMockSessionUid();
+      const postId = path.split("/")[1];
+      const post = mockTable<MockRow>("posts").find((p) => p.id === postId);
+      if (!uid || !path.startsWith(`${uid}/${postId}/`) || post?.authorUid !== uid || post.isDeleted === true) {
+        return { data: null, error: { message: "Only the post author may upload documents" } };
+      }
+      if (!file.size || file.size > 10 * 1024 * 1024) {
+        return { data: null, error: { message: "Documents must be between 1 byte and 10 MB" } };
+      }
+      if (!["application/pdf", "text/plain", "text/csv", "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"].includes(options?.contentType || file.type)) {
+        return { data: null, error: { message: "Unsupported document type" } };
+      }
+    }
     const dataUrl = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
@@ -1298,21 +1369,36 @@ class MockStorageBucket {
 
     const store = this.readStore();
     if (!store[this.bucket]) store[this.bucket] = {};
+    if (store[this.bucket][path]) return { data: null, error: { message: "Document already exists" } };
     store[this.bucket][path] = dataUrl;
     try {
       localStorage.setItem("mock_supabase_storage", JSON.stringify(store));
     } catch {
-      return { data: null, error: { message: "Demo storage is full (localStorage quota). Try a smaller image." } };
+      return { data: null, error: { message: "Demo browser storage is full. Try a smaller file or free up storage." } };
     }
     return { data: { path }, error: null };
   }
 
   getPublicUrl(path: string) {
+    // Private documents must never have a public URL.
+    if (this.bucket === "post-documents") return { data: { publicUrl: "" } };
     const store = this.readStore();
     return { data: { publicUrl: store[this.bucket]?.[path] || "" } };
   }
 
+  async createSignedUrl(path: string, _expiresIn: number, _options?: { download?: string }) {
+    if (this.bucket !== "post-documents") return { data: null, error: { message: "Only documents support signed URLs in demo mode" } };
+    const record = mockTable<MockRow>("post_attachments").find((row) => row.storagePath === path);
+    if (!record || !mockCanReadAttachment(record, getMockSessionUid()))
+      return { data: null, error: { message: "Document not found or not visible" } };
+    const url = this.readStore()[this.bucket]?.[path];
+    return url ? { data: { signedUrl: url }, error: null } : { data: null, error: { message: "Document file is missing" } };
+  }
+
   async remove(paths: string[]) {
+    if (this.bucket === "post-documents" && paths.some((path) => !getMockSessionUid() || !path.startsWith(`${getMockSessionUid()}/`))) {
+      return { data: null, error: { message: "Only the uploader can remove a document" } };
+    }
     const store = this.readStore();
     if (store[this.bucket]) {
       paths.forEach((path) => delete store[this.bucket][path]);

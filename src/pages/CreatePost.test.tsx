@@ -6,6 +6,8 @@ import CreatePost from "./CreatePost";
 import { createPost } from "@/lib/posts";
 import { fetchAllCommunities, type CommunityData } from "@/lib/communities";
 import { getUserProfile } from "@/lib/users";
+import { uploadPostDocuments } from "@/lib/attachments";
+import { readDraft } from "@/lib/drafts";
 
 vi.mock("@/components/AppLayout", () => ({ AppLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
 vi.mock("@/components/editor/ResourceBodyEditor", () => ({ ResourceBodyEditor: () => <div /> }));
@@ -13,6 +15,10 @@ vi.mock("@/components/editor/ResourceMarkdownHelp", () => ({ ResourceMarkdownHel
 vi.mock("@/hooks/auth-context", () => ({ useAuth: () => ({ user: { uid: "user-1" } }) }));
 vi.mock("@/hooks/use-toast", () => ({ toast: vi.fn() }));
 vi.mock("@/lib/uploads", () => ({ uploadImage: vi.fn() }));
+vi.mock("@/lib/attachments", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/attachments")>(),
+  uploadPostDocuments: vi.fn(),
+}));
 vi.mock("@/lib/posts", () => ({ createPost: vi.fn(async () => "created-post") }));
 vi.mock("@/lib/users", () => ({ getUserProfile: vi.fn() }));
 vi.mock("@/lib/communities", () => ({
@@ -32,8 +38,8 @@ const renderComposer = (url: string) => {
       <MemoryRouter initialEntries={[url]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           <Route path="/create" element={<CreatePost />} />
-          <Route path="/f/:handle" element={<p>Profile destination</p>} />
-          <Route path="/b/:slug" element={<p>Space destination</p>} />
+          <Route path="/p/:id" element={<p>Profile post detail</p>} />
+          <Route path="/b/:slug/p/:id" element={<p>Space post detail</p>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>
@@ -50,6 +56,7 @@ describe("main post composer targets", () => {
     localStorage.clear();
     vi.clearAllMocks();
     vi.mocked(fetchAllCommunities).mockResolvedValue(spaces);
+    vi.mocked(uploadPostDocuments).mockResolvedValue([]);
     vi.mocked(getUserProfile).mockResolvedValue({
       uid: "user-1", username: "alice", displayName: "Alice", initial: "A",
       bio: "", location: "", website: "", joined: "2026", status: "Available",
@@ -59,7 +66,7 @@ describe("main post composer targets", () => {
 
   it("publishes a profile post with a null community slug", async () => {
     renderComposer("/create");
-    const publish = await screen.findByRole("button", { name: /Post to Profile/ });
+    const publish = await screen.findByRole("button", { name: /Post to Profile/ }, { timeout: 3000 });
     fillPost();
     fireEvent.click(publish);
 
@@ -68,7 +75,7 @@ describe("main post composer targets", () => {
       title: "A useful post", communitySlug: null, visibility: "public", isPinned: false,
       author: { uid: "user-1" },
     });
-    expect(await screen.findByText("Profile destination")).toBeInTheDocument();
+    expect(await screen.findByText("Profile post detail")).toBeInTheDocument();
   });
 
   it("publishes a preselected real space post with the canonical slug", async () => {
@@ -81,7 +88,7 @@ describe("main post composer targets", () => {
     expect(vi.mocked(createPost).mock.calls[0][0]).toMatchObject({
       title: "A useful post", communitySlug: "dev", author: { uid: "user-1" },
     });
-    expect(await screen.findByText("Space destination")).toBeInTheDocument();
+    expect(await screen.findByText("Space post detail")).toBeInTheDocument();
   });
 
   it("never silently changes an unknown preselected space into a profile post", async () => {
@@ -100,5 +107,49 @@ describe("main post composer targets", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(await screen.findByRole("button", { name: "Post to Developers" })).toBeEnabled();
+  });
+
+  it("retains only failed documents and retries without creating a second post", async () => {
+    const { container } = renderComposer("/create");
+    const publish = await screen.findByRole("button", { name: /Post to Profile/ });
+    fillPost();
+    const files = [
+      new File(["first"], "first.pdf", { type: "application/pdf" }),
+      new File(["second"], "second.pdf", { type: "application/pdf" }),
+    ];
+    const input = container.querySelector<HTMLInputElement>('input[accept=".pdf,.txt,.csv,.doc,.docx,.xlsx"]')!;
+    fireEvent.change(input, { target: { files } });
+    expect(await screen.findByText(/2 documents queued/)).toBeInTheDocument();
+    vi.mocked(uploadPostDocuments).mockResolvedValueOnce([])
+      .mockRejectedValueOnce(new Error("Network error"))
+      .mockResolvedValueOnce([]);
+    fireEvent.click(publish);
+
+    expect(await screen.findByRole("button", { name: "Retry document uploads" })).toBeInTheDocument();
+    expect(createPost).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("second.pdf")).toBeInTheDocument();
+    expect(screen.queryByText("first.pdf")).not.toBeInTheDocument();
+    expect(readDraft("user-1")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Retry document uploads" }));
+    expect(await screen.findByText("Profile post detail")).toBeInTheDocument();
+    expect(createPost).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(uploadPostDocuments).mock.calls.map(([_, [file]]) => file.name)).toEqual([
+      "first.pdf", "second.pdf", "second.pdf",
+    ]);
+  });
+
+  it("restores the signed-in account's text and ignores another account's draft", async () => {
+    const draft = {
+      title: "My saved note", body: "I was writing this earlier", postType: "discussion",
+      selectedTargetId: "profile:user-1", tags: ["trust"], externalLink: "", pollOptions: ["Option 1", "Option 2"],
+      videoUrl: "", bodyImages: [], visibility: "public", allowComments: true, pinToSpace: false,
+    };
+    localStorage.setItem("borynx_post_draft:other-user", JSON.stringify({ ...draft, title: "Someone else's draft", userUid: "other-user" }));
+    localStorage.setItem("borynx_post_draft:user-1", JSON.stringify({ ...draft, userUid: "user-1" }));
+    renderComposer("/create");
+    expect(await screen.findByText(/Your draft was restored/)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Post title/)).toHaveValue("My saved note");
+    expect(screen.getByPlaceholderText(/Share your thoughts/)).toHaveValue("I was writing this earlier");
+    expect(screen.queryByText("Someone else's draft")).not.toBeInTheDocument();
   });
 });

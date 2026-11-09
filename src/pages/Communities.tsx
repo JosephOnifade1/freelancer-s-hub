@@ -34,7 +34,7 @@ const Communities = () => {
     queryFn: fetchAllCommunities,
   });
 
-  const { data: joinedList = [] } = useQuery({
+  const { data: joinedList = [], isError: membershipsError, refetch: refetchMemberships } = useQuery({
     queryKey: ["userCommunities", user?.uid],
     queryFn: () => (user?.uid ? getUserCommunities(user.uid) : []),
     enabled: !!user?.uid,
@@ -110,6 +110,7 @@ const Communities = () => {
               <div className="relative min-w-[220px] flex-1">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
+                  aria-label="Search spaces"
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setVisible(PAGE_SIZE); }}
                   placeholder="Search spaces"
@@ -134,6 +135,7 @@ const Communities = () => {
                 return (
                   <button
                     key={cat.id}
+                    aria-pressed={active}
                     onClick={() => { setCategory(cat.id); setVisible(PAGE_SIZE); }}
                     className={`whitespace-nowrap rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
                       active
@@ -182,15 +184,14 @@ const Communities = () => {
                         </p>
                       </div>
                     </Link>
-                    <Button
+                    {user ? <Button
                       variant={isJoined ? "ghost" : "outline"}
-                      size="sm"
-                      disabled={joinMutation.isPending || leaveMutation.isPending}
-                      onClick={() => toggle(space.slug, isJoined)}
-                      className="shrink-0 gap-1.5"
-                    >
+                      size="sm" disabled={membershipsError || joinMutation.isPending || leaveMutation.isPending}
+                      onClick={() => toggle(space.slug, isJoined)} className="min-h-10 shrink-0 gap-1.5">
                       {isJoined ? <><Check className="h-3.5 w-3.5" /> Joined</> : "Join"}
-                    </Button>
+                    </Button> : <Button variant="outline" size="sm" asChild className="min-h-10 shrink-0">
+                      <Link to="/login" state={{ from: { pathname: `/b/${space.slug}` } }}>Sign in to join</Link>
+                    </Button>}
                   </motion.div>
                 );
               })}
@@ -211,17 +212,21 @@ const Communities = () => {
               <p className="mt-1.5 text-sm text-muted-foreground">
                 Pick a name and a niche. You become the first member and can invite others with the space link.
               </p>
-              <CreateCommunityModal>
+              {user ? <CreateCommunityModal>
                 <Button variant="outline" className="mt-4 w-full gap-1.5">
                   <Plus className="h-4 w-4" /> Create space
                 </Button>
-              </CreateCommunityModal>
+              </CreateCommunityModal> : <Button asChild variant="outline" className="mt-4 w-full gap-1.5">
+                <Link to="/login" state={{ from: { pathname: "/communities" } }}>Sign in to create a space</Link>
+              </Button>}
             </div>
 
             <div className="rounded-xl border border-border bg-card p-5">
               <h2 className="mb-3 font-heading text-sm font-bold text-foreground">Your spaces</h2>
               {!user ? (
                 <p className="text-sm text-muted-foreground">Sign in to see the spaces you've joined.</p>
+              ) : membershipsError ? (
+                <QueryErrorState title="Couldn't load your spaces" onRetry={() => refetchMemberships()} />
               ) : mySpaces.length === 0 ? (
                 <p className="text-sm text-muted-foreground">You haven't joined any spaces yet.</p>
               ) : (

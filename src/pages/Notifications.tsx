@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
+import { QueryErrorState } from "@/components/QueryErrorState";
 import { useAuth } from "@/hooks/auth-context";
 import {
   fetchNotifications,
@@ -22,7 +23,7 @@ const Notifications = () => {
   const queryClient = useQueryClient();
   const uid = user?.uid;
 
-  const { data: notifications = [], isLoading } = useQuery({
+  const { data: notifications = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["notifications", uid],
     queryFn: () => (uid ? fetchNotifications(uid, 50) : []),
     enabled: !!uid,
@@ -73,7 +74,7 @@ const Notifications = () => {
         </div>
 
         <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
-          {isLoading ? (
+          {isError ? <QueryErrorState title="Couldn't load notifications" onRetry={() => refetch()} /> : isLoading ? (
             <div className="flex h-[40vh] items-center justify-center">
               <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
             </div>

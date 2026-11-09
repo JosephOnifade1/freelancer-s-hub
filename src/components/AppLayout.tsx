@@ -3,16 +3,18 @@ import { useSidebar } from "@/components/ui/sidebar-context";
 import { AppSidebar } from "@/components/AppSidebar";
 import { VeteranCelebration } from "./VeteranCelebration";
 import { NotificationBell } from "./NotificationBell";
-import { Plus, User, LogOut, Settings, Search, X, FileText, Sparkles, Monitor, Sun, Moon, Shield, Check, Wifi, WifiOff } from "lucide-react";
+import { Plus, User, LogOut, Settings, Search, X, FileText, Sparkles, Monitor, Sun, Moon, Shield, Check, Briefcase } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/auth-context";
 import { getUserProfile, UserProfile } from "@/lib/users";
 import { useState, useEffect, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { globalSearch, SearchResults } from "@/lib/search";
 import { VerifiedBadge } from "./VerifiedBadge";
 import { LiveReputation } from "./LiveReputation";
 import { useTheme, ThemeMode } from "@/hooks/useTheme";
-import { supabase } from "@/lib/supabase";
+import { supabase, isDemoMode } from "@/lib/supabase";
+import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,40 +32,47 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const { user, signOut } = useAuth();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const { data: profile, isError: profileError, refetch: refetchProfile } = useQuery({
+    queryKey: ["profile", user?.uid],
+    queryFn: () => getUserProfile(user!.uid),
+    enabled: !!user?.uid,
+  });
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResults>({ posts: [], users: [] });
   const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
+  const [availabilityPending, setAvailabilityPending] = useState(false);
+  const isAvailable = profile?.status === "Available";
   const searchInputRef = useRef<HTMLInputElement>(null);
   const mobileInputRef = useRef<HTMLInputElement>(null);
   const { theme, setTheme } = useTheme();
   const { state } = useSidebar();
 
-  useEffect(() => {
-    if (user?.uid) {
-      getUserProfile(user.uid).then(p => {
-        if (p) {
-          setProfile(p);
-          setIsOnline(p.status !== 'offline');
-        }
-      });
+  const toggleAvailability = async () => {
+    if (!user?.uid || !profile || availabilityPending) return;
+    const nextAvailable = !isAvailable;
+    setAvailabilityPending(true);
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .update({ status: nextAvailable ? "Available" : "Busy" })
+        .eq("uid", user.uid).select("uid");
+      if (error) throw new Error(error.message);
+      if (!data?.length) throw new Error("Could not update your work status.");
+      queryClient.setQueryData<UserProfile | null>(["profile", user.uid], (previous) =>
+        previous ? { ...previous, status: nextAvailable ? "Available" : "Busy" } : previous);
+      queryClient.invalidateQueries({ queryKey: ["profile", user.uid] });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not update your work status.");
+    } finally {
+      setAvailabilityPending(false);
     }
-  }, [user]);
-
-  const toggleOnlineStatus = async () => {
-    if (!user?.uid) return;
-    const newOnline = !isOnline;
-    setIsOnline(newOnline);
-    await supabase
-      .from("profiles")
-      .update({ status: newOnline ? "Available" : "offline" })
-      .eq("uid", user.uid);
   };
 
   const handleSignOut = async () => {
@@ -108,21 +117,25 @@ export function AppLayout({ children }: AppLayoutProps) {
     if (!searchQuery.trim()) {
       setSearchResults({ posts: [], users: [] });
       setIsSearching(false);
+      setSearchError(false);
       return;
     }
 
+    let cancelled = false;
+    setSearchError(false);
     const timer = setTimeout(async () => {
       setIsSearching(true);
       try {
         const results = await globalSearch(searchQuery);
-        setSearchResults(results);
+        if (!cancelled) setSearchResults(results);
+      } catch {
+        if (!cancelled) { setSearchError(true); setSearchResults({ posts: [], users: [] }); }
       } finally {
-        setIsSearching(false);
-        setActiveIndex(-1);
+        if (!cancelled) { setIsSearching(false); setActiveIndex(-1); }
       }
     }, 300);
 
-    return () => clearTimeout(timer);
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [searchQuery]);
 
   const allResults = [
@@ -153,7 +166,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <div className="min-h-screen flex flex-col w-full">
-      <header 
+      <header
         className={cn(
           "sticky top-0 z-30 w-full border-b border-border transition-all duration-300",
           theme === 'light' ? "bg-white/80 border-border" : "bg-background/80 border-white/10 backdrop-blur-md",
@@ -161,18 +174,18 @@ export function AppLayout({ children }: AppLayoutProps) {
         )}
       >
         <div className="h-14 flex items-center justify-between px-4 relative z-10">
-          <div className={`flex items-center shrink-0 absolute left-4 ${isSearchExpanded ? "hidden sm:flex" : "flex"}`}>
+          <div className={`flex shrink-0 items-center ${isSearchExpanded ? "hidden lg:flex" : "flex"}`}>
             {/* Mobile-only Trigger */}
             <SidebarTrigger className="md:hidden mr-2 hover:bg-accent text-muted-foreground hover:text-foreground transition-all duration-200" />
-            
+
             {/* Branding Group (Reddit Style) */}
             <div className="flex items-center">
               <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                 <div className="h-8 w-8 shrink-0 rounded-lg bg-brand/10 flex items-center justify-center overflow-hidden border border-brand/20">
-                  <img 
-                    src="/logo-transparent.png" 
-                    alt="Borynx Logo" 
-                    className="h-full w-full object-cover transform scale-125" 
+                  <img
+                    src="/logo-transparent.png"
+                    alt="Borynx Logo"
+                    className="h-full w-full object-cover transform scale-125"
                   />
                 </div>
                 <div className="flex items-center gap-2">
@@ -190,7 +203,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           {/* Search Bar (Command Center) */}
           <div className={cn(
             "transition-all duration-500 z-20",
-            isSearchExpanded ? "absolute inset-x-0 top-0 h-full bg-background z-40 px-4 flex items-center justify-center" : "absolute left-[260px] top-1/2 -translate-y-1/2 w-full max-w-[640px]"
+            isSearchExpanded ? "absolute inset-x-0 top-0 z-40 flex h-full items-center justify-center bg-background px-4" : "relative mx-auto hidden min-w-0 max-w-[640px] flex-1 lg:flex"
           )}>
             {/* Desktop Search (Flexible width like Reddit) */}
             <div className={cn(
@@ -199,23 +212,24 @@ export function AppLayout({ children }: AppLayoutProps) {
               isSearchExpanded && "hidden"
             )}>
               <Search className="h-4 w-4 text-muted-foreground mr-3" />
-              <input 
+              <input
                 ref={searchInputRef}
-                type="text" 
+                type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Find anything" 
+                placeholder="Search posts and people"
+                aria-label="Search posts and people"
                 className="bg-transparent border-none outline-none w-full font-body text-sm text-foreground placeholder:text-muted-foreground/60"
               />
               <div className="flex items-center gap-1.5 px-1.5 py-1 rounded-md border border-border bg-background/50 tabular-nums text-[9px] text-muted-foreground ml-2">
                 <span className="opacity-70">⌘</span>K
               </div>
-              
+
               {/* Instant Results Dropdown (Desktop) */}
               <div className={cn(
                 "hidden group-focus-within:block absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-2xl z-50 p-2 max-h-[480px] overflow-auto scrollbar-stealth theme-transition",
-                (!searchQuery || (allResults.length === 0 && !isSearching)) && "group-focus-within:hidden"
+                (!searchQuery || (allResults.length === 0 && !isSearching && !searchError)) && "group-focus-within:hidden"
               )}>
                 {isSearching ? (
                   <div className="p-4 space-y-4">
@@ -293,7 +307,8 @@ export function AppLayout({ children }: AppLayoutProps) {
                       </div>
                     )}
 
-                    {searchQuery && allResults.length === 0 && !isSearching && (
+                    {searchError && <p role="alert" className="p-4 text-xs text-destructive">Search unavailable. Check your connection and try again.</p>}
+                    {searchQuery && allResults.length === 0 && !isSearching && !searchError && (
                       <div className="p-8 text-center">
                         <p className="text-xs text-muted-foreground">
                           No results for <span className="text-foreground font-bold">"{searchQuery}"</span>. Try a different keyword.
@@ -310,16 +325,17 @@ export function AppLayout({ children }: AppLayoutProps) {
               <div className="flex flex-col w-full h-full lg:hidden">
                 <div className="flex items-center w-full gap-3 h-14">
                   <Search className="h-5 w-5 text-muted-foreground" />
-                  <input 
+                  <input
                     ref={mobileInputRef}
                     autoFocus
-                    type="text" 
+                    type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search..." 
+                    placeholder="Search posts and people"
+                    aria-label="Search posts and people"
                     className="bg-transparent border-none outline-none w-full font-body text-sm text-foreground placeholder:text-muted-foreground/50"
                   />
-                  <button onClick={() => { setIsSearchExpanded(false); setSearchQuery(""); }} className="p-2 hover:bg-white/5 rounded-full">
+                  <button onClick={() => { setIsSearchExpanded(false); setSearchQuery(""); }} aria-label="Close search" className="p-2 hover:bg-muted rounded-full">
                     <X className="h-5 w-5" />
                   </button>
                 </div>
@@ -381,7 +397,8 @@ export function AppLayout({ children }: AppLayoutProps) {
                         </button>
                       ))}
 
-                      {searchQuery && allResults.length === 0 && !isSearching && (
+                      {searchError && <p role="alert" className="p-4 text-xs text-destructive">Search unavailable. Check your connection and try again.</p>}
+                    {searchQuery && allResults.length === 0 && !isSearching && !searchError && (
                         <div className="p-12 text-center">
                           <p className="text-sm text-muted-foreground">
                             No results for <span className="text-foreground font-bold">"{searchQuery}"</span>.
@@ -395,10 +412,11 @@ export function AppLayout({ children }: AppLayoutProps) {
             )}
           </div>
 
-          {user && (
+          {user ? (
             <div className={`flex items-center gap-2 lg:gap-3 shrink-0 ml-auto ${isSearchExpanded ? "hidden" : "flex"}`}>
-              <button 
+              <button
                 onClick={() => setIsSearchExpanded(true)}
+                aria-label="Search"
                 className="lg:hidden p-2 text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-full transition-colors"
               >
                 <Search className="h-5 w-5" />
@@ -420,10 +438,10 @@ export function AppLayout({ children }: AppLayoutProps) {
                   )}
                 >
                   <div className="h-full w-full rounded-full overflow-hidden bg-brand/10 hover:bg-brand/20 transition-colors flex items-center justify-center">
-                    <img 
-                      src={profile?.avatarUrl || user?.user_metadata?.avatar_url || ""} 
-                      alt="Avatar" 
-                      className="h-full w-full object-cover" 
+                    <img
+                      src={profile?.avatarUrl || user?.user_metadata?.avatar_url || ""}
+                      alt="Avatar"
+                      className="h-full w-full object-cover"
                       onError={(e) => {
                         e.currentTarget.style.display = 'none';
                         const fallback = e.currentTarget.nextElementSibling as HTMLElement;
@@ -435,7 +453,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                         if (fallback) fallback.style.display = 'none';
                       }}
                     />
-                    <span 
+                    <span
                       className="font-heading text-xs font-bold text-brand flex items-center justify-center h-full w-full"
                       style={{ display: (profile?.avatarUrl || user?.user_metadata?.avatar_url) ? 'none' : 'flex' }}
                     >
@@ -447,6 +465,12 @@ export function AppLayout({ children }: AppLayoutProps) {
 
               </div>
             </div>
+          ) : (
+            <div className={`ml-auto flex shrink-0 items-center gap-2 ${isSearchExpanded ? "hidden" : ""}`}>
+              <button type="button" onClick={() => setIsSearchExpanded(true)} aria-label="Search" className="rounded-lg p-2 text-muted-foreground hover:bg-muted lg:hidden"><Search className="h-5 w-5" /></button>
+              <Link to="/login" className="inline-flex min-h-10 items-center rounded-lg px-2 text-sm font-semibold text-foreground hover:bg-muted">Sign in</Link>
+              <Link to="/signup" className="hidden min-h-10 items-center rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground sm:inline-flex">Join free</Link>
+            </div>
           )}
         </div>
 
@@ -456,7 +480,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         {isAvatarMenuOpen && (
           <>
             {/* Backdrop */}
-            <div 
+            <div
               onClick={() => setIsAvatarMenuOpen(false)}
               className="fixed inset-0 z-[998] bg-transparent cursor-default"
             />
@@ -469,7 +493,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               className="fixed top-[3.75rem] right-4 w-[240px] bg-card border border-border rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] z-[999] overflow-hidden theme-transition"
             >
               <div className="py-2">
-                <button 
+                <button
                   onClick={() => { navigate(user ? `/f/${profile?.username || user.uid}` : '/login'); setIsAvatarMenuOpen(false); }}
                   className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground transition-all hover:bg-white/5 hover:text-foreground group"
                 >
@@ -477,23 +501,22 @@ export function AppLayout({ children }: AppLayoutProps) {
                   <span className="flex items-center">View Profile</span>
                 </button>
 
-                {/* Online Status Toggle */}
-                <button 
-                  onClick={() => { toggleOnlineStatus(); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground transition-all hover:bg-white/5 hover:text-foreground group"
+                {/* Public work availability, not a fake online presence indicator. */}
+                <button
+                  type="button"
+                  onClick={() => profileError ? refetchProfile() : void toggleAvailability()}
+                  disabled={!profile && !profileError || availabilityPending}
+                  aria-label={profileError ? "Retry loading work status" : "Toggle public work availability"}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground transition-all hover:bg-white/5 hover:text-foreground disabled:opacity-60"
                 >
-                  {isOnline ? (
-                    <Wifi className="h-4 w-4 shrink-0 text-success" />
-                  ) : (
-                    <WifiOff className="h-4 w-4 shrink-0" />
-                  )}
+                  <Briefcase className={`h-4 w-4 shrink-0 ${isAvailable ? "text-success" : ""}`} />
                   <span className="flex items-center gap-2">
-                    {isOnline ? "Available" : "Appear Offline"}
-                    <span className={`h-1.5 w-1.5 rounded-full ${isOnline ? "bg-success" : "bg-muted-foreground"}`} />
+                    {profileError ? "Work status unavailable · Retry" : !profile ? "Loading work status…" : isAvailable ? "Open to work" : "Not open to work"}
+                    {profile && <span className={`h-1.5 w-1.5 rounded-full ${isAvailable ? "bg-success" : "bg-muted-foreground"}`} />}
                   </span>
                 </button>
 
-                <button 
+                <button
                   onClick={() => { navigate('/drafts'); setIsAvatarMenuOpen(false); }}
                   className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground transition-all hover:bg-white/5 hover:text-foreground group"
                 >
@@ -501,7 +524,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   <span className="flex items-center">Drafts</span>
                 </button>
 
-                <button 
+                <button
                   onClick={() => { navigate('/premium'); setIsAvatarMenuOpen(false); }}
                   className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground transition-all hover:bg-white/5 hover:text-foreground group"
                 >
@@ -509,7 +532,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   <span className="flex items-center">Premium</span>
                 </button>
 
-                <button 
+                <button
                   onClick={() => { setIsThemeModalOpen(true); setIsAvatarMenuOpen(false); }}
                   className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground transition-all hover:bg-white/5 hover:text-foreground group"
                 >
@@ -519,7 +542,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
                 <div className="h-[1px] bg-white/5 my-1" />
 
-                <button 
+                <button
                   onClick={handleSignOut}
                   className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground transition-all hover:bg-white/5 hover:text-destructive group"
                 >
@@ -527,7 +550,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   <span className="flex items-center">Log Out</span>
                 </button>
 
-                <button 
+                <button
                   onClick={() => { navigate('/settings'); setIsAvatarMenuOpen(false); }}
                   className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground transition-all hover:bg-white/5 hover:text-foreground group"
                 >
@@ -542,16 +565,16 @@ export function AppLayout({ children }: AppLayoutProps) {
 
       <div className="flex-1 flex min-w-0 overflow-hidden relative">
         <AppSidebar />
-        
+
         {/* High-Grade Boundary Toggle */}
-        <div 
+        <div
           className={cn(
             "fixed top-[5rem] z-50 transition-all duration-300 ease-in-out hidden md:flex pointer-events-none",
             state === "expanded" ? "left-[270px]" : "left-[30px]",
             "-translate-x-1/2"
           )}
         >
-          <SidebarTrigger 
+          <SidebarTrigger
             className={cn(
               "rounded-full w-8 h-8 flex items-center justify-center p-0 border border-border transition-all duration-300 hover:scale-110 active:scale-95 pointer-events-auto",
               "bg-background"
@@ -560,18 +583,19 @@ export function AppLayout({ children }: AppLayoutProps) {
         </div>
 
         <main className="flex-1 overflow-y-auto bg-background relative flex flex-col">
-          <div className="flex-1 p-4 sm:p-6 lg:p-8">
+          <div className="flex-1 min-w-0 p-3 sm:p-5 lg:p-6">
+            {isDemoMode && <div role="note" className="mb-4 rounded-lg border border-warning/50 bg-warning/10 px-4 py-2 text-xs text-foreground">Demo mode · Content and uploads are stored in this browser only. Opportunities here are not real client jobs.</div>}
             <Breadcrumbs />
             {children}
           </div>
-          
+
           <footer className="border-t border-border px-4 py-4 text-xs text-muted-foreground">
             &copy; {new Date().getFullYear()} Borynx
           </footer>
         </main>
       </div>
 
-      <VeteranCelebration />
+      {user && <VeteranCelebration />}
 
       {/* Global Theme Selection Modal (Reddit Style) */}
       <AnimatePresence>
@@ -584,7 +608,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               onClick={() => setIsThemeModalOpen(false)}
               className="fixed inset-0 bg-black/60 z-[9998]"
             />
-            
+
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -598,7 +622,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               {/* Header */}
               <div className="flex items-center justify-between p-5 border-b border-border">
                 <h2 className="text-lg font-bold text-foreground">Display Mode</h2>
-                <button 
+                <button
                   onClick={() => setIsThemeModalOpen(false)}
                   className="p-2 hover:bg-white/5 rounded-full text-muted-foreground transition-colors"
                 >

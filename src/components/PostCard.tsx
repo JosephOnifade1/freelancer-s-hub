@@ -67,7 +67,7 @@ export function PostCard({ post, index }: PostCardProps) {
   const [editBody, setEditBody] = useState(post.body);
 
   const previewText = stripMarkdown(post.body || "").substring(0, 150) + (stripMarkdown(post.body || "").length > 150 ? "..." : "");
-  
+
   const postImages: { alt: string, src: string }[] = [];
   const imageRegex = /!\[(.*?)\]\((.*?)\)/g;
   let match;
@@ -124,10 +124,10 @@ export function PostCard({ post, index }: PostCardProps) {
 
   const handleShare = (e: React.MouseEvent) => {
     e.preventDefault();
-    const spacePath = post.category ? `/b/${post.category}` : '';
-    const shareUrl = window.location.origin + `${spacePath}/p/${post.id}${user?.uid ? `?ref_id=${user.uid}` : ''}`;
-    navigator.clipboard.writeText(shareUrl);
-    toast.success("Link copied to clipboard!");
+    const path = post.communitySlug ? `/b/${post.communitySlug}/p/${post.id}` : `/p/${post.id}`;
+    navigator.clipboard.writeText(window.location.origin + path)
+      .then(() => toast.success("Link copied to clipboard!"))
+      .catch(() => toast.error("Couldn't copy the link"));
   };
 
   if (post.isDeleted) {
@@ -135,7 +135,7 @@ export function PostCard({ post, index }: PostCardProps) {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: index * 0.05, duration: 0.3 }}
+        transition={{ delay: Math.min(index, 8) * 0.05, duration: 0.3 }}
         className="group flex gap-3 rounded-xl border border-border bg-card py-[11.5px] px-4 transition-colors"
       >
         <div className="flex flex-col items-center justify-center gap-1.5 py-1 w-9 shrink-0">
@@ -168,13 +168,13 @@ export function PostCard({ post, index }: PostCardProps) {
             )}
           </div>
 
-          <Link to={post.category ? `/b/${post.category}/p/${post.id}` : `/p/${post.id}`} className="block">
+          <Link to={post.communitySlug ? `/b/${post.communitySlug}/p/${post.id}` : `/p/${post.id}`} className="block">
             <h3 className="font-heading text-base font-semibold text-muted-foreground leading-snug mb-1 transition-colors cursor-pointer line-through opacity-80">
               {post.title}
             </h3>
 
             <p className="font-body text-sm text-muted-foreground/70 italic line-clamp-2 mb-3 bg-muted/30 p-2 rounded-md">
-              The author has removed this content, but the discussion below remains active.
+              This post was removed. Earlier comments remain visible; new replies and votes are closed.
             </p>
           </Link>
 
@@ -189,7 +189,7 @@ export function PostCard({ post, index }: PostCardProps) {
             </div>
 
             <div className="flex items-center gap-1">
-              <Link to={post.category ? `/b/${post.category}/p/${post.id}` : `/p/${post.id}`} className="flex items-center gap-1 rounded-md px-2 py-1 font-body text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
+              <Link to={post.communitySlug ? `/b/${post.communitySlug}/p/${post.id}` : `/p/${post.id}`} className="flex items-center gap-1 rounded-md px-2 py-1 font-body text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
                 <MessageSquare className="h-3.5 w-3.5" />
                 {post.commentCount || 0}
               </Link>
@@ -204,11 +204,11 @@ export function PostCard({ post, index }: PostCardProps) {
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05, duration: 0.3 }}
+      transition={{ delay: Math.min(index, 8) * 0.05, duration: 0.3 }}
       className="group flex gap-3 rounded-2xl border border-border bg-card p-4 transition-colors hover:border-muted-foreground/40"
     >
       {postImages[0] && !isEditing && (
-        <Link to={post.category ? `/b/${post.category}/p/${post.id}` : `/p/${post.id}`} className="shrink-0 mt-1 block h-[72px] w-[96px] overflow-hidden rounded-md border border-border bg-muted/20">
+        <Link to={post.communitySlug ? `/b/${post.communitySlug}/p/${post.id}` : `/p/${post.id}`} className="shrink-0 mt-1 hidden min-[420px]:block h-[72px] w-[96px] overflow-hidden rounded-md border border-border bg-muted/20">
           <img
             src={postImages[0].src}
             alt={postImages[0].alt || "Post thumbnail"}
@@ -299,14 +299,14 @@ export function PostCard({ post, index }: PostCardProps) {
           </div>
         </div>
 
-        <Link to={post.category ? `/b/${post.category}/p/${post.id}` : `/p/${post.id}`} className="block">
+        <Link to={post.communitySlug ? `/b/${post.communitySlug}/p/${post.id}` : `/p/${post.id}`} className="block">
           <h3 className="font-heading text-[1.1rem] font-semibold text-foreground leading-tight cursor-pointer">
             {post.title}
           </h3>
         </Link>
-        
+
         {post.externalLink && (
-          <a 
+          <a
             href={post.externalLink.startsWith('http') ? post.externalLink : `https://${post.externalLink}`}
             target="_blank"
             rel="noopener noreferrer"
@@ -317,7 +317,7 @@ export function PostCard({ post, index }: PostCardProps) {
             Source Reference
           </a>
         )}
-        
+
         {isEditing ? (
           <div className="mb-2 mt-2">
             <Editor
@@ -329,8 +329,8 @@ export function PostCard({ post, index }: PostCardProps) {
             />
             <div className="flex justify-end gap-2 mt-2">
               <button onClick={() => setIsEditing(false)} className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground">Cancel</button>
-              <button 
-                onClick={() => updateMutation.mutate()} 
+              <button
+                onClick={() => updateMutation.mutate()}
                 disabled={updateMutation.isPending || !editBody.trim()}
                 className="px-3 py-1 bg-primary text-primary-foreground text-xs rounded hover:opacity-90 disabled:opacity-50"
               >
@@ -340,7 +340,7 @@ export function PostCard({ post, index }: PostCardProps) {
           </div>
         ) : (
           !postImages[0] && previewText && (
-            <Link to={post.category ? `/b/${post.category}/p/${post.id}` : `/p/${post.id}`} className="block mt-0.5">
+            <Link to={post.communitySlug ? `/b/${post.communitySlug}/p/${post.id}` : `/p/${post.id}`} className="block mt-0.5">
               <p className="font-body text-sm text-muted-foreground leading-relaxed line-clamp-2">
                 {previewText}
               </p>
@@ -365,26 +365,26 @@ export function PostCard({ post, index }: PostCardProps) {
         )}
 
         <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-          <VoteControls score={post.score || 0} entityId={post.id} authorUid={post.author?.uid} type="post" orientation="horizontal" />
-          
-          <Link to={post.category ? `/b/${post.category}/p/${post.id}` : `/p/${post.id}`} className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-body text-[12px] font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-info">
+          <VoteControls score={post.score || 0} entityId={post.id} authorUid={post.author?.uid} type="post" orientation="horizontal" disabled={!user} />
+
+          <Link to={post.communitySlug ? `/b/${post.communitySlug}/p/${post.id}` : `/p/${post.id}`} className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-body text-[12px] font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-info">
             <MessageSquare className="h-4 w-4" />
             {post.commentCount || 0}
           </Link>
-          
+
           <button onClick={handleShare} aria-label="Share post" className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-body text-[12px] font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-brand">
             <Share2 className="h-4 w-4" />
             <span className="hidden sm:inline">Share</span>
           </button>
-          
-          <button aria-label={isSaved ? "Unsave post" : "Save post"} 
+
+          {user && <button aria-label={isSaved ? "Unsave post" : "Save post"}
             onClick={(e) => { e.preventDefault(); bookmarkMutation.mutate(); }}
             disabled={bookmarkMutation.isPending}
             className={`flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-body text-[12px] font-medium transition-colors hover:bg-muted/40 ${isSaved ? 'text-warning' : 'text-muted-foreground hover:text-warning'}`}
           >
             <Bookmark className="h-4 w-4" fill={isSaved ? "currentColor" : "none"} />
             <span className="hidden sm:inline">{isSaved ? "Saved" : "Save"}</span>
-          </button>
+          </button>}
 
           {isOwnPost && (
             <DropdownMenu>

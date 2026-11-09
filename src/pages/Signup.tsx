@@ -17,7 +17,7 @@ export default function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
+  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid" | "unavailable">("idle");
   const [confirmationSentTo, setConfirmationSentTo] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
   const navigate = useNavigate();
@@ -36,15 +36,16 @@ export default function Signup() {
       return;
     }
     setUsernameStatus("checking");
+    let active = true;
     const timeoutId = setTimeout(async () => {
       try {
         const available = await checkUsernameAvailability(username);
-        setUsernameStatus(available ? "available" : "taken");
+        if (active) setUsernameStatus(available ? "available" : "taken");
       } catch {
-        setUsernameStatus("idle");
+        if (active) setUsernameStatus("unavailable");
       }
     }, 500);
-    return () => clearTimeout(timeoutId);
+    return () => { active = false; clearTimeout(timeoutId); };
   }, [username]);
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -57,8 +58,8 @@ export default function Signup() {
       toast.error("Username must be 3-15 lowercase letters, numbers, or underscores.");
       return;
     }
-    if (usernameStatus === "taken") {
-      toast.error("That username is already taken. Please choose another.");
+    if (usernameStatus !== "available") {
+      toast.error(usernameStatus === "taken" ? "That username is already taken." : "Check that your username is available before signing up.");
       return;
     }
 
@@ -257,12 +258,13 @@ export default function Signup() {
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
                   {usernameStatus === "checking" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
                   {usernameStatus === "available" && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
-                  {(usernameStatus === "taken" || usernameStatus === "invalid") && <XCircle className="h-4 w-4 text-destructive" />}
+                  {(usernameStatus === "taken" || usernameStatus === "invalid" || usernameStatus === "unavailable") && <XCircle className="h-4 w-4 text-destructive" />}
                 </div>
               </div>
               {usernameStatus === "available" && <p className="text-xs text-emerald-600">Username is available!</p>}
               {usernameStatus === "taken" && <p className="text-xs text-destructive">That username is already taken.</p>}
               {usernameStatus === "invalid" && <p className="text-xs text-destructive">Must be 3-15 lowercase letters, numbers, or underscores.</p>}
+              {usernameStatus === "unavailable" && <p role="alert" className="text-xs text-destructive">Couldn't check the username. Please try again when connected.</p>}
               {usernameStatus === "idle" && <p className="text-xs text-muted-foreground">This is your public @handle. You can change it later in Settings.</p>}
             </div>
             <div className="space-y-2">
@@ -290,7 +292,7 @@ export default function Signup() {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-3">
-            <Button className="w-full" type="submit" disabled={isLoading || usernameStatus === "taken" || usernameStatus === "invalid"}>
+            <Button className="w-full" type="submit" disabled={isLoading || usernameStatus !== "available"}>
               {isLoading ? "Creating account..." : "Sign up"}
             </Button>
             <p className="text-center text-xs text-muted-foreground">

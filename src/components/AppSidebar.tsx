@@ -1,169 +1,80 @@
-import {
-  Home,
-  Compass,
-  Bookmark,
-  Settings,
-  Trophy,
-  Plus,
-  Bell,
-  Briefcase,
-  ShieldCheck,
-  Inbox,
-  TrendingUp,
-  Zap,
-  Users,
-} from "lucide-react";
+import { Home, Compass, Bookmark, Settings, Trophy, Plus, Bell, Briefcase, ShieldCheck, Inbox, TrendingUp, Zap, Users, LogIn, KanbanSquare } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/auth-context";
+import { getUserProfile } from "@/lib/users";
 import { cn } from "@/lib/utils";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar";
-import { useSidebar } from "@/components/ui/sidebar-context";
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { CreateCommunityModal } from "@/components/modals/CreateCommunityModal";
 
-const mainNav = [
-  { title: "Feed", url: "/", icon: Home },
-  { title: "New", url: "/new", icon: Zap },
-  { title: "Popular", url: "/popular", icon: TrendingUp },
-  { title: "Following", url: "/following", icon: Users },
-];
-
-const discover = [
-  { title: "Spaces", url: "/communities", icon: Compass },
-  { title: "Leads", url: "/l", icon: Briefcase },
-  { title: "Applications", url: "/applications", icon: Inbox },
-  { title: "Saved", url: "/bookmarks", icon: Bookmark },
-  { title: "Achievements", url: "/achievements", icon: Trophy },
-];
-
-const personal = [
-  { title: "Notifications", url: "/notifications", icon: Bell },
-  { title: "Moderation", url: "/admin", icon: ShieldCheck },
-  { title: "Settings", url: "/settings", icon: Settings },
-];
+const nav = (title: string, url: string, icon: typeof Home) => ({ title, url, icon });
 
 export function AppSidebar() {
-  const { state } = useSidebar();
-  const collapsed = state === "collapsed";
   const location = useLocation();
-  const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
+  const { data: profile } = useQuery({
+    queryKey: ["profile", user?.uid],
+    queryFn: () => getUserProfile(user!.uid),
+    enabled: !!user?.uid,
+  });
+  const isModerator = profile?.role === "moderator" || profile?.role === "admin";
 
-  const isActive = (path: string) => location.pathname === path;
+  const browse = [
+    nav(user ? "Feed" : "Browse posts", user ? "/" : "/new", Home),
+    nav("New posts", "/new", Zap),
+    nav("Popular", "/popular", TrendingUp),
+    nav("Spaces", "/communities", Compass),
+    nav("Opportunities", "/l", Briefcase),
+  ].filter((item, index, list) => !list.slice(0, index).some((previous) => previous.url === item.url));
+  const account = user ? [
+    nav("My pipeline", "/pipeline", KanbanSquare),
+    nav("Applications", "/applications", Inbox),
+    nav("Saved posts", "/bookmarks", Bookmark),
+    nav("Achievements", "/achievements", Trophy),
+    nav("Notifications", "/notifications", Bell),
+    ...(isModerator ? [nav("Moderation", "/admin", ShieldCheck)] : []),
+    nav("Settings", "/settings", Settings),
+  ] : [nav("Sign in", "/login", LogIn)];
+
+  const renderItems = (items: typeof browse) => items.map((item) => (
+    <SidebarMenuItem key={item.url} className="px-4 sm:px-6">
+      <SidebarMenuButton asChild isActive={location.pathname === item.url} variant="ghost" className="h-auto overflow-hidden p-0 hover:bg-transparent">
+        <NavLink to={item.url} end className={({ isActive }: { isActive: boolean }) => cn(
+          "flex min-h-10 w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          isActive ? "bg-accent font-semibold text-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+        )}>
+          <item.icon className="h-[18px] w-[18px] shrink-0" aria-hidden />
+          <span className="whitespace-nowrap">{item.title}</span>
+        </NavLink>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  ));
 
   return (
     <Sidebar collapsible="icon" className="overflow-hidden">
-      <SidebarContent className="pt-6">
+      <SidebarContent className="pt-4">
         <SidebarGroup className="px-0">
-          <SidebarGroupLabel className="text-xs font-medium text-muted-foreground/70 px-8 h-10 transition-all duration-300 ease-in-out opacity-100">
-            Browse
-          </SidebarGroupLabel>
+          <SidebarGroupLabel className="h-9 px-7 text-xs font-medium text-muted-foreground">Browse</SidebarGroupLabel>
+          <SidebarGroupContent><SidebarMenu>{renderItems(browse)}</SidebarMenu></SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup className="px-0">
+          <SidebarGroupLabel className="h-9 px-7 text-xs font-medium text-muted-foreground">{user ? "Your workspace" : "Join Borynx"}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainNav.map((item) => (
-                <SidebarMenuItem key={item.title} className="px-8">
-                  <SidebarMenuButton asChild isActive={isActive(item.url)} variant="ghost" className="p-0 h-auto hover:bg-transparent overflow-hidden">
-                    <NavLink to={item.url} end className={({ isActive }: { isActive: boolean }) => cn(
-                      "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-colors",
-                      isActive 
-                        ? "bg-accent text-foreground font-medium" 
-                        : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                    )}>
-                      <item.icon className="h-[17px] w-[17px] shrink-0" strokeWidth={isActive(item.url) ? 2.5 : 1.5} />
-                      <span className="text-sm whitespace-nowrap transition-all duration-300 opacity-100">
-                        {item.title}
-                      </span>
-                    </NavLink>
+              {user && <SidebarMenuItem className="px-4 sm:px-6">
+                <CreateCommunityModal>
+                  <SidebarMenuButton variant="ghost" className="h-auto min-h-10 cursor-pointer overflow-hidden p-0 hover:bg-transparent">
+                    <span className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-accent/50 hover:text-foreground"><Plus className="h-[18px] w-[18px] shrink-0" /> New space</span>
                   </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+                </CreateCommunityModal>
+              </SidebarMenuItem>}
+              {renderItems(account)}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
-        <SidebarGroup className="px-0">
-          <SidebarGroupLabel className="text-xs font-medium text-muted-foreground/70 px-8 h-10 transition-all duration-300 ease-in-out opacity-100">
-            Community
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {discover.map((item) => (
-                <div key={item.title}>
-                  <SidebarMenuItem className="px-8">
-                    <SidebarMenuButton asChild isActive={isActive(item.url)} variant="ghost" className="p-0 h-auto hover:bg-transparent overflow-hidden">
-                      <NavLink to={item.url} end className={({ isActive }: { isActive: boolean }) => cn(
-                        "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-colors",
-                        isActive 
-                          ? "bg-accent text-foreground font-medium" 
-                          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                      )}>
-                        <item.icon className="h-[17px] w-[17px] shrink-0" strokeWidth={isActive(item.url) ? 2.5 : 1.5} />
-                        <span className="text-sm whitespace-nowrap transition-all duration-300 opacity-100">
-                          {item.title}
-                        </span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  {item.title === "Spaces" && (
-                    <SidebarMenuItem className="px-8 mt-1 mb-1">
-                      <CreateCommunityModal>
-                        <SidebarMenuButton variant="ghost" className="p-0 h-auto hover:bg-transparent overflow-hidden">
-                          <div className={cn(
-                            "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-colors",
-                            "text-muted-foreground hover:bg-accent/50 hover:text-foreground cursor-pointer"
-                          )}>
-                            <Plus className="h-[17px] w-[17px] shrink-0" strokeWidth={1.5} />
-                            <span className="text-sm whitespace-nowrap transition-all duration-300 opacity-100">
-                              New space
-                            </span>
-                          </div>
-                        </SidebarMenuButton>
-                      </CreateCommunityModal>
-                    </SidebarMenuItem>
-                  )}
-                </div>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup className="px-0">
-          <SidebarGroupLabel className="text-xs font-medium text-muted-foreground/70 px-8 h-10 transition-all duration-300 ease-in-out opacity-100">
-            Account
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {personal.map((item) => (
-                <SidebarMenuItem key={item.title} className="px-8">
-                  <SidebarMenuButton asChild isActive={isActive(item.url)} variant="ghost" className="p-0 h-auto hover:bg-transparent overflow-hidden">
-                    <NavLink to={item.url} end className={({ isActive }: { isActive: boolean }) => cn(
-                      "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-colors",
-                      isActive 
-                        ? "bg-accent text-foreground font-medium" 
-                        : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                    )}>
-                      <item.icon className="h-[17px] w-[17px] shrink-0" strokeWidth={isActive(item.url) ? 2.5 : 1.5} />
-                      <span className="text-sm whitespace-nowrap transition-all duration-300 opacity-100">
-                        {item.title}
-                      </span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {!user && <p className="px-7 pt-3 text-xs leading-relaxed text-muted-foreground">Browse public content freely. Sign in to post, join, apply or save.</p>}
       </SidebarContent>
-
     </Sidebar>
   );
 }
