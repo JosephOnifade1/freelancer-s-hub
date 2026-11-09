@@ -142,8 +142,8 @@ export function VoteControls({ entityId, authorUid, score, type = "post", postId
         aria-pressed={vote === "up"}
         className={`rounded-full p-1 transition-all duration-200 disabled:opacity-50 ${
           vote === "up"
-            ? "text-success bg-success/10"
-            : "text-muted-foreground hover:text-success hover:bg-success/10"
+            ? "text-upvote bg-upvote/10"
+            : "text-muted-foreground hover:text-upvote hover:bg-upvote/10"
         }`}
       >
         <ArrowBigUp className={isHorizontal ? "h-4 w-4" : "h-5 w-5"} fill={vote === "up" ? "currentColor" : "none"} />
@@ -155,7 +155,7 @@ export function VoteControls({ entityId, authorUid, score, type = "post", postId
           initial={{ scale: 1.2, opacity: 0.7 }}
           animate={{ scale: 1, opacity: 1 }}
           className={`font-heading ${isHorizontal ? 'text-[12px]' : 'text-sm'} font-bold leading-none ${
-            vote === "up" ? "text-success" : vote === "down" ? "text-destructive" : "text-foreground"
+            vote === "up" ? "text-upvote" : vote === "down" ? "text-downvote" : "text-foreground"
           }`}
         >
           {displayScore}
@@ -182,8 +182,8 @@ export function VoteControls({ entityId, authorUid, score, type = "post", postId
         aria-pressed={vote === "down"}
         className={`rounded-full p-1 transition-all duration-200 disabled:opacity-50 ${
           vote === "down"
-            ? "text-destructive bg-destructive/10"
-            : "text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            ? "text-downvote bg-downvote/10"
+            : "text-muted-foreground hover:text-downvote hover:bg-downvote/10"
         }`}
       >
         <ArrowBigDown className={isHorizontal ? "h-4 w-4" : "h-5 w-5"} fill={vote === "down" ? "currentColor" : "none"} />
