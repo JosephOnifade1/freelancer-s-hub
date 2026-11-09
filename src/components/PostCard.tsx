@@ -142,10 +142,9 @@ export function PostCard({ post, index }: PostCardProps) {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: Math.min(index, 8) * 0.05, duration: 0.3 }}
-        className="group flex gap-3 rounded-2xl border border-border bg-card p-4 transition-colors"
+        className="group flex gap-3 rounded-xl border border-border bg-card p-4 transition-colors"
       >
-        {/* Vote rail placeholder */}
-        <div className="flex flex-col items-center justify-center gap-1.5 py-1 w-8 shrink-0">
+        {/* Vote rail placeholder */}        <div className="flex flex-col items-center justify-center gap-1.5 py-1 w-8 shrink-0">
           <div className="h-5 w-5 rounded-full text-muted-foreground flex items-center justify-center">^</div>
           <span className="font-heading text-xs font-bold text-muted-foreground">{post.score || 0}</span>
           <div className="h-5 w-5 rounded-full text-muted-foreground flex items-center justify-center">v</div>
@@ -200,9 +199,9 @@ export function PostCard({ post, index }: PostCardProps) {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: Math.min(index, 8) * 0.05, duration: 0.3 }}
-        className="group flex gap-4 rounded-2xl border border-border bg-card p-4 transition-colors hover:border-brand/40"
+        className="group flex gap-3 rounded-xl border border-border bg-card p-3 transition-colors hover:border-brand/40"
       >
-        {/* ── Vote rail (Borynx industrial style) ────────────────────── */}
+        {/* ── Vote rail (Reddit style: left of post content) ── */}
         <div className="flex flex-col items-center justify-start gap-1 pt-0.5 w-8 shrink-0">
           <VoteControls
             score={post.score || 0}
@@ -214,27 +213,16 @@ export function PostCard({ post, index }: PostCardProps) {
           />
         </div>
 
-        {/* ── Content ────────────────────────────────────────────────── */}
-        <div className="flex-1 min-w-0 flex flex-col gap-2">
+        {/* ── Content ── */}
+        <div className="flex-1 min-w-0 flex flex-col gap-1.5">
 
-          {/* Thumbnail image (if post has one) */}
-          {postImages[0] && !isEditing && (
-            <Link to={postUrl} className="shrink-0 mt-0.5 hidden min-[420px]:block h-[72px] w-[96px] overflow-hidden rounded-md border border-border bg-muted/20">
-              <img
-                src={postImages[0].src}
-                alt={postImages[0].alt || "Post thumbnail"}
-                className="h-full w-full object-cover"
-              />
-            </Link>
-          )}
-
-          {/* Meta line: identity · time · status badges */}
+          {/* Meta line: community avatar + name + Join + time */}
           <div className="flex items-center gap-2 flex-wrap">
             {post.communitySlug ? (
               <>
                 <Link
                   to={`/b/${post.communitySlug}`}
-                  className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+                  className="flex items-center gap-1 hover:opacity-80 transition-opacity"
                 >
                   <div className="flex h-5 w-5 items-center justify-center rounded-md bg-muted text-foreground font-heading text-[9px] font-bold shrink-0">
                     {post.communitySlug.charAt(0).toUpperCase()}
@@ -312,7 +300,7 @@ export function PostCard({ post, index }: PostCardProps) {
 
           {/* Title */}
           <Link to={postUrl} className="block group">
-            <h3 className="font-display text-lg font-semibold text-foreground leading-tight group-hover:text-brand transition-colors">
+            <h3 className="font-display text-base font-semibold text-foreground leading-tight group-hover:text-brand transition-colors">
               {post.title}
             </h3>
           </Link>
@@ -323,7 +311,7 @@ export function PostCard({ post, index }: PostCardProps) {
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1.5 font-body text-[11px] text-brand hover:underline mt-0.5"
+              className="inline-flex items-center gap-1.5 font-body text-[10px] text-brand hover:underline mt-0.5"
             >
               <ExternalLink className="h-3 w-3" />
               Source Reference
@@ -368,7 +356,7 @@ export function PostCard({ post, index }: PostCardProps) {
                 <Link
                   key={tag}
                   to={`/tag/${tag}`}
-                  className="rounded-md border border-border bg-muted/50 px-2.5 py-0.5 font-body text-[11px] font-medium text-muted-foreground hover:border-brand hover:text-brand transition-colors"
+                  className="rounded-md border border-border bg-muted/50 px-2.5 py-0.5 font-body text-[10px] font-medium text-muted-foreground hover:border-brand hover:text-brand transition-colors"
                 >
                   #{tag}
                 </Link>
@@ -376,32 +364,32 @@ export function PostCard({ post, index }: PostCardProps) {
             </div>
           )}
 
-          {/* Action footer */}
-          <div className="flex items-center gap-1 mt-2 pt-2.5 border-t border-border/40">
-            <Link to={postUrl} className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 font-body text-[12px] font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-info">
-              <MessageSquare className="h-4 w-4" />
+          {/* Action footer - Reddit style: comment count | Repost | Award | Share | ... */}
+          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/40">
+            <Link to={postUrl} className="flex items-center gap-1 rounded-md px-2 py-1 font-body text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-info">
+              <MessageSquare className="h-3.5 w-3.5" />
               {post.commentCount || 0}
             </Link>
 
-            <button onClick={handleShare} aria-label="Share post" className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted/40 hover:text-brand">
-              <Share2 className="h-4 w-4" />
+            <button onClick={handleShare} aria-label="Share post" className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted/40 hover:text-brand">
+              <Share2 className="h-3.5 w-3.5" />
             </button>
 
             {user && (
               <button aria-label={isSaved ? "Unsave post" : "Save post"}
                 onClick={(e) => { e.preventDefault(); bookmarkMutation.mutate(); }}
                 disabled={bookmarkMutation.isPending}
-                className={`rounded-md p-1.5 transition-colors hover:bg-muted/40 ${isSaved ? 'text-warning' : 'text-muted-foreground hover:text-warning'}`}
+                className={`rounded-md p-1 transition-colors hover:bg-muted/40 ${isSaved ? 'text-warning' : 'text-muted-foreground hover:text-warning'}`}
               >
-                <Bookmark className="h-4 w-4" fill={isSaved ? "currentColor" : "none"} />
+                <Bookmark className="h-3.5 w-3.5" fill={isSaved ? "currentColor" : "none"} />
               </button>
             )}
 
             {isOwnPost && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground focus:outline-none">
-                    <MoreHorizontal className="h-4 w-4" />
+                  <button className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground focus:outline-none">
+                    <MoreHorizontal className="h-3.5 w-3.5" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-40 font-body">
@@ -420,10 +408,10 @@ export function PostCard({ post, index }: PostCardProps) {
             {!isOwnPost && user && (
               <button
                 onClick={() => setIsPostReportOpen(true)}
-                className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted/40 hover:text-brand"
+                className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted/40 hover:text-brand"
                 aria-label="Report post"
               >
-                <Flag className="h-4 w-4" />
+                <Flag className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
