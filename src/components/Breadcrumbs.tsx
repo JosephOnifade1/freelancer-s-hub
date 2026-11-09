@@ -88,7 +88,7 @@ export function Breadcrumbs() {
   }
 
   return (
-    <div className="mb-6 px-1">
+    <div className="mb-6">
       <Breadcrumb>
         <BreadcrumbList>
           {/* Home anchor */}

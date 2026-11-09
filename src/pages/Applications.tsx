@@ -19,10 +19,10 @@ import { Briefcase, Check, Inbox, Loader2, Send, X } from "lucide-react";
 import { toast } from "sonner";
 
 const STATUS_STYLES: Record<ApplicationStatus, string> = {
-  pending: "bg-warning/15 text-warning border-warning/30",
-  accepted: "bg-success/15 text-success border-success/30",
-  rejected: "bg-destructive/15 text-destructive border-destructive/30",
-  withdrawn: "bg-muted text-muted-foreground border-border",
+  pending: "bg-brand/10 text-brand border-brand/20",
+  accepted: "bg-success/10 text-success border-success/20",
+  rejected: "bg-destructive/10 text-destructive border-destructive/20",
+  withdrawn: "bg-muted/50 text-muted-foreground border-border",
 };
 
 function StatusBadge({ status }: { status: ApplicationStatus }) {
@@ -85,21 +85,21 @@ const Applications = () => {
         <div className="mt-2 flex gap-2">
           <button
             onClick={() => setTab("received")}
-            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 font-body text-sm font-medium transition-colors ${
-              tab === "received" ? "bg-primary text-primary-foreground" : "bg-muted/50 text-muted-foreground hover:text-foreground"
+            className={`inline-flex items-center gap-2 rounded-radius-md px-4 py-2 font-mono text-[11px] font-medium transition-colors ${
+              tab === "received" ? "bg-brand/10 text-brand border-brand/20" : "bg-muted/50 text-muted-foreground border-border hover:text-foreground hover:border-brand/30"
             }`}
           >
             <Inbox className="h-4 w-4" /> Received
             {pendingReceived > 0 && (
-              <span className="rounded-full bg-warning px-1.5 font-mono text-[10px] font-bold text-warning-foreground">
+              <span className="rounded-full bg-brand px-1.5 font-mono text-[10px] font-bold text-brand-foreground">
                 {pendingReceived}
               </span>
             )}
           </button>
           <button
             onClick={() => setTab("sent")}
-            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 font-body text-sm font-medium transition-colors ${
-              tab === "sent" ? "bg-primary text-primary-foreground" : "bg-muted/50 text-muted-foreground hover:text-foreground"
+            className={`inline-flex items-center gap-2 rounded-radius-md px-4 py-2 font-mono text-[11px] font-medium transition-colors ${
+              tab === "sent" ? "bg-brand/10 text-brand border-brand/20" : "bg-muted/50 text-muted-foreground border-border hover:text-foreground hover:border-brand/30"
             }`}
           >
             <Send className="h-4 w-4" /> Sent
@@ -118,7 +118,7 @@ const Applications = () => {
                 title="No applications yet"
                 description="When freelancers apply to opportunities you post, their proposals will show up here for review."
                 action={
-                  <Link to="/l/post" className="rounded-lg bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground hover:opacity-90">
+                  <Link to="/l/post" className="rounded-radius-md bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
                     Post an opportunity
                   </Link>
                 }
@@ -129,7 +129,7 @@ const Applications = () => {
                 title="You haven't applied to anything"
                 description="Browse opportunities and send your first proposal — it'll be tracked here."
                 action={
-                  <Link to="/l" className="rounded-lg bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground hover:opacity-90">
+                  <Link to="/l" className="rounded-radius-md bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
                     Browse opportunities
                   </Link>
                 }
@@ -166,7 +166,7 @@ function ApplicationCard({
   const applicant = app.applicant;
 
   return (
-    <article className="rounded-xl border border-border bg-card p-5">
+    <article className="rounded-2xl border border-border bg-card p-5">
       <div className="flex flex-wrap items-start gap-3">
         {mode === "received" && applicant ? (
           <Link to={`/f/${applicant.username || applicant.uid}`} className="flex min-w-0 items-center gap-3">
@@ -222,14 +222,14 @@ function ApplicationCard({
           <button
             onClick={() => onStatus("accepted")}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-success px-4 py-2 font-body text-sm font-semibold text-success-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-radius-md bg-success px-4 py-2 font-body text-sm font-semibold text-success-foreground transition-opacity hover:bg-success/90 disabled:opacity-50"
           >
             <Check className="h-4 w-4" /> Accept
           </button>
           <button
             onClick={() => onStatus("rejected")}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 font-body text-sm font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-radius-md border border-border px-4 py-2 font-body text-sm font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-50"
           >
             <X className="h-4 w-4" /> Reject
           </button>

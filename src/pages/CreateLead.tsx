@@ -138,7 +138,7 @@ const CreateLead = () => {
           subtitle="Publish a real project to Borynx. Members can apply with a proposal; no bidding credits."
         />
 
-        {draftSaveError && <p role="alert" className="mt-4 rounded-lg border border-destructive p-3 text-sm text-destructive">Couldn't save your draft locally. Copy your text before leaving this page.</p>}
+        {draftSaveError && <p role="alert" className="mt-4 rounded-radius-md border border-destructive p-3 text-sm text-destructive">Couldn't save your draft locally. Copy your text before leaving this page.</p>}
         <p className="mt-3 text-xs text-muted-foreground">Unpublished details are saved on this device for your account as you write. Nothing appears in the marketplace until you publish.</p>
         <form onSubmit={handleSubmit} className="space-y-6 mt-8">
           <div className="space-y-2">
@@ -226,7 +226,7 @@ const CreateLead = () => {
             </div>
             <div className="flex flex-wrap gap-2">
               {skills.map(skill => (
-                <span key={skill} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted text-foreground text-xs font-medium">
+                <span key={skill} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-radius-md bg-muted text-foreground text-xs font-medium">
                   {skill}
                   <button type="button" onClick={() => removeSkill(skill)} aria-label={`Remove ${skill}`} className="flex h-7 w-7 items-center justify-center hover:text-foreground">
                     <X className="h-3 w-3" />

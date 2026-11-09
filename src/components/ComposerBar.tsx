@@ -40,18 +40,26 @@ export function ComposerBar({ spaceSlug, placeholder = "Start a post" }: Compose
   if (!user) {
     const params = new URLSearchParams({ type: "discussion" });
     if (spaceSlug) params.set("space", spaceSlug);
-    return <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-      <span className="flex-1">Want to join the conversation?</span>
-      <Link to="/login" state={{ from: { pathname: "/submit", search: `?${params}` } }} className="inline-flex min-h-10 items-center rounded-lg bg-primary px-4 font-semibold text-primary-foreground">Sign in to post</Link>
-    </div>;
+    return (
+      <div className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
+        <span className="min-w-0 flex-1">Want to join the conversation?</span>
+        <Link
+          to="/login"
+          state={{ from: { pathname: "/submit", search: `?${params}` } }}
+          className="inline-flex min-h-10 items-center rounded-lg bg-primary px-4 font-semibold text-primary-foreground"
+        >
+          Sign in to post
+        </Link>
+      </div>
+    );
   }
 
   const avatar = user?.photoURL || profile?.avatarUrl;
   const initial = (profile?.displayName || profile?.username || user?.displayName || "?").charAt(0).toUpperCase();
 
   return (
-    <div className="rounded-xl border border-border bg-card">
-      <div className="flex items-center gap-3 p-3">
+    <div className="rounded-2xl border border-border bg-card p-3">
+      <div className="flex items-center gap-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted font-heading text-sm font-bold text-foreground">
           {avatar ? <img src={avatar} alt="" className="h-full w-full object-cover" /> : initial}
         </div>
@@ -62,21 +70,22 @@ export function ComposerBar({ spaceSlug, placeholder = "Start a post" }: Compose
         >
           {placeholder}
         </button>
-      </div>
-      <div className="grid grid-cols-4 border-t border-border">
-        {ACTIONS.map(({ type, label, icon: Icon }) => (
-          <button
-            key={type}
-            type="button"
-            aria-label={label}
-            title={label}
-            onClick={() => go(type)}
-            className="flex min-w-0 items-center justify-center gap-1.5 px-1 py-2.5 font-body text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-          >
-            <Icon className="h-4 w-4 shrink-0" />
-            <span className="hidden truncate min-[420px]:inline">{label}</span>
-          </button>
-        ))}
+
+        {/* Post type pills */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {ACTIONS.map(({ type, label, icon: Icon }) => (
+            <button
+              key={type}
+              type="button"
+              aria-label={label}
+              onClick={() => go(type)}
+              className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Icon className="h-4 w-4 shrink-0" />
+              <span className="sr-only">{label}</span>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -143,10 +143,10 @@ const LeadDetail = () => {
     return (
       <AppLayout>
         <div className="mx-auto max-w-4xl px-4 py-8 animate-pulse">
-           <div className="h-4 w-24 bg-muted rounded mb-6" />
-           <div className="h-10 w-3/4 bg-muted rounded mb-4" />
-           <div className="h-32 bg-muted rounded mb-8" />
-           <div className="h-64 bg-muted rounded" />
+           <div className="h-4 w-24 bg-muted rounded-radius-md mb-6" />
+           <div className="h-10 w-3/4 bg-muted rounded-radius-md mb-4" />
+           <div className="h-32 bg-muted rounded-radius-md mb-8" />
+           <div className="h-64 bg-muted rounded-radius-md" />
         </div>
       </AppLayout>
     );
@@ -195,7 +195,7 @@ const LeadDetail = () => {
                 {lead.title}
               </h1>
               {lead.isVerified && (
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-success/10 border border-success/25 w-fit">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-success/10 border border-success/25 w-fit">
                   <BadgeCheck className="h-4 w-4 text-success" />
                   <span className="font-heading text-sm font-bold text-success ">Verified Opportunity</span>
                   <span className="font-body text-xs text-success/70">— vetted by a Borynx moderator</span>
@@ -228,7 +228,7 @@ const LeadDetail = () => {
               <h3 className="font-heading text-lg font-bold">Requirements & Skills</h3>
               <div className="flex flex-wrap gap-2">
                 {lead.skills.map((skill) => (
-                  <span key={skill} className="px-3 py-1.5 rounded-xl bg-secondary font-body text-xs font-medium text-foreground">
+                  <span key={skill} className="px-3 py-1.5 rounded-radius-md bg-secondary font-body text-xs font-medium text-foreground">
                     {skill}
                   </span>
                 ))}
@@ -265,7 +265,7 @@ const LeadDetail = () => {
                   onClick={user ? () => setIsApplyOpen(true) : undefined}
                   disabled={hasApplied || isOwnLead || !isOpen || applicationError}
                   asChild={!user && isOpen && !isOwnLead}
-                  className={`w-full min-h-12 font-heading font-bold text-base rounded-xl transition-all ${
+                  className={`w-full min-h-12 font-heading font-bold text-base rounded-radius-md transition-all ${
                     hasApplied ? "bg-success/20 text-success border border-success/30 hover:bg-success/30" : ""
                   }`}
                 >

@@ -100,8 +100,8 @@ const Communities = () => {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
           <div className="space-y-6 lg:col-span-8">
             <div>
-              <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground md:text-3xl">Spaces</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <h1 className="font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl">Spaces</h1>
+              <p className="mt-1 font-body text-sm text-muted-foreground">
                 B-Spaces are topic communities for freelancers. Join the ones that match the work you do.
               </p>
             </div>
@@ -114,14 +114,14 @@ const Communities = () => {
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setVisible(PAGE_SIZE); }}
                   placeholder="Search spaces"
-                  className="h-10 pl-9"
+                  className="h-10 pl-9 rounded-radius-md"
                 />
               </div>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as SortKey)}
                 aria-label="Sort spaces"
-                className="h-10 cursor-pointer rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="h-10 cursor-pointer rounded-radius-md border border-input bg-background px-3 font-body text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="members">Most members</option>
                 <option value="newest">Newest</option>
@@ -137,10 +137,10 @@ const Communities = () => {
                     key={cat.id}
                     aria-pressed={active}
                     onClick={() => { setCategory(cat.id); setVisible(PAGE_SIZE); }}
-                    className={`whitespace-nowrap rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
+                    className={`whitespace-nowrap rounded-full border px-3.5 py-1.5 text-[11px] font-mono font-medium transition-colors ${
                       active
-                        ? "border-foreground bg-foreground text-background"
-                        : "border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground"
+                        ? "border-brand bg-brand/10 text-brand"
+                        : "border-border text-muted-foreground hover:border-brand/30 hover:text-foreground"
                     }`}
                   >
                     {cat.id === "All" ? "All spaces" : cat.id} <span className="ml-1 tabular-nums opacity-60">{cat.count}</span>
@@ -171,15 +171,15 @@ const Communities = () => {
                     className="flex items-center gap-4 p-4 transition-colors hover:bg-muted/40"
                   >
                     <Link to={`/b/${space.slug}`} className="flex min-w-0 flex-1 items-center gap-4">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border bg-muted text-foreground">
-                        <Icon className="h-5 w-5" />
-                      </div>
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-radius-md border border-border bg-muted text-foreground">
+                      <Icon className="h-5 w-5" />
+                    </div>
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-foreground">
-                          {space.name} <span className="ml-1 tabular-nums text-xs font-normal text-muted-foreground">b/{space.slug}</span>
+                        <p className="truncate font-body text-sm font-medium text-foreground">
+                          {space.name} <span className="ml-1 tabular-nums text-[10px] font-normal text-muted-foreground">b/{space.slug}</span>
                         </p>
-                        <p className="truncate text-xs text-muted-foreground">{space.description}</p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
+                        <p className="truncate text-[10px] font-mono text-muted-foreground">{space.description}</p>
+                        <p className="mt-0.5 text-[10px] font-mono text-muted-foreground tabular-nums">
                           {space.memberCount.toLocaleString()} {space.memberCount === 1 ? "member" : "members"}
                         </p>
                       </div>
@@ -187,9 +187,9 @@ const Communities = () => {
                     {user ? <Button
                       variant={isJoined ? "ghost" : "outline"}
                       size="sm" disabled={membershipsError || joinMutation.isPending || leaveMutation.isPending}
-                      onClick={() => toggle(space.slug, isJoined)} className="min-h-10 shrink-0 gap-1.5">
+                      onClick={() => toggle(space.slug, isJoined)} className="min-h-10 shrink-0 gap-1.5 rounded-radius-md">
                       {isJoined ? <><Check className="h-3.5 w-3.5" /> Joined</> : "Join"}
-                    </Button> : <Button variant="outline" size="sm" asChild className="min-h-10 shrink-0">
+                    </Button> : <Button variant="outline" size="sm" asChild className="min-h-10 shrink-0 rounded-radius-md">
                       <Link to="/login" state={{ from: { pathname: `/b/${space.slug}` } }}>Sign in to join</Link>
                     </Button>}
                   </motion.div>
@@ -207,13 +207,13 @@ const Communities = () => {
           </div>
 
           <aside className="space-y-4 lg:col-span-4">
-            <div className="rounded-xl border border-border bg-card p-5">
-              <h2 className="font-heading text-sm font-bold text-foreground">Start your own space</h2>
+            <div className="rounded-2xl border border-border bg-card p-5">
+              <h2 className="font-display text-sm font-bold text-foreground tracking-tight">Start your own space</h2>
               <p className="mt-1.5 text-sm text-muted-foreground">
                 Pick a name and a niche. You become the first member and can invite others with the space link.
               </p>
               {user ? <CreateCommunityModal>
-                <Button variant="outline" className="mt-4 w-full gap-1.5">
+                <Button variant="outline" className="mt-4 w-full gap-1.5 rounded-radius-md">
                   <Plus className="h-4 w-4" /> Create space
                 </Button>
               </CreateCommunityModal> : <Button asChild variant="outline" className="mt-4 w-full gap-1.5">
@@ -221,8 +221,8 @@ const Communities = () => {
               </Button>}
             </div>
 
-            <div className="rounded-xl border border-border bg-card p-5">
-              <h2 className="mb-3 font-heading text-sm font-bold text-foreground">Your spaces</h2>
+            <div className="rounded-2xl border border-border bg-card p-5">
+              <h2 className="mb-3 font-display text-sm font-bold text-foreground tracking-tight">Your spaces</h2>
               {!user ? (
                 <p className="text-sm text-muted-foreground">Sign in to see the spaces you've joined.</p>
               ) : membershipsError ? (
@@ -243,8 +243,8 @@ const Communities = () => {
               )}
             </div>
 
-            <div className="rounded-xl border border-border bg-card p-5">
-              <h2 className="mb-3 flex items-center gap-2 font-heading text-sm font-bold text-foreground">
+            <div className="rounded-2xl border border-border bg-card p-5">
+              <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-bold text-foreground tracking-tight">
                 <Compass className="h-4 w-4 text-muted-foreground" /> Largest spaces
               </h2>
               {topSpaces.length === 0 ? (

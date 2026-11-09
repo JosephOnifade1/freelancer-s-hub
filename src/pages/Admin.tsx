@@ -102,10 +102,10 @@ const Admin = () => {
               key={item.id}
               onClick={() => setTab(item.id)}
               className={cn(
-                "rounded-lg px-4 py-2 font-body text-sm font-medium transition-colors",
+                "rounded-radius-md px-4 py-2 font-mono text-[11px] font-medium transition-colors",
                 tab === item.id
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted/50 text-muted-foreground hover:text-foreground"
+                  ? "bg-brand/10 text-brand border-brand/20"
+                  : "bg-muted/50 text-muted-foreground border-border hover:text-foreground hover:border-brand/30"
               )}
             >
               {item.label}
@@ -199,8 +199,8 @@ function ReportsQueue({
               key={s}
               onClick={() => onStatusChange(s)}
               className={cn(
-                "rounded-full px-3.5 py-1.5 font-body text-xs font-semibold capitalize transition-colors",
-                status === s ? "bg-primary text-primary-foreground" : "bg-muted/50 text-muted-foreground hover:text-foreground"
+                "rounded-full px-3.5 py-1.5 font-mono text-[11px] font-medium capitalize transition-colors",
+                status === s ? "bg-brand/10 text-brand border-brand/20" : "bg-muted/50 text-muted-foreground border-border hover:text-foreground hover:border-brand/30"
               )}
             >
               {s}
@@ -221,9 +221,9 @@ function ReportsQueue({
             <button
               key={t}
               onClick={() => setEntityFilter(t === "all" ? "all" : t)}
-              className={cn(
-                "rounded-full px-3 py-1 font-body text-xs font-semibold transition-colors border",
-                entityFilter === t ? "border-brand bg-brand/10 text-brand" : "border-transparent text-muted-foreground hover:bg-muted hover:text-foreground"
+                className={cn(
+                "rounded-full px-3 py-1 font-mono text-[10px] font-medium transition-colors border",
+                entityFilter === t ? "border-brand bg-brand/10 text-brand" : "border-transparent text-muted-foreground hover:bg-muted hover:text-foreground hover:border-brand/30"
               )}
             >
               {t === "all" ? "All" : ENTITY_LABELS[t as Report["entityType"]]}
@@ -239,21 +239,21 @@ function ReportsQueue({
             <button
               onClick={() => handleBulkAction("resolve")}
               disabled={mutation.isPending || bulkAction !== null}
-              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+              className="rounded-radius-md bg-primary px-3 py-1.5 font-body text-xs font-semibold text-primary-foreground disabled:opacity-50"
             >
               Resolve selected
             </button>
             <button
               onClick={() => handleBulkAction("dismiss")}
               disabled={mutation.isPending || bulkAction !== null}
-              className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground disabled:opacity-50"
+              className="rounded-radius-md border border-border px-3 py-1.5 font-body text-xs font-semibold text-foreground disabled:opacity-50"
             >
               Dismiss selected
             </button>
             <button
               onClick={() => handleBulkAction("remove")}
               disabled={mutation.isPending || bulkAction !== null}
-              className="rounded-lg bg-destructive px-3 py-1.5 text-xs font-semibold text-destructive-foreground disabled:opacity-50"
+              className="rounded-radius-md bg-destructive px-3 py-1.5 font-body text-xs font-semibold text-destructive-foreground disabled:opacity-50"
             >
               Remove & resolve
             </button>
@@ -290,19 +290,19 @@ function ReportsQueue({
             return (
               <article
                 key={report.id}
-                className="rounded-xl border border-border bg-card p-5 group"
+                className="rounded-2xl border border-border bg-card p-5 group"
               >
                 <div className="flex flex-wrap items-center gap-2 mb-2.5">
-                  <span className="rounded-full bg-destructive/15 px-2.5 py-0.5 font-body text-[11px] font-semibold capitalize text-destructive">
+                  <span className="rounded-full bg-brand/10 px-2.5 py-0.5 font-body text-[11px] font-semibold capitalize text-brand border border-brand/20">
                     {report.reason}
                   </span>
                   <span className="font-body text-xs capitalize text-muted-foreground">
                     {ENTITY_LABELS[report.entityType]} report
                   </span>
                   {preview?.isDeleted && (
-                    <span className="rounded-full bg-muted px-2.5 py-0.5 font-body text-[11px] font-bold text-muted-foreground">
-                      Removed
-                    </span>
+                  <span className="rounded-full bg-muted/50 px-2.5 py-0.5 font-body text-[11px] font-bold text-muted-foreground border border-border">
+                    Removed
+                  </span>
                   )}
                   <span className="ml-auto font-body text-xs text-muted-foreground">
                     {formatTimeAgo(report.createdAt)}
@@ -337,14 +337,14 @@ function ReportsQueue({
                 </p>
 
                 {preview && (preview.title || preview.body) && (
-                  <div className="mt-2 whitespace-pre-wrap rounded-lg bg-muted/40 p-3 font-body text-sm leading-relaxed text-muted-foreground">
+                  <div className="mt-2 whitespace-pre-wrap rounded-radius-md bg-muted/40 p-3 font-body text-sm leading-relaxed text-muted-foreground">
                     {preview.title && <div className="font-medium text-foreground mb-1">{preview.title}</div>}
                     {truncate(preview.body)}
                   </div>
                 )}
 
                 {report.details && !preview?.body && (
-                  <p className="mt-2 whitespace-pre-wrap rounded-lg bg-muted/40 p-3 font-body text-sm leading-relaxed text-muted-foreground">
+                  <p className="mt-2 whitespace-pre-wrap rounded-radius-md bg-muted/40 p-3 font-body text-sm leading-relaxed text-muted-foreground">
                     {report.details}
                   </p>
                 )}
@@ -354,21 +354,21 @@ function ReportsQueue({
                     <button
                       onClick={() => { if (window.confirm("Remove the reported content and resolve this report?")) mutation.mutate({ id: report.id, status: "resolved", remove: true }); }}
                       disabled={mutation.isPending || bulkAction !== null}
-                      className="rounded-lg bg-destructive px-4 py-2 font-body text-sm font-semibold text-destructive-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+                      className="rounded-radius-md bg-destructive px-4 py-2 font-body text-sm font-semibold text-destructive-foreground transition-opacity hover:bg-destructive/90 disabled:opacity-50"
                     >
                       Remove content & resolve
                     </button>
                     <button
                       onClick={() => mutation.mutate({ id: report.id, status: "resolved", remove: false })}
                       disabled={mutation.isPending || bulkAction !== null}
-                      className="rounded-lg bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+                      className="rounded-radius-md bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground transition-opacity hover:bg-primary/90 disabled:opacity-50"
                     >
                       Resolve (keep content)
                     </button>
                     <button
                       onClick={() => mutation.mutate({ id: report.id, status: "dismissed", remove: false })}
                       disabled={mutation.isPending || bulkAction !== null}
-                      className="rounded-lg border border-border px-4 py-2 font-body text-sm font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+                      className="rounded-radius-md border border-border px-4 py-2 font-body text-sm font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-50"
                     >
                       Dismiss
                     </button>
@@ -431,7 +431,7 @@ function VerifiedProManager({ isAdmin }: { isAdmin: boolean }) {
               onClick={() => mutation.mutate({ uid: u.uid, verified: !u.isVerifiedPro })}
               disabled={mutation.isPending}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 font-body text-xs font-semibold transition-opacity disabled:opacity-50",
+                "inline-flex items-center gap-1.5 rounded-radius-md px-3.5 py-1.5 font-body text-xs font-semibold transition-opacity disabled:opacity-50",
                 u.isVerifiedPro
                   ? "border border-border text-foreground hover:bg-muted"
                   : "bg-brand text-brand-foreground hover:opacity-90"
@@ -485,7 +485,7 @@ function RolesManager({ isAdmin, currentUid }: { isAdmin: boolean; currentUid?: 
             value={u.role}
             disabled={mutation.isPending || u.uid === currentUid}
             onChange={(e) => mutation.mutate({ uid: u.uid, role: e.target.value as UserRole })}
-            className="rounded-lg border border-border bg-background px-2.5 py-1.5 font-body text-xs font-medium text-foreground disabled:opacity-50"
+            className="rounded-radius-md border border-border bg-background px-2.5 py-1.5 font-body text-xs font-medium text-foreground disabled:opacity-50"
             aria-label={`Role for ${u.name}`}
           >
             <option value="member">Member</option>

@@ -67,13 +67,13 @@ export default function Pipeline() {
         <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-4 text-sm">
           <span className="mr-auto text-muted-foreground"><strong className="text-foreground">{items.length}</strong> tracked · <strong className="text-foreground">{won}</strong> marked won</span>
           <label className="flex items-center gap-2 text-muted-foreground">Stage
-            <select aria-label="Filter pipeline stage" value={stageFilter} onChange={(event) => setStageFilter(event.target.value as typeof stageFilter)} className="min-h-10 rounded-lg border border-border bg-background px-3 text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+            <select aria-label="Filter pipeline stage" value={stageFilter} onChange={(event) => setStageFilter(event.target.value as typeof stageFilter)} className="min-h-10 rounded-radius-md border border-border bg-background px-3 font-body text-foreground focus-visible:ring-2 focus-visible:ring-ring">
               <option value="all">All stages</option>
               {PIPELINE_STAGES.map(({ id, label }) => <option key={id} value={id}>{label}</option>)}
             </select>
           </label>
           <label className="flex items-center gap-2 text-muted-foreground">Sort
-            <select aria-label="Sort pipeline" value={sort} onChange={(event) => setSort(event.target.value as Sort)} className="min-h-10 rounded-lg border border-border bg-background px-3 text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+            <select aria-label="Sort pipeline" value={sort} onChange={(event) => setSort(event.target.value as Sort)} className="min-h-10 rounded-radius-md border border-border bg-background px-3 font-body text-foreground focus-visible:ring-2 focus-visible:ring-ring">
               <option value="updated">Recently updated</option><option value="client">Client A–Z</option>
             </select>
           </label>
@@ -86,7 +86,7 @@ export default function Pipeline() {
               action={<div className="flex flex-wrap justify-center gap-2"><Button onClick={() => setAdding(true)}>Add prospect</Button><Button variant="outline" asChild><Link to="/l">Browse opportunities</Link></Button></div>} />
           : <div className="grid gap-3 md:grid-cols-2">
               {visible.map((item) => (
-                <article key={item.id} className="rounded-xl border border-border bg-card p-4">
+                <article key={item.id} className="rounded-2xl border border-border bg-card p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-xs font-medium text-muted-foreground">{item.clientName} · {item.source}</p>
@@ -103,7 +103,7 @@ export default function Pipeline() {
                   </div>
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
                     <label className="flex items-center gap-2 text-sm text-muted-foreground">Stage
-                      <select aria-label={`Stage for ${item.title}`} value={item.stage} disabled={stageMutation.isPending} onChange={(event) => stageMutation.mutate({ id: item.id, stage: event.target.value as PipelineStage })} className="min-h-10 rounded-lg border border-border bg-background px-2 text-foreground disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-ring">
+                      <select aria-label={`Stage for ${item.title}`} value={item.stage} disabled={stageMutation.isPending} onChange={(event) => stageMutation.mutate({ id: item.id, stage: event.target.value as PipelineStage })} className="min-h-10 rounded-radius-md border border-border bg-background px-2 font-body text-foreground disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-ring">
                         {PIPELINE_STAGES.map(({ id, label }) => <option key={id} value={id}>{label}</option>)}
                       </select>
                     </label>

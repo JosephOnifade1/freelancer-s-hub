@@ -66,14 +66,14 @@ const Notifications = () => {
             <button
               onClick={() => readAllMutation.mutate()}
               disabled={readAllMutation.isPending}
-              className="mt-1 inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border px-3.5 py-2 font-body text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+              className="mt-1 inline-flex shrink-0 items-center gap-1.5 rounded-radius-md border border-border px-3.5 py-2 font-body text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
             >
               <CheckCheck className="h-4 w-4" /> Mark all read
             </button>
           )}
         </div>
 
-        <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
+        <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-card">
           {isError ? <QueryErrorState title="Couldn't load notifications" onRetry={() => refetch()} /> : isLoading ? (
             <div className="flex h-[40vh] items-center justify-center">
               <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
@@ -84,6 +84,7 @@ const Notifications = () => {
                 icon={Bell}
                 title="No notifications yet"
                 description="When someone replies to you, upvotes your work, follows you, or acts on an application, it'll show up here."
+                action={<button className="rounded-radius-md bg-primary px-4 py-2 font-body text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">Browse posts</button>}
               />
             </div>
           ) : (
@@ -92,12 +93,12 @@ const Notifications = () => {
                 key={n.id}
                 onClick={() => handleOpen(n)}
                 className={cn(
-                  "flex w-full items-start gap-3 px-5 py-4 text-left transition-colors hover:bg-muted/40",
+                  "flex w-full items-start gap-3 px-5 py-4 text-left transition-colors hover:bg-muted/50",
                   i < notifications.length - 1 && "border-b border-border/60",
-                  !n.isRead && "bg-brand/[0.04]"
+                  !n.isRead && "bg-brand/[0.03]"
                 )}
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted font-heading text-xs font-bold text-foreground">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted font-heading text-[11px] font-bold text-foreground">
                   {n.actor?.avatarUrl ? (
                     <img src={n.actor.avatarUrl} alt="" className="h-full w-full object-cover" />
                   ) : (
@@ -106,7 +107,7 @@ const Notifications = () => {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block font-body text-sm leading-snug text-foreground">{n.message}</span>
-                  <span className="mt-0.5 block font-body text-xs capitalize text-muted-foreground">
+                  <span className="mt-0.5 block font-body text-[10px] font-mono text-muted-foreground">
                     {n.type.replace(/_/g, " ")} · {formatTimeAgo(n.createdAt)}
                   </span>
                 </span>

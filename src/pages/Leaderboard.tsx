@@ -86,7 +86,7 @@ export default function Leaderboard() {
             title="No contributors yet"
             description="Be the first to post and climb the leaderboard."
             action={
-              <Link to="/submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
+              <Link to="/submit" className="rounded-radius-md bg-primary px-4 py-2 font-body text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
                 Create a post
               </Link>
             }
@@ -101,10 +101,10 @@ export default function Leaderboard() {
       <div className="mx-auto max-w-3xl px-4 py-6">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">
+            <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
               Leaderboard
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 font-body text-sm text-muted-foreground">
               Top contributors by {metric}. Rankings update as activity happens.
             </p>
           </div>
@@ -113,10 +113,10 @@ export default function Leaderboard() {
               <button
                 key={m.id}
                 onClick={() => setMetric(m.id)}
-                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                className={`inline-flex items-center gap-1.5 rounded-radius-md px-3 py-1.5 font-mono text-[11px] font-medium transition-colors ${
                   metric === m.id
-                    ? "bg-primary text-primary-foreground"
-                    : "border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                    ? "bg-brand/10 text-brand border-brand/20"
+                  : "border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 <m.icon className="h-4 w-4" /> {m.label}
@@ -125,13 +125,13 @@ export default function Leaderboard() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="rounded-2xl border border-border bg-card overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50 text-left text-muted-foreground">
-                <th className="p-4 font-semibold">Rank</th>
-                <th className="p-4 font-semibold">Contributor</th>
-                <th className="p-4 font-semibold text-right">Score</th>
+                <th className="p-4 font-mono font-bold text-[10px] uppercase tracking-wider">Rank</th>
+                <th className="p-4 font-mono font-bold text-[10px] uppercase tracking-wider">Contributor</th>
+                <th className="p-4 font-mono font-bold text-[10px] uppercase tracking-wider text-right">Score</th>
               </tr>
             </thead>
             <tbody>
@@ -139,9 +139,9 @@ export default function Leaderboard() {
                 const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : String(i + 1);
                 const isTop3 = i < 3;
                 return (
-                  <tr
+                    <tr
                     key={u.uid}
-                    className={`border-b border-border/50 hover:bg-muted/30 transition-colors ${isTop3 ? "bg-brand/10" : ""}`}
+                    className={`border-b border-border/50 hover:bg-muted/40 transition-colors ${isTop3 ? "bg-brand/5" : ""}`}
                   >
                     <td className="p-4 font-mono font-bold">
                       {isTop3 ? medal : <span className="text-muted-foreground">{medal}</span>}
@@ -160,8 +160,8 @@ export default function Leaderboard() {
                           </div>
                         )}
                         <div className="min-w-0">
-                          <div className="font-medium text-foreground truncate">{u.name}</div>
-                          <div className="text-xs text-muted-foreground truncate">@{u.username}</div>
+                          <div className="font-body text-sm font-medium text-foreground truncate">{u.name}</div>
+                          <div className="text-[10px] font-mono text-muted-foreground truncate">@{u.username}</div>
                         </div>
                       </Link>
                     </td>
@@ -174,7 +174,7 @@ export default function Leaderboard() {
             </tbody>
           </table>
           {ranked.length > 20 && (
-            <div className="px-4 py-3 text-center text-xs text-muted-foreground border-t border-border/50">
+            <div className="px-4 py-3 text-center text-[10px] font-mono text-muted-foreground border-t border-border/50">
               Showing top 20 of {ranked.length} contributors.
             </div>
           )}

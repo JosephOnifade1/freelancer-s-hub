@@ -181,11 +181,11 @@ export default function Profile() {
       <div className="mx-auto max-w-6xl px-3 sm:px-6 py-4">
 
         {/* Top Header bar with back button & Profile title */}
-        <div className="flex items-center gap-3 mb-4 text-foreground">
-          <Link to="/" className="p-1.5 rounded-full hover:bg-secondary transition-colors">
+        <div className="flex items-center gap-3 mb-6 text-foreground">
+          <Link to="/" className="p-1.5 rounded-radius-md hover:bg-secondary transition-colors">
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <h1 className="font-heading text-xl font-bold">Profile</h1>
+          <h1 className="font-display text-lg font-bold">Profile</h1>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -194,9 +194,9 @@ export default function Profile() {
           <div className="lg:col-span-8 space-y-6">
 
             {/* Header Banner & Profile Card */}
-            <div className="rounded-2xl border border-border/50 bg-card overflow-hidden shadow-md">
+            <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
 
-              <div className="h-28 sm:h-36 w-full bg-muted" />
+              <div className="h-24 sm:h-28 w-full bg-muted/40" />
 
               {/* Avatar & Action Buttons Bar */}
               <div className="px-6 relative pb-6">
@@ -332,7 +332,7 @@ export default function Profile() {
                     {skills.map((skill) => (
                       <span
                         key={skill}
-                        className="px-2.5 py-1 rounded-md border border-border bg-background text-muted-foreground text-xs"
+                        className="rounded-md border border-border bg-muted/50 px-2.5 py-1 font-body text-[11px] font-medium text-muted-foreground hover:border-brand hover:text-brand transition-colors"
                       >
                         {skill}
                       </span>
@@ -341,26 +341,26 @@ export default function Profile() {
                 )}
 
                 {/* Stats Summary Bar (5 Stats Columns) */}
-                <div className="grid grid-cols-5 gap-2 py-4 px-2 sm:px-6 rounded-xl border border-border/40 bg-secondary/30 text-center">
+                <div className="grid grid-cols-5 gap-2 py-3 px-3 sm:px-6 rounded-radius-md border border-border bg-secondary/40 text-center">
                   <div>
-                    <div className="font-heading text-lg sm:text-xl font-bold text-foreground">{postsCount}</div>
-                    <div className="text-[11px] text-muted-foreground">Posts</div>
+                    <div className="font-display text-lg sm:text-xl font-bold text-foreground tabular-nums">{postsCount}</div>
+                    <div className="text-[10px] font-mono text-muted-foreground">Posts</div>
                   </div>
                   <div>
-                    <div className="font-heading text-lg sm:text-xl font-bold text-foreground">{followersCount}</div>
-                    <div className="text-[11px] text-muted-foreground">Followers</div>
+                    <div className="font-display text-lg sm:text-xl font-bold text-foreground tabular-nums">{followersCount}</div>
+                    <div className="text-[10px] font-mono text-muted-foreground">Followers</div>
                   </div>
                   <div>
-                    <div className="font-heading text-lg sm:text-xl font-bold text-foreground">{followingCount}</div>
-                    <div className="text-[11px] text-muted-foreground">Following</div>
+                    <div className="font-display text-lg sm:text-xl font-bold text-foreground tabular-nums">{followingCount}</div>
+                    <div className="text-[10px] font-mono text-muted-foreground">Following</div>
                   </div>
                   <div>
-                    <div className="font-heading text-lg sm:text-xl font-bold text-foreground">{resourcesCount}</div>
-                    <div className="text-[11px] text-muted-foreground">Resources</div>
+                    <div className="font-display text-lg sm:text-xl font-bold text-foreground tabular-nums">{resourcesCount}</div>
+                    <div className="text-[10px] font-mono text-muted-foreground">Resources</div>
                   </div>
                   <div>
-                    <div className="font-heading text-lg sm:text-xl font-bold text-foreground">{spacesCount}</div>
-                    <div className="text-[11px] text-muted-foreground">B-Spaces</div>
+                    <div className="font-display text-lg sm:text-xl font-bold text-foreground tabular-nums">{spacesCount}</div>
+                    <div className="text-[10px] font-mono text-muted-foreground">B-Spaces</div>
                   </div>
                 </div>
 
@@ -369,14 +369,14 @@ export default function Profile() {
             </div>
 
             {/* Tabs Row */}
-            <div className="flex items-center gap-6 overflow-x-auto border-b border-border/50 px-2 text-sm font-medium sm:gap-8">
+            <div className="flex items-center gap-6 overflow-x-auto border-b border-border pb-2 px-2 text-sm font-medium sm:gap-8">
               {(["Threads", "Resources", "B-Spaces", ...(isOwnProfile ? ["Bookmarks"] : [])] as Tab[]).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`pb-3 font-semibold transition-all relative ${
+                  className={`pb-2 font-medium transition-all relative ${
                     activeTab === tab
-                      ? "text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-brand"
+                      ? "text-brand after:absolute after:bottom-0 after:left-0 after:right-0 after:h-1 after:w-full after:bg-brand after:rounded-full"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
@@ -465,25 +465,25 @@ export default function Profile() {
 
             {/* About: only fields that exist on the profile */}
             {(profile.status || location || website || profile.joined) && (
-              <div className="rounded-xl border border-border bg-card p-5 space-y-3">
-                <h3 className="font-heading text-sm font-bold text-foreground">About</h3>
-                <dl className="space-y-2.5 text-sm">
+              <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
+                <h3 className="font-display text-sm font-bold text-foreground tracking-tight">About</h3>
+                <dl className="space-y-2.5">
                   {profile.status && (
                     <div className="flex justify-between gap-4">
-                      <dt className="text-muted-foreground">Work</dt>
-                      <dd className="font-medium text-foreground">{profile.status}</dd>
+                      <dt className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Work</dt>
+                      <dd className="font-body text-sm font-medium text-foreground tabular-nums">{profile.status}</dd>
                     </div>
                   )}
                   {location && (
                     <div className="flex justify-between gap-4">
-                      <dt className="text-muted-foreground">Location</dt>
-                      <dd className="font-medium text-foreground">{location}</dd>
+                      <dt className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Location</dt>
+                      <dd className="font-body text-sm font-medium text-foreground tabular-nums">{location}</dd>
                     </div>
                   )}
                   {profile.joined && (
                     <div className="flex justify-between gap-4">
-                      <dt className="text-muted-foreground">Joined</dt>
-                      <dd className="font-medium text-foreground">{profile.joined}</dd>
+                      <dt className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Joined</dt>
+                      <dd className="font-body text-sm font-medium text-foreground tabular-nums">{profile.joined}</dd>
                     </div>
                   )}
                 </dl>
@@ -491,8 +491,8 @@ export default function Profile() {
             )}
 
             {/* Spaces */}
-            <div className="rounded-xl border border-border bg-card p-5 space-y-3">
-              <h3 className="font-heading text-sm font-bold text-foreground">Spaces</h3>
+            <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
+              <h3 className="font-display text-sm font-bold text-foreground tracking-tight">Spaces</h3>
               {joinedSpaces.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No spaces joined yet.</p>
               ) : (
@@ -513,10 +513,10 @@ export default function Profile() {
             </div>
 
             {/* Badges */}
-            <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+            <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
               <div className="flex items-center gap-2">
                 <Award className="h-4 w-4 text-muted-foreground" />
-                <h3 className="font-heading text-sm font-bold text-foreground">Badges</h3>
+                <h3 className="font-display text-sm font-bold text-foreground tracking-tight">Badges</h3>
               </div>
               {badgesError ? (
                 <p className="text-xs text-destructive">Couldn't load badges.</p>

@@ -60,7 +60,7 @@ const CommentTextarea = ({
     onChange={(e) => onChange(e.target.value)}
     placeholder={placeholder}
     rows={minRows}
-    className="w-full resize-none rounded-lg border border-border bg-card px-3 py-2.5 font-body text-sm text-foreground placeholder:text-muted-foreground focus:border-brand/50 focus:outline-none focus:ring-1 focus:ring-brand/20 transition-all"
+    className="w-full resize-none rounded-radius-md border border-border bg-card px-3 py-2.5 font-body text-sm text-foreground placeholder:text-muted-foreground focus:border-brand/50 focus:outline-none focus:ring-1 focus:ring-brand/20 transition-all"
   />
 );
 
@@ -182,7 +182,7 @@ const CommentThread = ({ comment, postId, depth = 0, commentsEnabled = true, vot
             {isOwnComment ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus:outline-none">
+                  <button className="rounded-radius-md p-1.5 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus:outline-none">
                     <MoreHorizontal className="h-3.5 w-3.5" />
                   </button>
                 </DropdownMenuTrigger>
@@ -198,9 +198,9 @@ const CommentThread = ({ comment, postId, depth = 0, commentsEnabled = true, vot
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : user && (
-              <button
+                <button
                 onClick={() => setIsCommentReportOpen(true)}
-                className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus:outline-none"
+                className="rounded-radius-md p-1.5 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-brand focus:outline-none"
                 aria-label="Report comment"
               >
                 <Flag className="h-3.5 w-3.5" />
@@ -222,11 +222,11 @@ const CommentThread = ({ comment, postId, depth = 0, commentsEnabled = true, vot
             <div className="mb-2">
               <CommentTextarea value={editBody} onChange={setEditBody} placeholder="Edit your comment..." minRows={3} />
               <div className="flex justify-end gap-2 mt-2">
-                <button onClick={() => setIsEditing(false)} className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground">Cancel</button>
+                <button onClick={() => setIsEditing(false)} className="px-3 py-1 text-[10px] font-mono text-muted-foreground hover:text-foreground">Cancel</button>
                 <button
                   onClick={() => updateMutation.mutate()}
                   disabled={updateMutation.isPending || !editBody.trim()}
-                  className="px-3 py-1 bg-primary text-primary-foreground text-xs rounded hover:opacity-90 disabled:opacity-50"
+                  className="px-3 py-1 bg-primary text-primary-foreground text-[10px] font-mono font-semibold rounded-radius-md hover:bg-primary/90 disabled:opacity-50 transition-colors"
                 >
                   {updateMutation.isPending ? "Saving..." : "Save"}
                 </button>
@@ -249,19 +249,19 @@ const CommentThread = ({ comment, postId, depth = 0, commentsEnabled = true, vot
           )}
 
           {commentsEnabled && isReplying && (
-            <div className="mt-3 bg-card rounded-lg p-3 border border-brand/20 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="mt-3 bg-card rounded-radius-md p-3 border border-brand/20 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
               <CommentTextarea value={replyBody} onChange={setReplyBody} placeholder="Write your reply..." minRows={2} />
               <div className="flex justify-end gap-2 mt-2">
                 <button
                   onClick={() => setIsReplying(false)}
-                  className="px-3 py-1.5 font-body text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  className="px-3 py-1.5 font-body text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => submitReply.mutate()}
                   disabled={submitReply.isPending || !replyBody.trim()}
-                  className="rounded-md bg-primary px-4 py-1.5 font-body text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-opacity shadow-sm"
+                  className="rounded-radius-md bg-primary px-4 py-1.5 font-body text-[10px] font-mono font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-sm"
                 >
                   {submitReply.isPending ? "Posting..." : "Reply"}
                 </button>
@@ -434,13 +434,13 @@ const PostDetail = () => {
       <div className="mx-auto max-w-3xl px-4 py-6">
         <button
           onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-1 mb-4 font-body text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-1 mb-6 font-body text-[11px] font-mono text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" /> Back
         </button>
 
         {post.isDeleted ? (
-          <div className="rounded-xl border border-dashed border-brand/50 bg-card p-5 mb-6 shadow-sm opacity-80">
+          <div className="rounded-2xl border border-dashed border-brand/50 bg-card p-5 mb-6 shadow-sm opacity-80">
             <div className="flex gap-4">
               <div className="w-8" />
               <div className="flex-1 min-w-0">
@@ -466,26 +466,26 @@ const PostDetail = () => {
             </div>
           </div>
         ) : (
-          <div className="rounded-xl border border-border bg-card p-5 mb-6 shadow-sm">
+          <div className="rounded-2xl border border-border bg-card p-5 mb-6 shadow-sm">
             <div className="flex gap-4">
               <VoteControls score={post.score || 0} entityId={post.id} authorUid={post.author?.uid} type="post" disabled={!user} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <PostTypeBadge type={post.type} />
-                    <span className="font-body text-xs text-muted-foreground flex items-center gap-1">
+                    <span className="font-body text-[10px] font-mono text-muted-foreground flex items-center gap-1">
                       {formatTimeAgo(post.createdAt)}
-                      {post.isEdited && <span className="italic text-[10px]">(edited)</span>}
+                      {post.isEdited && <span className="italic">(edited)</span>}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="font-body text-xs text-muted-foreground flex items-center gap-1">
+                    <span className="font-body text-[10px] font-mono text-muted-foreground flex items-center gap-1">
                       <Eye className="h-3.5 w-3.5" /> {post.views || 0}
                     </span>
                   </div>
                 </div>
 
-                <h1 className="font-heading text-2xl font-bold text-foreground leading-tight mb-3">
+                <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground leading-tight mb-3">
                   {post.title}
                 </h1>
 
@@ -494,7 +494,7 @@ const PostDetail = () => {
                     href={post.externalLink.startsWith('http') ? post.externalLink : `https://${post.externalLink}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 font-body text-sm text-brand hover:underline mb-4"
+                    className="inline-flex items-center gap-2 font-body text-[11px] font-mono text-brand hover:underline mb-4"
                   >
                     <ExternalLink className="h-4 w-4" />
                     Visit External Resource
@@ -512,11 +512,11 @@ const PostDetail = () => {
                       className="mb-4"
                     />
                     <div className="flex justify-end gap-2 mt-2">
-                      <button onClick={() => setIsEditingPost(false)} className="px-3 py-1.5 text-sm font-body text-muted-foreground hover:text-foreground">Cancel</button>
+                      <button onClick={() => setIsEditingPost(false)} className="px-3 py-1.5 text-[11px] font-mono text-muted-foreground hover:text-foreground">Cancel</button>
                       <button
                         onClick={() => updatePostMutation.mutate()}
                         disabled={updatePostMutation.isPending || !editPostBody.trim()}
-                        className="px-4 py-1.5 bg-primary text-primary-foreground text-sm font-semibold rounded-md hover:opacity-90 disabled:opacity-50"
+                        className="px-4 py-1.5 bg-primary text-primary-foreground text-[11px] font-mono font-semibold rounded-radius-md hover:bg-primary/90 disabled:opacity-50 transition-colors"
                       >
                         {updatePostMutation.isPending ? "Saving..." : "Save"}
                       </button>
@@ -529,7 +529,7 @@ const PostDetail = () => {
 
                 <div className="flex flex-wrap gap-1.5 mb-4">
                   {(post.tags || []).map((tag) => (
-                    <Link key={tag} to={`/tag/${tag}`} className="rounded-md bg-secondary px-2 py-0.5 font-body text-[11px] font-medium text-secondary-foreground hover:bg-brand/15 hover:text-brand transition-colors">
+                    <Link key={tag} to={`/tag/${tag}`} className="rounded-md border border-border bg-muted/50 px-2 py-0.5 font-body text-[11px] font-medium text-muted-foreground hover:border-brand hover:text-brand transition-colors">
                       #{tag}
                     </Link>
                   ))}
@@ -537,7 +537,7 @@ const PostDetail = () => {
 
                 <div className="flex items-center justify-between pt-3 border-t border-border/50">
                   <Link to={post.author?.uid ? `/f/${post.author.uid}` : "#"} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full font-heading text-xs font-bold overflow-hidden bg-muted text-foreground">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-muted text-foreground">
                       {post.author?.avatar ? (
                         <img src={post.author.avatar} alt={post.author.name} className="h-full w-full object-cover" />
                       ) : (
@@ -548,15 +548,15 @@ const PostDetail = () => {
                       {post.author?.name || 'Anonymous'}
                       <VerifiedBadge isVerified={!!post.author?.isVerifiedPro} size={14} showTooltip={false} />
                     </span>
-                    <span className="font-body text-[11px] text-muted-foreground">
+                    <span className="font-body text-[10px] font-mono text-muted-foreground">
                       <LiveReputation uid={post.author?.uid} fallback={post.author?.reputation || 0} />
                     </span>
                   </Link>
                   <div className="flex items-center gap-1">
-                    <div className="flex items-center gap-1 rounded-md px-2 py-1 font-body text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1 rounded-radius-md px-2 py-1 font-body text-[10px] font-mono text-muted-foreground">
                       <MessageSquare className="h-3.5 w-3.5" /> {commentsError || loadingComments ? post.commentCount : activeCommentCount}
                     </div>
-                    <button onClick={handleShare} className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+                    <button onClick={handleShare} className="rounded-radius-md p-1.5 text-muted-foreground hover:bg-muted/50 hover:text-brand transition-colors">
                       <Share2 className="h-3.5 w-3.5" />
                     </button>
                     {user && <button
@@ -564,19 +564,19 @@ const PostDetail = () => {
                       aria-label={isSaved ? "Remove bookmark" : "Bookmark post"}
                       onClick={() => bookmarkMutation.mutate()}
                       disabled={bookmarkMutation.isPending}
-                      className={`rounded-md p-1.5 transition-colors hover:bg-secondary ${isSaved ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                      className={`rounded-radius-md p-1.5 transition-colors hover:bg-muted/50 ${isSaved ? 'text-warning' : 'text-muted-foreground hover:text-warning'}`}
                     >
                       <Bookmark className="h-3.5 w-3.5" fill={isSaved ? "currentColor" : "none"} />
                     </button>}
                     {user && !isOwnPost && (
-                      <button onClick={() => setIsReportOpen(true)} title="Report this post" className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+                      <button onClick={() => setIsReportOpen(true)} title="Report this post" className="rounded-radius-md p-1.5 text-muted-foreground hover:bg-muted/50 hover:text-brand transition-colors">
                         <Flag className="h-3.5 w-3.5" />
                       </button>
                     )}
                     {isOwnPost && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button type="button" aria-label="Post actions" className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground focus:outline-none">
+                          <button type="button" aria-label="Post actions" className="rounded-radius-md p-1.5 text-muted-foreground hover:bg-muted/50 hover:text-foreground focus:outline-none">
                             <MoreHorizontal className="h-4 w-4" />
                           </button>
                         </DropdownMenuTrigger>
@@ -601,23 +601,23 @@ const PostDetail = () => {
 
         {!post.isDeleted && <PostAttachments postId={post.id} canUpload={!!isOwnPost} />}
 
-        {!user && !post.isDeleted && post.allowComments !== false && <div className="mb-6 rounded-lg border border-border bg-card p-4 text-center text-sm text-muted-foreground">
-          <Link to="/login" state={{ from: { pathname: window.location.pathname } }} className="font-semibold text-brand hover:underline">Sign in</Link> to comment, vote or save this post.
+        {!user && !post.isDeleted && post.allowComments !== false && <div className="mb-6 rounded-2xl border border-border bg-card p-4 text-center font-body text-sm text-muted-foreground">
+          <Link to="/login" state={{ from: { pathname: window.location.pathname } }} className="font-medium text-brand hover:underline">Sign in</Link> to comment, vote or save this post.
         </div>}
 
         {/* Comment compose — blocked entirely when the author turned
             comments off (enforced in comments.ts + RLS as well) */}
         {!post.isDeleted && post.allowComments === false && (
-          <div className="rounded-xl border border-border bg-card p-4 mb-6 text-center shadow-sm">
-            <p className="text-sm font-medium text-foreground">Comments are turned off for this post</p>
-            <p className="mt-1 text-xs text-muted-foreground">
+          <div className="rounded-2xl border border-border bg-card p-4 mb-6 text-center shadow-sm">
+            <p className="font-body text-sm font-medium text-foreground">Comments are turned off for this post</p>
+            <p className="mt-1 text-[10px] font-mono text-muted-foreground">
               Existing comments stay visible, but new comments and replies are disabled.
             </p>
           </div>
         )}
         {user && !post.isDeleted && post.allowComments !== false && (
-          <div className="rounded-xl border border-border bg-card p-4 mb-6 shadow-sm">
-            <p className="font-body text-xs font-semibold text-muted-foreground mb-2 ">Leave a comment</p>
+          <div className="rounded-2xl border border-border bg-card p-4 mb-6 shadow-sm">
+            <p className="font-body text-[10px] font-mono font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Leave a comment</p>
             <CommentTextarea
               value={newComment}
               onChange={setNewComment}
@@ -628,7 +628,7 @@ const PostDetail = () => {
               <button
                 onClick={() => submitComment.mutate()}
                 disabled={submitComment.isPending || !newComment.trim()}
-                className="rounded-lg bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-opacity"
+                className="rounded-radius-md bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
               >
                 {submitComment.isPending ? "Posting..." : "Comment"}
               </button>
@@ -637,7 +637,7 @@ const PostDetail = () => {
         )}
 
         {/* Comments */}
-        <h2 className="font-heading text-lg font-semibold text-foreground mb-3 px-1">
+        <h2 className="font-display text-lg font-semibold text-foreground mb-3 px-1">
           {commentsError || loadingComments ? "Comments" : `${activeCommentCount} Comments`}
         </h2>
 
@@ -652,8 +652,8 @@ const PostDetail = () => {
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : commentTree.length === 0 ? (
-          <div className="rounded-xl border border-border bg-card p-8 text-center">
-            <p className="text-sm text-muted-foreground">
+          <div className="rounded-2xl border border-border bg-card p-8 text-center">
+            <p className="font-body text-sm text-muted-foreground">
               {post.isDeleted
                 ? "No comments are available for this removed post."
                 : post.allowComments === false
@@ -662,7 +662,7 @@ const PostDetail = () => {
             </p>
           </div>
         ) : (
-          <div className="rounded-xl border border-border bg-card px-4 shadow-sm divide-y divide-border/50 overflow-hidden">
+          <div className="rounded-2xl border border-border bg-card px-4 shadow-sm divide-y divide-border/50 overflow-hidden">
             {commentTree.map((c) => (
               <CommentThread key={c.id} comment={c} postId={id as string} commentsEnabled={commentsEnabled} votesEnabled={votesEnabled} />
             ))}
