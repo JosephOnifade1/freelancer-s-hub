@@ -121,6 +121,31 @@ export const fetchReports = async (status?: ReportStatus): Promise<Report[]> => 
   return reports;
 };
 
+/** Count open reports (for moderator badge indicator). */
+export const fetchOpenReportsCount = async (): Promise<number> => {
+  const { count, error } = await supabase
+    .from("reports")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "open");
+
+  if (error) throw new Error(error.message);
+  return count || 0;
+};
+
+/** Fetch reports filed by the current user (their report history). */
+export const fetchMyReports = async (uid: string): Promise<Report[]> => {
+  const { data, error } = await supabase
+    .from("reports")
+    .select("*")
+    .eq("reporterUid", uid)
+    .order("createdAt", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  if (!data) return [];
+
+  return (data as ReportRow[]).map(rowToReport);
+};
+
 /** Resolve/dismiss a report, optionally removing the reported content. */
 export const moderateReport = async (
   reportId: string,

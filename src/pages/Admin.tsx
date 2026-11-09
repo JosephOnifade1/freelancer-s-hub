@@ -19,8 +19,7 @@ import {
   type ReportStatus,
   type UserRole,
 } from "@/lib/reports";
-import { formatTimeAgo } from "@/lib/utils";
-import { cn } from "@/lib/utils";
+import { formatTimeAgo, cn } from "@/lib/utils";
 import { BadgeCheck, Flag, Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
@@ -31,6 +30,13 @@ const ENTITY_LINKS: Record<Report["entityType"], (id: string) => string> = {
   comment: (id) => `/p/${id}`,
   lead: (id) => `/l/${id}`,
   profile: (id) => `/f/${id}`,
+};
+
+const ENTITY_LABELS: Record<Report["entityType"], string> = {
+  post: "Post",
+  comment: "Comment",
+  lead: "Opportunity",
+  profile: "Profile",
 };
 
 const Admin = () => {
@@ -127,11 +133,18 @@ function ReportsQueue({
   onStatusChange: (s: ReportStatus) => void;
 }) {
   const queryClient = useQueryClient();
+  const [entityFilter, setEntityFilter] = useState<Report["entityType"] | "all">("all");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkAction, setBulkAction] = useState<"resolve" | "dismiss" | "remove" | null>(null);
 
   const { data: reports = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["reports", status],
     queryFn: () => fetchReports(status),
   });
+
+  const filteredReports = reports.filter(
+    (r) => entityFilter === "all" || r.entityType === entityFilter,
+  );
 
   const mutation = useMutation({
     mutationFn: (vars: { id: string; status: ReportStatus; remove: boolean }) =>
@@ -143,34 +156,109 @@ function ReportsQueue({
           ? "Report resolved and the content was removed."
           : vars.status === "dismissed"
             ? "Report dismissed."
-            : "Report resolved."
+            : "Report resolved.",
       );
+      setSelectedIds(new Set());
+      setBulkAction(null);
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Moderation failed."),
   });
 
+  const isSelectAll = filteredReports.length > 0 && filteredReports.every((r) => selectedIds.has(r.id));
+
+  const handleBulkAction = (action: "resolve" | "dismiss" | "remove") => {
+    if (selectedIds.size === 0) return;
+    setBulkAction(action);
+    const ids = Array.from(selectedIds);
+    ids.forEach((id) => {
+      mutation.mutate({ id, status: action === "dismiss" ? "dismissed" : "resolved", remove: action === "remove" });
+    });
+  };
+
   return (
     <div>
-      <div className="mb-4 flex gap-2">
-        {(["open", "resolved", "dismissed"] as ReportStatus[]).map((s) => (
-          <button
-            key={s}
-            onClick={() => onStatusChange(s)}
-            className={cn(
-              "rounded-full px-3.5 py-1.5 font-body text-xs font-semibold capitalize transition-colors",
-              status === s ? "bg-primary text-primary-foreground" : "bg-muted/50 text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {s}
-          </button>
-        ))}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div className="flex gap-1">
+          {(["open", "resolved", "dismissed"] as ReportStatus[]).map((s) => (
+            <button
+              key={s}
+              onClick={() => onStatusChange(s)}
+              className={cn(
+                "rounded-full px-3.5 py-1.5 font-body text-xs font-semibold capitalize transition-colors",
+                status === s ? "bg-primary text-primary-foreground" : "bg-muted/50 text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+
+        <div className="h-6 w-px bg-border/50 mx-1" />
+
+        <div className="flex gap-1">
+          {([
+            "all",
+            "post",
+            "comment",
+            "lead",
+            "profile",
+          ] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setEntityFilter(t === "all" ? "all" : t)}
+              className={cn(
+                "rounded-full px-3 py-1 font-body text-xs font-semibold transition-colors border",
+                entityFilter === t ? "border-brand bg-brand/10 text-brand" : "border-transparent text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              {t === "all" ? "All" : ENTITY_LABELS[t as Report["entityType"]]}
+            </button>
+          ))}
+        </div>
+
+        {selectedIds.size > 0 && (
+          <div className="ml-auto flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">
+              {selectedIds.size} selected
+            </span>
+            <button
+              onClick={() => handleBulkAction("resolve")}
+              disabled={mutation.isPending || bulkAction !== null}
+              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+            >
+              Resolve selected
+            </button>
+            <button
+              onClick={() => handleBulkAction("dismiss")}
+              disabled={mutation.isPending || bulkAction !== null}
+              className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground disabled:opacity-50"
+            >
+              Dismiss selected
+            </button>
+            <button
+              onClick={() => handleBulkAction("remove")}
+              disabled={mutation.isPending || bulkAction !== null}
+              className="rounded-lg bg-destructive px-3 py-1.5 text-xs font-semibold text-destructive-foreground disabled:opacity-50"
+            >
+              Remove & resolve
+            </button>
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              Clear
+            </button>
+          </div>
+        )}
       </div>
 
-      {isError ? <QueryErrorState title="Couldn't load reports" onRetry={() => refetch()} /> : isLoading ? (
+      {isError ? (
+        <QueryErrorState title="Couldn't load reports" onRetry={() => refetch()} />
+      ) : isLoading ? (
         <div className="flex h-[30vh] items-center justify-center">
           <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
         </div>
-      ) : reports.length === 0 ? (
+      ) : filteredReports.length === 0 ? (
         <EmptyState
           icon={Flag}
           title={`No ${status} reports`}
@@ -182,21 +270,36 @@ function ReportsQueue({
         />
       ) : (
         <div className="space-y-3">
-          {reports.map((report) => (
-            <article key={report.id} className="rounded-xl border border-border bg-card p-5">
-              <div className="flex flex-wrap items-center gap-2">
+          {filteredReports.map((report) => (
+            <article
+              key={report.id}
+              className="rounded-xl border border-border bg-card p-5 group"
+            >
+              <div className="flex flex-wrap items-center gap-2 mb-2.5">
                 <span className="rounded-full bg-destructive/15 px-2.5 py-0.5 font-body text-[11px] font-semibold capitalize text-destructive">
                   {report.reason}
                 </span>
                 <span className="font-body text-xs capitalize text-muted-foreground">
-                  {report.entityType} report
+                  {ENTITY_LABELS[report.entityType]} report
                 </span>
                 <span className="ml-auto font-body text-xs text-muted-foreground">
                   {formatTimeAgo(report.createdAt)}
                 </span>
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(report.id)}
+                  onChange={(e) => {
+                    const next = new Set(selectedIds);
+                    if (e.target.checked) next.add(report.id);
+                    else next.delete(report.id);
+                    setSelectedIds(next);
+                  }}
+                  className="h-4 w-4 rounded border-brand text-brand"
+                  aria-label={`Select report ${report.id}`}
+                />
               </div>
 
-              <p className="mt-2.5 font-body text-sm text-foreground">
+              <p className="mt-0.5 font-body text-sm text-foreground">
                 Reported by{" "}
                 {report.reporter ? (
                   <Link to={`/f/${report.reporter.username || report.reporter.uid}`} className="font-semibold hover:text-brand">
@@ -204,10 +307,10 @@ function ReportsQueue({
                   </Link>
                 ) : (
                   "a member"
-                )}{" "}
+                )}
                 ·{" "}
                 <Link to={ENTITY_LINKS[report.entityType](report.entityId)} className="font-semibold text-brand hover:underline">
-                  View {report.entityType}
+                  View {ENTITY_LABELS[report.entityType]}
                 </Link>
               </p>
 
@@ -221,21 +324,21 @@ function ReportsQueue({
                 <div className="mt-4 flex flex-wrap gap-2 border-t border-border/60 pt-4">
                   <button
                     onClick={() => { if (window.confirm("Remove the reported content and resolve this report?")) mutation.mutate({ id: report.id, status: "resolved", remove: true }); }}
-                    disabled={mutation.isPending}
+                    disabled={mutation.isPending || bulkAction !== null}
                     className="rounded-lg bg-destructive px-4 py-2 font-body text-sm font-semibold text-destructive-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
                   >
                     Remove content & resolve
                   </button>
                   <button
                     onClick={() => mutation.mutate({ id: report.id, status: "resolved", remove: false })}
-                    disabled={mutation.isPending}
+                    disabled={mutation.isPending || bulkAction !== null}
                     className="rounded-lg bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
                   >
                     Resolve (keep content)
                   </button>
                   <button
                     onClick={() => mutation.mutate({ id: report.id, status: "dismissed", remove: false })}
-                    disabled={mutation.isPending}
+                    disabled={mutation.isPending || bulkAction !== null}
                     className="rounded-lg border border-border px-4 py-2 font-body text-sm font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-50"
                   >
                     Dismiss
@@ -402,7 +505,7 @@ function UserRows({
                 </Link>
                 <VerifiedBadge isVerified={u.isVerifiedPro} size={13} showTooltip={false} />
                 {eligible && !u.isVerifiedPro && (
-                  <span className="shrink-0 rounded-full bg-success/15 px-2 py-0.5 font-body text-[10px] font-semibold text-success">
+                  <span className="shrink-0 rounded-full bg-emerald/15 px-2 py-0.5 font-body text-[10px] font-semibold text-emerald-800">
                     Eligible
                   </span>
                 )}

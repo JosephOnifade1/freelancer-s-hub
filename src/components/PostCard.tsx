@@ -1,4 +1,4 @@
-import { MessageSquare, Share2, Bookmark, MoreHorizontal, Edit2, Trash2, Eye, ExternalLink, Pin, Lock, Users } from "lucide-react";
+import { MessageSquare, Share2, Bookmark, MoreHorizontal, Edit2, Trash2, Eye, ExternalLink, Pin, Lock, Users, Flag } from "lucide-react";
 import { Link } from "react-router-dom";
 import { VoteControls } from "@/components/VoteControls";
 import { PostTypeBadge } from "@/components/PostTypeBadge";
@@ -16,6 +16,7 @@ import { useState } from "react";
 import { Editor } from "@/components/editor/Editor";
 import { stripMarkdown } from "@/lib/markdown";
 import { PollWidget } from "@/components/PollWidget";
+import { ReportDialog } from "@/components/ReportDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,6 +66,7 @@ export function PostCard({ post, index }: PostCardProps) {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [editBody, setEditBody] = useState(post.body);
+  const [isPostReportOpen, setIsPostReportOpen] = useState(false);
 
   const previewText = stripMarkdown(post.body || "").substring(0, 150) + (stripMarkdown(post.body || "").length > 150 ? "..." : "");
 
@@ -201,212 +203,237 @@ export function PostCard({ post, index }: PostCardProps) {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: Math.min(index, 8) * 0.05, duration: 0.3 }}
-      className="group flex gap-3 rounded-2xl border border-border bg-card p-4 transition-colors hover:border-muted-foreground/40"
-    >
-      {postImages[0] && !isEditing && (
-        <Link to={post.communitySlug ? `/b/${post.communitySlug}/p/${post.id}` : `/p/${post.id}`} className="shrink-0 mt-1 hidden min-[420px]:block h-[72px] w-[96px] overflow-hidden rounded-md border border-border bg-muted/20">
-          <img
-            src={postImages[0].src}
-            alt={postImages[0].alt || "Post thumbnail"}
-            className="h-full w-full object-cover"
-          />
-        </Link>
-      )}
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: Math.min(index, 8) * 0.05, duration: 0.3 }}
+        className="group flex gap-3 rounded-2xl border border-border bg-card p-4 transition-colors hover:border-muted-foreground/40"
+      >
+        {postImages[0] && !isEditing && (
+          <Link to={post.communitySlug ? `/b/${post.communitySlug}/p/${post.id}` : `/p/${post.id}`} className="shrink-0 mt-1 hidden min-[420px]:block h-[72px] w-[96px] overflow-hidden rounded-md border border-border bg-muted/20">
+            <img
+              src={postImages[0].src}
+              alt={postImages[0].alt || "Post thumbnail"}
+              className="h-full w-full object-cover"
+            />
+          </Link>
+        )}
 
-      <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-        <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
 
-          {post.communitySlug ? (
-            // ── COMMUNITY POST: b/space is the primary identity ──────────────
-            <>
-              <Link
-                to={`/b/${post.communitySlug}`}
-                className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
-              >
-                <div className="flex h-5 w-5 items-center justify-center rounded bg-muted text-foreground font-heading text-[9px] font-bold shrink-0">
-                  {post.communitySlug.charAt(0).toUpperCase()}
-                </div>
-                <span className="font-body text-[12px] font-bold text-foreground hover:underline">
-                  b/{post.communitySlug}
-                </span>
-              </Link>
-              <span className="text-muted-foreground text-[11px]">·</span>
+            {post.communitySlug ? (
+              // ── COMMUNITY POST: b/space is the primary identity ──────────────
+              <>
+                <Link
+                  to={`/b/${post.communitySlug}`}
+                  className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+                >
+                  <div className="flex h-5 w-5 items-center justify-center rounded bg-muted text-foreground font-heading text-[9px] font-bold shrink-0">
+                    {post.communitySlug.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="font-body text-[12px] font-bold text-foreground hover:underline">
+                    b/{post.communitySlug}
+                  </span>
+                </Link>
+                <span className="text-muted-foreground text-[11px]">·</span>
+                <Link
+                  to={post.author?.uid ? `/f/${post.author.username || post.author.name?.replace(/\s+/g, '')}` : "#"}
+                  className="flex items-center gap-1 hover:opacity-80 transition-opacity"
+                >
+                  <div className="flex h-4 w-4 items-center justify-center rounded-full font-heading text-[9px] font-bold overflow-hidden bg-muted text-muted-foreground shrink-0">
+                    {(post.author?.avatar || post.author?.avatarUrl) ? (
+                      <img src={post.author.avatar || post.author.avatarUrl} alt={post.author.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <span>{post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'}</span>
+                    )}
+                  </div>
+                  <span className="font-body text-[11px] text-muted-foreground hover:underline flex items-center gap-0.5">
+                    f/{post.author?.username || post.author?.name?.replace(/\s+/g, '') || 'unknown'}
+                    <VerifiedBadge isVerified={!!post.author?.isVerifiedPro} size={10} showTooltip={false} />
+                  </span>
+                </Link>
+              </>
+            ) : (
+              // ── PROFILE POST: f/username is the primary identity ─────────────
               <Link
                 to={post.author?.uid ? `/f/${post.author.username || post.author.name?.replace(/\s+/g, '')}` : "#"}
-                className="flex items-center gap-1 hover:opacity-80 transition-opacity"
+                className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
               >
-                <div className="flex h-4 w-4 items-center justify-center rounded-full font-heading text-[9px] font-bold overflow-hidden bg-muted text-muted-foreground shrink-0">
+                <div className="flex h-5 w-5 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-muted text-foreground shrink-0">
                   {(post.author?.avatar || post.author?.avatarUrl) ? (
                     <img src={post.author.avatar || post.author.avatarUrl} alt={post.author.name} className="h-full w-full object-cover" />
                   ) : (
                     <span>{post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'}</span>
                   )}
                 </div>
-                <span className="font-body text-[11px] text-muted-foreground hover:underline flex items-center gap-0.5">
+                <span className="font-body text-[12px] font-medium text-foreground hover:underline flex items-center gap-1">
                   f/{post.author?.username || post.author?.name?.replace(/\s+/g, '') || 'unknown'}
-                  <VerifiedBadge isVerified={!!post.author?.isVerifiedPro} size={10} showTooltip={false} />
+                  <VerifiedBadge isVerified={!!post.author?.isVerifiedPro} size={12} showTooltip={false} />
                 </span>
               </Link>
-            </>
-          ) : (
-            // ── PROFILE POST: f/username is the primary identity ─────────────
-            <Link
-              to={post.author?.uid ? `/f/${post.author.username || post.author.name?.replace(/\s+/g, '')}` : "#"}
-              className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
-            >
-              <div className="flex h-5 w-5 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-muted text-foreground shrink-0">
-                {(post.author?.avatar || post.author?.avatarUrl) ? (
-                  <img src={post.author.avatar || post.author.avatarUrl} alt={post.author.name} className="h-full w-full object-cover" />
-                ) : (
-                  <span>{post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'}</span>
-                )}
-              </div>
-              <span className="font-body text-[12px] font-medium text-foreground hover:underline flex items-center gap-1">
-                f/{post.author?.username || post.author?.name?.replace(/\s+/g, '') || 'unknown'}
-                <VerifiedBadge isVerified={!!post.author?.isVerifiedPro} size={12} showTooltip={false} />
-              </span>
-            </Link>
-          )}
-
-          <span className="text-muted-foreground text-[12px]">•</span>
-          <span className="font-body text-[12px] text-muted-foreground flex items-center gap-1">
-            {formatTimeAgo(post.createdAt)}
-            {isVeteran(post.author?.reputation || 0) && (
-              <span className="text-brand font-bold ml-1" title="Veteran">V</span>
             )}
-          </span>
-          <div className="ml-auto flex items-center gap-2">
-             {post.isPinned && (
-               <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-semibold text-brand">
-                 <Pin className="h-3 w-3" /> Pinned
-               </span>
-             )}
-             {post.visibility === "members" && (
-               <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                 <Users className="h-3 w-3" /> Members only
-               </span>
-             )}
-             {post.visibility === "admins" && (
-               <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                 <Lock className="h-3 w-3" /> Space admins
-               </span>
-             )}
-             {post.type !== 'discussion' && <PostTypeBadge type={post.type} />}
-          </div>
-        </div>
 
-        <Link to={post.communitySlug ? `/b/${post.communitySlug}/p/${post.id}` : `/p/${post.id}`} className="block">
-          <h3 className="font-heading text-[1.1rem] font-semibold text-foreground leading-tight cursor-pointer">
-            {post.title}
-          </h3>
-        </Link>
-
-        {post.externalLink && (
-          <a
-            href={post.externalLink.startsWith('http') ? post.externalLink : `https://${post.externalLink}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-1.5 font-body text-[11px] text-brand hover:underline"
-          >
-            <ExternalLink className="h-3 w-3" />
-            Source Reference
-          </a>
-        )}
-
-        {isEditing ? (
-          <div className="mb-2 mt-2">
-            <Editor
-              value={editBody}
-              onChange={setEditBody}
-              placeholder="Edit your post..."
-              minHeight="150px"
-              className="mb-3"
-            />
-            <div className="flex justify-end gap-2 mt-2">
-              <button onClick={() => setIsEditing(false)} className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground">Cancel</button>
-              <button
-                onClick={() => updateMutation.mutate()}
-                disabled={updateMutation.isPending || !editBody.trim()}
-                className="px-3 py-1 bg-primary text-primary-foreground text-xs rounded hover:opacity-90 disabled:opacity-50"
-              >
-                {updateMutation.isPending ? "Saving..." : "Save"}
-              </button>
+            <span className="text-muted-foreground text-[12px]">•</span>
+            <span className="font-body text-[12px] text-muted-foreground flex items-center gap-1">
+              {formatTimeAgo(post.createdAt)}
+              {isVeteran(post.author?.reputation || 0) && (
+                <span className="text-brand font-bold ml-1" title="Veteran">V</span>
+              )}
+            </span>
+            <div className="ml-auto flex items-center gap-2">
+               {post.isPinned && (
+                 <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-semibold text-brand">
+                   <Pin className="h-3 w-3" /> Pinned
+                 </span>
+               )}
+               {post.visibility === "members" && (
+                 <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                   <Users className="h-3 w-3" /> Members only
+                 </span>
+               )}
+               {post.visibility === "admins" && (
+                 <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                   <Lock className="h-3 w-3" /> Space admins
+                 </span>
+               )}
+               {post.type !== 'discussion' && <PostTypeBadge type={post.type} />}
             </div>
           </div>
-        ) : (
-          !postImages[0] && previewText && (
-            <Link to={post.communitySlug ? `/b/${post.communitySlug}/p/${post.id}` : `/p/${post.id}`} className="block mt-0.5">
-              <p className="font-body text-sm text-muted-foreground leading-relaxed line-clamp-2">
-                {previewText}
-              </p>
-            </Link>
-          )
-        )}
 
-        {post.type === "poll" && <PollWidget postId={post.id} />}
-
-        {post.tags && post.tags.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap mt-0.5">
-            {post.tags.map((tag) => (
-              <Link
-                key={tag}
-                to={`/tag/${tag}`}
-                className="rounded-full bg-muted px-2.5 py-0.5 font-body text-[11px] font-medium text-muted-foreground cursor-pointer hover:text-foreground transition-all"
-              >
-                #{tag}
-              </Link>
-            ))}
-          </div>
-        )}
-
-        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-          <VoteControls score={post.score || 0} entityId={post.id} authorUid={post.author?.uid} type="post" orientation="horizontal" disabled={!user} />
-
-          <Link to={post.communitySlug ? `/b/${post.communitySlug}/p/${post.id}` : `/p/${post.id}`} className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-body text-[12px] font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-info">
-            <MessageSquare className="h-4 w-4" />
-            {post.commentCount || 0}
+          <Link to={post.communitySlug ? `/b/${post.communitySlug}/p/${post.id}` : `/p/${post.id}`} className="block">
+            <h3 className="font-heading text-[1.1rem] font-semibold text-foreground leading-tight cursor-pointer">
+              {post.title}
+            </h3>
           </Link>
 
-          <button onClick={handleShare} aria-label="Share post" className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-body text-[12px] font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-brand">
-            <Share2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Share</span>
-          </button>
-
-          {user && <button aria-label={isSaved ? "Unsave post" : "Save post"}
-            onClick={(e) => { e.preventDefault(); bookmarkMutation.mutate(); }}
-            disabled={bookmarkMutation.isPending}
-            className={`flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-body text-[12px] font-medium transition-colors hover:bg-muted/40 ${isSaved ? 'text-warning' : 'text-muted-foreground hover:text-warning'}`}
-          >
-            <Bookmark className="h-4 w-4" fill={isSaved ? "currentColor" : "none"} />
-            <span className="hidden sm:inline">{isSaved ? "Saved" : "Save"}</span>
-          </button>}
-
-          {isOwnPost && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground focus:outline-none">
-                  <MoreHorizontal className="h-4 w-4" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40 font-body">
-                <DropdownMenuItem onClick={() => setIsEditing(true)} className="cursor-pointer">
-                  <Edit2 className="h-4 w-4 mr-2" />
-                  <span>Edit Post</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => deleteMutation.mutate()} className="cursor-pointer text-destructive focus:text-destructive">
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  <span>Delete Post</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          {post.externalLink && (
+            <a
+              href={post.externalLink.startsWith('http') ? post.externalLink : `https://${post.externalLink}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1.5 font-body text-[11px] text-brand hover:underline"
+            >
+              <ExternalLink className="h-3 w-3" />
+              Source Reference
+            </a>
           )}
+
+          {isEditing ? (
+            <div className="mb-2 mt-2">
+              <Editor
+                value={editBody}
+                onChange={setEditBody}
+                placeholder="Edit your post..."
+                minHeight="150px"
+                className="mb-3"
+              />
+              <div className="flex justify-end gap-2 mt-2">
+                <button onClick={() => setIsEditing(false)} className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground">Cancel</button>
+                <button
+                  onClick={() => updateMutation.mutate()}
+                  disabled={updateMutation.isPending || !editBody.trim()}
+                  className="px-3 py-1 bg-primary text-primary-foreground text-xs rounded hover:opacity-90 disabled:opacity-50"
+                >
+                  {updateMutation.isPending ? "Saving..." : "Save"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            !postImages[0] && previewText && (
+              <Link to={post.communitySlug ? `/b/${post.communitySlug}/p/${post.id}` : `/p/${post.id}`} className="block mt-0.5">
+                <p className="font-body text-sm text-muted-foreground leading-relaxed line-clamp-2">
+                  {previewText}
+                </p>
+              </Link>
+            )
+          )}
+
+          {post.type === "poll" && <PollWidget postId={post.id} />}
+
+          {post.tags && post.tags.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap mt-0.5">
+              {post.tags.map((tag) => (
+                <Link
+                  key={tag}
+                  to={`/tag/${tag}`}
+                  className="rounded-full bg-muted px-2.5 py-0.5 font-body text-[11px] font-medium text-muted-foreground cursor-pointer hover:text-foreground transition-all"
+                >
+                  #{tag}
+                </Link>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+            <VoteControls score={post.score || 0} entityId={post.id} authorUid={post.author?.uid} type="post" orientation="horizontal" disabled={!user} />
+
+            <Link to={post.communitySlug ? `/b/${post.communitySlug}/p/${post.id}` : `/p/${post.id}`} className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-body text-[12px] font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-info">
+              <MessageSquare className="h-4 w-4" />
+              {post.commentCount || 0}
+            </Link>
+
+            <button onClick={handleShare} aria-label="Share post" className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-body text-[12px] font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-brand">
+              <Share2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Share</span>
+            </button>
+
+            {user && (
+              <button aria-label={isSaved ? "Unsave post" : "Save post"}
+                onClick={(e) => { e.preventDefault(); bookmarkMutation.mutate(); }}
+                disabled={bookmarkMutation.isPending}
+                className={`flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-body text-[12px] font-medium transition-colors hover:bg-muted/40 ${isSaved ? 'text-warning' : 'text-muted-foreground hover:text-warning'}`}
+              >
+                <Bookmark className="h-4 w-4" fill={isSaved ? "currentColor" : "none"} />
+                <span className="hidden sm:inline">{isSaved ? "Saved" : "Save"}</span>
+              </button>
+            )}
+
+            {isOwnPost && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground focus:outline-none">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40 font-body">
+                  <DropdownMenuItem onClick={() => setIsEditing(true)} className="cursor-pointer">
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    <span>Edit Post</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => deleteMutation.mutate()} className="cursor-pointer text-destructive focus:text-destructive">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    <span>Delete Post</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
+            {!isOwnPost && user && (
+              <button
+                onClick={() => setIsPostReportOpen(true)}
+                className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-body text-[12px] font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-brand"
+                aria-label="Report post"
+              >
+                <Flag className="h-4 w-4" />
+                <span className="hidden sm:inline">Report</span>
+              </button>
+            )}
+          </div>
         </div>
-      </div>
-    </motion.div>
+      </motion.div>
+
+      {user && (
+        <ReportDialog
+          open={isPostReportOpen}
+          onOpenChange={setIsPostReportOpen}
+          entityType="post"
+          entityId={post.id}
+          entityLabel="this post"
+        />
+      )}
+    </>
   );
 }
