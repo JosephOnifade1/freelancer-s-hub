@@ -67,15 +67,15 @@ export function AppSidebar() {
 
   const renderItems = (items: typeof browse) => items.map((item) => (
     <SidebarMenuItem key={item.url} className="px-4 sm:px-6">
-      <SidebarMenuButton asChild isActive={location.pathname === item.url} variant="ghost" className="h-auto overflow-hidden p-0 hover:bg-transparent">
+      <SidebarMenuButton asChild isActive={location.pathname === item.url} variant="ghost" className="h-10 overflow-hidden p-0 hover:bg-transparent">
         <NavLink to={item.url} end className={({ isActive }: { isActive: boolean }) => cn(
           "flex min-h-10 w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          isActive ? "bg-accent font-semibold text-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+          isActive ? "bg-brand/10 text-brand border-brand/20" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
         )}>
-          <item.icon className="h-[18px] w-[18px] shrink-0" aria-hidden />
+          <item.icon className="h-4 w-4 shrink-0" aria-hidden />
           <span className="whitespace-nowrap">{item.title}</span>
           {item.badge && (
-            <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-amber-900">
+              <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-brand-foreground">
               {item.badge}
             </span>
           )}
@@ -88,17 +88,17 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="overflow-hidden">
       <SidebarContent className="pt-4">
         <SidebarGroup className="px-0">
-          <SidebarGroupLabel className="h-9 px-7 text-xs font-medium text-muted-foreground">Browse</SidebarGroupLabel>
+          <SidebarGroupLabel className="h-9 px-7 text-[10px] font-mono font-semibold text-muted-foreground/70 tracking-wider uppercase">Browse</SidebarGroupLabel>
           <SidebarGroupContent><SidebarMenu>{renderItems(browse)}</SidebarMenu></SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup className="px-0">
-          <SidebarGroupLabel className="h-9 px-7 text-xs font-medium text-muted-foreground">{user ? "Your workspace" : "Join Borynx"}</SidebarGroupLabel>
+          <SidebarGroupLabel className="h-9 px-7 text-[10px] font-mono font-semibold text-muted-foreground/70 tracking-wider uppercase">{user ? "Your workspace" : "Join Borynx"}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {user && <SidebarMenuItem className="px-4 sm:px-6">
                 <CreateCommunityModal>
                   <SidebarMenuButton variant="ghost" className="h-auto min-h-10 cursor-pointer overflow-hidden p-0 hover:bg-transparent">
-                    <span className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-accent/50 hover:text-foreground"><Plus className="h-[18px] w-[18px] shrink-0" /> New space</span>
+                    <span className="flex w-full items-center gap-3 rounded-radius-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent/50 hover:text-foreground"><Plus className="h-4 w-4 shrink-0" /> New space</span>
                   </SidebarMenuButton>
                 </CreateCommunityModal>
               </SidebarMenuItem>}

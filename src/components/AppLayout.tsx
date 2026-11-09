@@ -169,11 +169,11 @@ export function AppLayout({ children }: AppLayoutProps) {
       <header
         className={cn(
           "sticky top-0 z-30 w-full border-b border-border transition-all duration-300",
-          theme === 'light' ? "bg-white/80 border-border" : "bg-background/80 border-white/10 backdrop-blur-md",
+          theme === 'light' ? "bg-white/90 border-border" : "bg-background/90 border-white/10 backdrop-blur-md",
           isAvatarMenuOpen && "bg-background/95 shadow-2xl"
         )}
       >
-        <div className="h-14 flex items-center justify-between px-4 relative z-10">
+        <div className="h-12 flex items-center justify-between px-4 sm:px-6 relative z-10">
           <div className={`flex shrink-0 items-center ${isSearchExpanded ? "hidden lg:flex" : "flex"}`}>
             {/* Mobile-only Trigger */}
             <SidebarTrigger className="md:hidden mr-2 hover:bg-accent text-muted-foreground hover:text-foreground transition-all duration-200" />
@@ -181,15 +181,15 @@ export function AppLayout({ children }: AppLayoutProps) {
             {/* Branding Group (Reddit Style) */}
             <div className="flex items-center">
               <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                <div className="h-8 w-8 shrink-0 rounded-lg bg-brand/10 flex items-center justify-center overflow-hidden border border-brand/20">
+                <div className="h-7 w-7 shrink-0 rounded-radius-md bg-brand/10 flex items-center justify-center overflow-hidden border border-brand/20">
                   <img
                     src="/logo-transparent.png"
                     alt="Borynx Logo"
-                    className="h-full w-full object-cover transform scale-125"
+                    className="h-full w-full object-cover"
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-heading text-lg font-bold tracking-tight text-foreground leading-none">
+                  <span className="font-heading text-base font-bold tracking-tight text-foreground leading-none">
                     Borynx
                   </span>
                   <span className="hidden sm:inline-flex rounded-md border border-border px-1.5 py-0.5 font-body text-[10px] font-semibold text-muted-foreground leading-none">
@@ -207,8 +207,8 @@ export function AppLayout({ children }: AppLayoutProps) {
           )}>
             {/* Desktop Search (Flexible width like Reddit) */}
             <div className={cn(
-              "hidden lg:flex items-center w-full max-w-[640px] h-10 rounded-full px-4 group transition-all duration-300 theme-transition",
-              theme === 'light' ? "bg-muted/40 border border-border hover:bg-muted/60" : "bg-muted/20 border border-border hover:bg-muted/30",
+              "hidden lg:flex items-center w-full max-w-[720px] h-10 rounded-radius-xl px-4 group transition-all duration-300 theme-transition",
+              theme === 'light' ? "bg-muted/40 border border-border hover:bg-muted/60 focus-within:border-brand focus-within:ring-1 focus-within:ring-brand" : "bg-muted/20 border border-border hover:bg-muted/30 focus-within:border-brand focus-within:ring-1 focus-within:ring-brand",
               isSearchExpanded && "hidden"
             )}>
               <Search className="h-4 w-4 text-muted-foreground mr-3" />
@@ -422,7 +422,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 <Search className="h-5 w-5" />
               </button>
 
-              <Link to="/submit" className="flex items-center gap-1.5 h-9 px-3 sm:px-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md transition-colors font-body text-sm font-semibold">
+              <Link to="/submit" className="flex items-center gap-1.5 h-9 px-3 sm:px-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-radius-md transition-colors font-body text-sm font-semibold">
                 <Plus className="h-4 w-4" />
                 <span className="hidden sm:inline">Create</span>
               </Link>
@@ -433,7 +433,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 <button
                   onClick={() => setIsAvatarMenuOpen(prev => !prev)}
                   className={cn(
-                    "flex items-center justify-center h-8 w-8 rounded-full ml-1 focus:outline-none relative border-[2px] transition-all z-50",
+                    "flex items-center justify-center h-7 w-7 rounded-full ml-1 focus:outline-none relative border-[2px] transition-all z-50",
                     isAvatarMenuOpen ? "border-brand ring-4 ring-brand/10" : "border-white/10"
                   )}
                 >
@@ -583,13 +583,13 @@ export function AppLayout({ children }: AppLayoutProps) {
         </div>
 
         <main className="flex-1 overflow-y-auto bg-background relative flex flex-col">
-          <div className="flex-1 min-w-0 p-3 sm:p-5 lg:p-6">
-            {isDemoMode && <div role="note" className="mb-4 rounded-lg border border-warning/50 bg-warning/10 px-4 py-2 text-xs text-foreground">Demo mode · Content and uploads are stored in this browser only. Opportunities here are not real client jobs.</div>}
+          <div className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8">
+            {isDemoMode && <div role="note" className="mb-4 rounded-radius-md border border-warning/50 bg-warning/10 px-4 py-2 text-[11px] text-foreground">Demo mode · Content and uploads are stored in this browser only. Opportunities here are not real client jobs.</div>}
             <Breadcrumbs />
             {children}
           </div>
 
-          <footer className="border-t border-border px-4 py-4 text-xs text-muted-foreground">
+          <footer className="border-t border-border px-6 py-3 text-[10px] text-muted-foreground/60">
             &copy; {new Date().getFullYear()} Borynx
           </footer>
         </main>
