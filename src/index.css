@@ -44,14 +44,14 @@
     /* ── Actions & accents ────────────────────────────────────── */
     --primary: 0 0% 98%;
     --primary-foreground: 213 24% 7%;
-    --brand: 17 100% 55%;
+    --brand: 215 65% 50%;
     --brand-foreground: 0 0% 100%;
-    --ring: 17 100% 55%;
+    --ring: 215 65% 50%;
 
-    /* ── Voting (Reddit theme) ────────────────────────────────── */
-    --upvote: 17 100% 55%;
+    /* ── Voting (Borynx industrial theme) ─────────────────────── */
+    --upvote: 215 65% 50%;
     --upvote-foreground: 0 0% 100%;
-    --downvote: 225 70% 55%;
+    --downvote: 0 0% 55%;
     --downvote-foreground: 0 0% 100%;
 
     /* ── Semantics ────────────────────────────────────────────── */
@@ -84,12 +84,12 @@
     /* ── Sidebar ──────────────────────────────────────────────── */
     --sidebar-background: 213 24% 7%;
     --sidebar-foreground: 220 15% 50%;
-    --sidebar-primary: 17 100% 55%;
+    --sidebar-primary: 215 65% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 14% 13%;
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 220 13% 15%;
-    --sidebar-ring: 17 100% 55%;
+    --sidebar-ring: 215 65% 50%;
   }
 
   .theme-light {
@@ -116,14 +116,14 @@
     /* ── Actions & accents ────────────────────────────────────── */
     --primary: 213 24% 9%;
     --primary-foreground: 0 0% 100%;
-    --brand: 17 95% 45%;
+    --brand: 215 60% 45%;
     --brand-foreground: 0 0% 100%;
-    --ring: 17 95% 45%;
+    --ring: 215 60% 45%;
 
-    /* ── Voting (Reddit theme) ────────────────────────────────── */
-    --upvote: 17 95% 45%;
+    /* ── Voting (Borynx industrial theme) ─────────────────────── */
+    --upvote: 215 60% 45%;
     --upvote-foreground: 0 0% 100%;
-    --downvote: 225 70% 45%;
+    --downvote: 0 0% 45%;
     --downvote-foreground: 0 0% 100%;
 
     /* ── Semantics ────────────────────────────────────────────── */
@@ -156,12 +156,12 @@
     /* ── Sidebar ──────────────────────────────────────────────── */
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 220 10% 38%;
-    --sidebar-primary: 17 95% 45%;
+    --sidebar-primary: 215 60% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 16% 94%;
     --sidebar-accent-foreground: 213 24% 9%;
     --sidebar-border: 220 13% 90%;
-    --sidebar-ring: 17 95% 45%;
+    --sidebar-ring: 215 60% 45%;
   }
 }
 

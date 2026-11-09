@@ -202,7 +202,7 @@ export function PostCard({ post, index }: PostCardProps) {
         transition={{ delay: Math.min(index, 8) * 0.05, duration: 0.3 }}
         className="group flex gap-4 rounded-2xl border border-border bg-card p-4 transition-colors hover:border-brand/40"
       >
-        {/* ── Vote rail (reddit style) ────────────────────────────────── */}
+        {/* ── Vote rail (Borynx industrial style) ────────────────────── */}
         <div className="flex flex-col items-center justify-start gap-1 pt-0.5 w-8 shrink-0">
           <VoteControls
             score={post.score || 0}
