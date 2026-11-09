@@ -3,6 +3,7 @@ import { Flag } from "lucide-react";
 import { useAuth } from "@/hooks/auth-context";
 import {
   createReport,
+  checkReportRateLimit,
   REPORT_REASONS,
   type ReportEntityType,
   type ReportReason,
@@ -33,6 +34,8 @@ interface ReportDialogProps {
  * Report dialog backed by the real `reports` table. Submissions land in
  * the moderators' queue at /admin (previously, Report buttons showed a
  * "reported for review" toast and stored nothing).
+ *
+ * Includes a 24-hour rate limit so a single user can't flood the queue.
  */
 export function ReportDialog({
   open,
@@ -55,6 +58,9 @@ export function ReportDialog({
 
     setIsSubmitting(true);
     try {
+      // Rate limit: max MAX_REPORTS_PER_24H reports per user per day.
+      await checkReportRateLimit(user.uid);
+
       await createReport({
         reporterUid: user.uid,
         entityType,
@@ -75,7 +81,7 @@ export function ReportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[440px]">
+      <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Flag className="h-4 w-4 text-muted-foreground" /> Report {entityLabel}
@@ -83,11 +89,14 @@ export function ReportDialog({
           <DialogDescription>
             Tell the moderation team what's wrong. Reports are reviewed by a
             moderator — they aren't shown to the person you report.
+            <br />
+            You can file up to {10} reports per 24 hours.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-1">
           <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">Why are you reporting?</p>
             {REPORT_REASONS.map((r) => (
               <button
                 key={r.value}
@@ -107,7 +116,14 @@ export function ReportDialog({
                     reason === r.value ? "bg-brand" : "bg-muted-foreground/40"
                   )}
                 />
-                {r.label}
+                <div className="flex-1">
+                  <div className="flex items-center gap-1">
+                    <span className="font-medium">{r.label}</span>
+                    <span className="text-[10px] text-muted-foreground/70">
+                      {r.description}
+                    </span>
+                  </div>
+                </div>
               </button>
             ))}
           </div>

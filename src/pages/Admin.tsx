@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
@@ -11,11 +11,13 @@ import { getUserProfile } from "@/lib/users";
 import {
   fetchModerationUsers,
   fetchReports,
+  fetchReportContentPreviews,
   moderateReport,
   setUserRole,
   setUserVerifiedPro,
   VERIFIED_PRO_ELIGIBLE_REPUTATION,
   type Report,
+  type ReportContentPreview,
   type ReportStatus,
   type UserRole,
 } from "@/lib/reports";
@@ -136,11 +138,19 @@ function ReportsQueue({
   const [entityFilter, setEntityFilter] = useState<Report["entityType"] | "all">("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkAction, setBulkAction] = useState<"resolve" | "dismiss" | "remove" | null>(null);
+  const [previews, setPreviews] = useState<Map<string, ReportContentPreview>>(new Map());
 
   const { data: reports = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["reports", status],
     queryFn: () => fetchReports(status),
   });
+
+  // Fetch content previews for the currently displayed reports.
+  useEffect(() => {
+    if (reports.length > 0) {
+      fetchReportContentPreviews(reports).then(setPreviews);
+    }
+  }, [reports]);
 
   const filteredReports = reports.filter(
     (r) => entityFilter === "all" || r.entityType === entityFilter,
@@ -173,6 +183,11 @@ function ReportsQueue({
     ids.forEach((id) => {
       mutation.mutate({ id, status: action === "dismiss" ? "dismissed" : "resolved", remove: action === "remove" });
     });
+  };
+
+  const truncate = (text: string | undefined, max = 220): string => {
+    if (!text) return "";
+    return text.length > max ? text.slice(0, max).trim() + "…" : text;
   };
 
   return (
@@ -270,83 +285,98 @@ function ReportsQueue({
         />
       ) : (
         <div className="space-y-3">
-          {filteredReports.map((report) => (
-            <article
-              key={report.id}
-              className="rounded-xl border border-border bg-card p-5 group"
-            >
-              <div className="flex flex-wrap items-center gap-2 mb-2.5">
-                <span className="rounded-full bg-destructive/15 px-2.5 py-0.5 font-body text-[11px] font-semibold capitalize text-destructive">
-                  {report.reason}
-                </span>
-                <span className="font-body text-xs capitalize text-muted-foreground">
-                  {ENTITY_LABELS[report.entityType]} report
-                </span>
-                <span className="ml-auto font-body text-xs text-muted-foreground">
-                  {formatTimeAgo(report.createdAt)}
-                </span>
-                <input
-                  type="checkbox"
-                  checked={selectedIds.has(report.id)}
-                  onChange={(e) => {
-                    const next = new Set(selectedIds);
-                    if (e.target.checked) next.add(report.id);
-                    else next.delete(report.id);
-                    setSelectedIds(next);
-                  }}
-                  className="h-4 w-4 rounded border-brand text-brand"
-                  aria-label={`Select report ${report.id}`}
-                />
-              </div>
-
-              <p className="mt-0.5 font-body text-sm text-foreground">
-                Reported by{" "}
-                {report.reporter ? (
-                  <Link to={`/f/${report.reporter.username || report.reporter.uid}`} className="font-semibold hover:text-brand">
-                    {report.reporter.name}
-                  </Link>
-                ) : (
-                  "a member"
-                )}
-                ·{" "}
-                <Link to={ENTITY_LINKS[report.entityType](report.entityId)} className="font-semibold text-brand hover:underline">
-                  View {ENTITY_LABELS[report.entityType]}
-                </Link>
-              </p>
-
-              {report.details && (
-                <p className="mt-2 whitespace-pre-wrap rounded-lg bg-muted/40 p-3 font-body text-sm leading-relaxed text-muted-foreground">
-                  {report.details}
-                </p>
-              )}
-
-              {report.status === "open" && (
-                <div className="mt-4 flex flex-wrap gap-2 border-t border-border/60 pt-4">
-                  <button
-                    onClick={() => { if (window.confirm("Remove the reported content and resolve this report?")) mutation.mutate({ id: report.id, status: "resolved", remove: true }); }}
-                    disabled={mutation.isPending || bulkAction !== null}
-                    className="rounded-lg bg-destructive px-4 py-2 font-body text-sm font-semibold text-destructive-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
-                  >
-                    Remove content & resolve
-                  </button>
-                  <button
-                    onClick={() => mutation.mutate({ id: report.id, status: "resolved", remove: false })}
-                    disabled={mutation.isPending || bulkAction !== null}
-                    className="rounded-lg bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
-                  >
-                    Resolve (keep content)
-                  </button>
-                  <button
-                    onClick={() => mutation.mutate({ id: report.id, status: "dismissed", remove: false })}
-                    disabled={mutation.isPending || bulkAction !== null}
-                    className="rounded-lg border border-border px-4 py-2 font-body text-sm font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-50"
-                  >
-                    Dismiss
-                  </button>
+          {filteredReports.map((report) => {
+            const preview = previews.get(report.entityId);
+            return (
+              <article
+                key={report.id}
+                className="rounded-xl border border-border bg-card p-5 group"
+              >
+                <div className="flex flex-wrap items-center gap-2 mb-2.5">
+                  <span className="rounded-full bg-destructive/15 px-2.5 py-0.5 font-body text-[11px] font-semibold capitalize text-destructive">
+                    {report.reason}
+                  </span>
+                  <span className="font-body text-xs capitalize text-muted-foreground">
+                    {ENTITY_LABELS[report.entityType]} report
+                  </span>
+                  {preview?.isDeleted && (
+                    <span className="rounded-full bg-muted px-2.5 py-0.5 font-body text-[11px] font-bold text-muted-foreground">
+                      Removed
+                    </span>
+                  )}
+                  <span className="ml-auto font-body text-xs text-muted-foreground">
+                    {formatTimeAgo(report.createdAt)}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(report.id)}
+                    onChange={(e) => {
+                      const next = new Set(selectedIds);
+                      if (e.target.checked) next.add(report.id);
+                      else next.delete(report.id);
+                      setSelectedIds(next);
+                    }}
+                    className="h-4 w-4 rounded border-brand text-brand"
+                    aria-label={`Select report ${report.id}`}
+                  />
                 </div>
-              )}
-            </article>
-          ))}
+
+                <p className="mt-0.5 font-body text-sm text-foreground">
+                  Reported by{" "}
+                  {report.reporter ? (
+                    <Link to={`/f/${report.reporter.username || report.reporter.uid}`} className="font-semibold hover:text-brand">
+                      {report.reporter.name}
+                    </Link>
+                  ) : (
+                    "a member"
+                  )}
+                  ·{" "}
+                  <Link to={ENTITY_LINKS[report.entityType](report.entityId)} className="font-semibold text-brand hover:underline">
+                    View {ENTITY_LABELS[report.entityType]}
+                  </Link>
+                </p>
+
+                {preview && (preview.title || preview.body) && (
+                  <div className="mt-2 whitespace-pre-wrap rounded-lg bg-muted/40 p-3 font-body text-sm leading-relaxed text-muted-foreground">
+                    {preview.title && <div className="font-medium text-foreground mb-1">{preview.title}</div>}
+                    {truncate(preview.body)}
+                  </div>
+                )}
+
+                {report.details && !preview?.body && (
+                  <p className="mt-2 whitespace-pre-wrap rounded-lg bg-muted/40 p-3 font-body text-sm leading-relaxed text-muted-foreground">
+                    {report.details}
+                  </p>
+                )}
+
+                {report.status === "open" && (
+                  <div className="mt-4 flex flex-wrap gap-2 border-t border-border/60 pt-4">
+                    <button
+                      onClick={() => { if (window.confirm("Remove the reported content and resolve this report?")) mutation.mutate({ id: report.id, status: "resolved", remove: true }); }}
+                      disabled={mutation.isPending || bulkAction !== null}
+                      className="rounded-lg bg-destructive px-4 py-2 font-body text-sm font-semibold text-destructive-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+                    >
+                      Remove content & resolve
+                    </button>
+                    <button
+                      onClick={() => mutation.mutate({ id: report.id, status: "resolved", remove: false })}
+                      disabled={mutation.isPending || bulkAction !== null}
+                      className="rounded-lg bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+                    >
+                      Resolve (keep content)
+                    </button>
+                    <button
+                      onClick={() => mutation.mutate({ id: report.id, status: "dismissed", remove: false })}
+                      disabled={mutation.isPending || bulkAction !== null}
+                      className="rounded-lg border border-border px-4 py-2 font-body text-sm font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                )}
+              </article>
+            );
+          })}
         </div>
       )}
     </div>
