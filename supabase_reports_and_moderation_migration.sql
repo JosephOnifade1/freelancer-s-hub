@@ -12,6 +12,22 @@
 --      only be granted by hand-editing the database, and profile RLS
 --      (correctly) stops admins editing other users' rows directly.
 --
+-- 1b. Extend reason CHECK constraint for new report reasons
+-- (Existing projects that already applied this migration need this step.)
+do $$
+begin
+  if exists (
+    select 1 from pg_constraint
+    where conname = 'reports_reason_check'
+      and conrelid = 'public.reports'::regclass
+  ) then
+    alter table public.reports drop constraint reports_reason_check;
+  end if;
+  alter table public.reports
+    add constraint reports_reason_check
+    check ("reason" in ('spam', 'harassment', 'scam', 'inappropriate', 'hate_speech', 'misinformation', 'copyright', 'nsfw', 'other'));
+end $$;
+
 -- Bootstrap your first admin afterwards, e.g.:
 --   update public.profiles set "role" = 'admin'
 --   where "username" = 'your_handle';
@@ -24,7 +40,7 @@ create table if not exists public.reports (
   "reporterUid" uuid not null references public.profiles("uid") on delete cascade,
   "entityType" text not null check ("entityType" in ('post', 'comment', 'lead', 'profile')),
   "entityId" uuid not null,
-  "reason" text not null check ("reason" in ('spam', 'harassment', 'scam', 'inappropriate', 'other')),
+  "reason" text not null check ("reason" in ('spam', 'harassment', 'scam', 'inappropriate', 'hate_speech', 'misinformation', 'copyright', 'nsfw', 'other')),
   "details" text default '',
   "status" text not null default 'open' check ("status" in ('open', 'resolved', 'dismissed')),
   "resolvedBy" uuid references public.profiles("uid") on delete set null,

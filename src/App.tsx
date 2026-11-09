@@ -10,6 +10,8 @@ import { SidebarProvider } from "@/components/ui/sidebar.tsx";
 import { lazy, Suspense, type CSSProperties } from "react";
 
 const Index = lazy(() => import("./pages/Index.tsx"));
+const Leaderboard = lazy(() => import("./pages/Leaderboard.tsx"));
+const MyReports = lazy(() => import("./pages/MyReports.tsx"));
 const NewFeed = lazy(() => import("./pages/NewFeed.tsx"));
 const Popular = lazy(() => import("./pages/Popular.tsx"));
 const TagFeed = lazy(() => import("./pages/TagFeed.tsx"));
@@ -134,6 +136,7 @@ const App = () => (
               <Route path="/new"          element={<NewFeed />} />
               <Route path="/following"    element={<ProtectedRoute><Navigate to="/?feed=following" replace /></ProtectedRoute>} />
               <Route path="/popular"      element={<Popular />} />
+              <Route path="/leaderboard"  element={<Leaderboard />} />
               <Route path="/submit"       element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
               <Route path="/tag/:tagName" element={<TagFeed />} />
 
@@ -160,6 +163,7 @@ const App = () => (
               {/* ── Authenticated: personal pages ───────────────────────── */}
               <Route path="/bookmarks"    element={<ProtectedRoute><Bookmarks /></ProtectedRoute>} />
               <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
+              <Route path="/my-reports"   element={<ProtectedRoute><MyReports /></ProtectedRoute>} />
               <Route path="/settings"     element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
               {/* ── Authenticated: coming-soon stubs ───────────────────── */}

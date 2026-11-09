@@ -11,8 +11,10 @@ import { uploadImage } from "@/lib/uploads";
 import { fetchPosts } from "@/lib/posts";
 import { QueryErrorState } from "@/components/QueryErrorState";
 import { fetchAllCommunities, getUserCommunities } from "@/lib/communities";
+import { fetchUserBadges } from "@/lib/badges";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Award, Clock } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 
@@ -56,6 +58,12 @@ export default function Profile() {
   const { data: joinedCommunities = [], isError: joinedError, refetch: refetchJoined } = useQuery({
     queryKey: ["userCommunities", profile?.uid],
     queryFn: () => (profile?.uid ? getUserCommunities(profile.uid) : []),
+    enabled: !!profile?.uid,
+  });
+
+  const { data: earnedBadges = [], isError: badgesError, refetch: refetchBadges } = useQuery({
+    queryKey: ["user-badges", profile?.uid],
+    queryFn: () => (profile?.uid ? fetchUserBadges(profile.uid) : []),
     enabled: !!profile?.uid,
   });
 
@@ -502,6 +510,31 @@ export default function Profile() {
               <Link to="/communities" className="inline-block text-xs text-muted-foreground hover:text-foreground">
                 Browse all spaces
               </Link>
+            </div>
+
+            {/* Badges */}
+            <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <Award className="h-4 w-4 text-muted-foreground" />
+                <h3 className="font-heading text-sm font-bold text-foreground">Badges</h3>
+              </div>
+              {badgesError ? (
+                <p className="text-xs text-destructive">Couldn't load badges.</p>
+              ) : earnedBadges.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No badges earned yet.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {earnedBadges.map((eb) => (
+                    <span
+                      key={eb.badgeId}
+                      title={eb.badgeId}
+                      className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-foreground truncate"
+                    >
+                      {eb.badgeId.charAt(0).toUpperCase()}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
           </div>

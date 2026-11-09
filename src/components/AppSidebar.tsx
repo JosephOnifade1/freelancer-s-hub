@@ -1,14 +1,27 @@
-import { Home, Compass, Bookmark, Settings, Trophy, Plus, Bell, Briefcase, ShieldCheck, Inbox, TrendingUp, Zap, Users, LogIn, KanbanSquare } from "lucide-react";
+import { Home, Compass, Bookmark, Settings, Trophy, Plus, Bell, Briefcase, ShieldCheck, Inbox, TrendingUp, Zap, Users, LogIn, KanbanSquare, AlertTriangle } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/auth-context";
 import { getUserProfile } from "@/lib/users";
+import { fetchOpenReportsCount } from "@/lib/reports";
 import { cn } from "@/lib/utils";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { CreateCommunityModal } from "@/components/modals/CreateCommunityModal";
 
-const nav = (title: string, url: string, icon: typeof Home) => ({ title, url, icon });
+type NavItem = {
+  title: string;
+  url: string;
+  icon: typeof Home;
+  badge?: string;
+};
+
+const nav = (
+  title: string,
+  url: string,
+  icon: typeof Home,
+  badge?: string,
+): NavItem => ({ title, url, icon, badge });
 
 export function AppSidebar() {
   const location = useLocation();
@@ -19,6 +32,12 @@ export function AppSidebar() {
     enabled: !!user?.uid,
   });
   const isModerator = profile?.role === "moderator" || profile?.role === "admin";
+
+  const { data: openReportsCount = 0 } = useQuery({
+    queryKey: ["open-reports-count"],
+    queryFn: fetchOpenReportsCount,
+    enabled: isModerator,
+  });
 
   const browse = [
     nav(user ? "Feed" : "Browse posts", user ? "/" : "/new", Home),
@@ -33,7 +52,16 @@ export function AppSidebar() {
     nav("Saved posts", "/bookmarks", Bookmark),
     nav("Achievements", "/achievements", Trophy),
     nav("Notifications", "/notifications", Bell),
-    ...(isModerator ? [nav("Moderation", "/admin", ShieldCheck)] : []),
+    ...(isModerator
+      ? [
+          {
+            title: "Moderation",
+            url: "/admin",
+            icon: ShieldCheck,
+            badge: openReportsCount > 0 ? String(openReportsCount) : undefined,
+          },
+        ]
+      : []),
     nav("Settings", "/settings", Settings),
   ] : [nav("Sign in", "/login", LogIn)];
 
@@ -46,6 +74,11 @@ export function AppSidebar() {
         )}>
           <item.icon className="h-[18px] w-[18px] shrink-0" aria-hidden />
           <span className="whitespace-nowrap">{item.title}</span>
+          {item.badge && (
+            <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-amber-900">
+              {item.badge}
+            </span>
+          )}
         </NavLink>
       </SidebarMenuButton>
     </SidebarMenuItem>

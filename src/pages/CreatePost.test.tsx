@@ -6,7 +6,7 @@ import CreatePost from "./CreatePost";
 import { createPost } from "@/lib/posts";
 import { fetchAllCommunities, type CommunityData } from "@/lib/communities";
 import { getUserProfile } from "@/lib/users";
-import { uploadPostDocuments } from "@/lib/attachments";
+import { uploadPostDocuments, type PostAttachment } from "@/lib/attachments";
 import { readDraft } from "@/lib/drafts";
 
 vi.mock("@/components/AppLayout", () => ({ AppLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
@@ -30,6 +30,17 @@ const spaces: CommunityData[] = [
   { slug: "dev", name: "Developers", category: "Development", topics: ["typescript"], description: "Code", ownerId: "user-2", memberCount: 1, createdAt: "2026-01-01" },
   { slug: "design", name: "Designers", category: "Design", topics: ["ui"], description: "Design", ownerId: "user-3", memberCount: 1, createdAt: "2026-01-01" },
 ];
+
+const mockUploaded = (fileName: string): PostAttachment => ({
+  id: `att-${fileName}`,
+  postId: "created-post",
+  uploaderUid: "user-1",
+  storagePath: `user-1/created-post/${fileName}`,
+  fileName,
+  mimeType: "application/pdf",
+  fileSize: 100,
+  createdAt: "2026-01-01T00:00:00Z",
+});
 
 const renderComposer = (url: string) => {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -120,9 +131,10 @@ describe("main post composer targets", () => {
     const input = container.querySelector<HTMLInputElement>('input[accept=".pdf,.txt,.csv,.doc,.docx,.xlsx"]')!;
     fireEvent.change(input, { target: { files } });
     expect(await screen.findByText(/2 documents queued/)).toBeInTheDocument();
-    vi.mocked(uploadPostDocuments).mockResolvedValueOnce([])
-      .mockRejectedValueOnce(new Error("Network error"))
-      .mockResolvedValueOnce([]);
+    vi.mocked(uploadPostDocuments)
+      .mockResolvedValueOnce({ uploaded: [mockUploaded("first.pdf")], failed: [] })
+      .mockResolvedValueOnce({ uploaded: [], failed: [{ file: files[1], error: "Network error" }] })
+      .mockResolvedValueOnce({ uploaded: [mockUploaded("second.pdf")], failed: [] });
     fireEvent.click(publish);
 
     expect(await screen.findByRole("button", { name: "Retry document uploads" })).toBeInTheDocument();

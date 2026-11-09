@@ -11,6 +11,11 @@ export interface PostAttachment {
   createdAt: string;
 }
 
+export interface DocumentUploadResult {
+  uploaded: PostAttachment[];
+  failed: { file: File; error: string }[];
+}
+
 const BUCKET = "post-documents";
 export const MAX_DOCUMENT_SIZE = 10 * 1024 * 1024;
 export const MAX_DOCUMENTS_PER_POST = 3;
@@ -48,8 +53,12 @@ export async function fetchPostAttachments(postId: string): Promise<PostAttachme
   return data as PostAttachment[];
 }
 
-/** Upload only after the post exists, then persist metadata so only viewers can download. */
-export async function uploadPostDocuments(postId: string, files: File[]): Promise<PostAttachment[]> {
+/**
+ * Upload documents one at a time, independently. A failure on one file
+ * never blocks the others. Returns what succeeded and what failed so the
+ * caller can show per-file status instead of an all-or-nothing error.
+ */
+export async function uploadPostDocuments(postId: string, files: File[]): Promise<DocumentUploadResult> {
   if (!postId) throw new Error("Save the post before uploading documents.");
   if (!files.length || files.length > MAX_DOCUMENTS_PER_POST) {
     throw new Error(`Select 1–${MAX_DOCUMENTS_PER_POST} documents.`);
@@ -60,6 +69,17 @@ export async function uploadPostDocuments(postId: string, files: File[]): Promis
   if (!uid) throw new Error("Sign in before attaching documents.");
 
   const uploaded: PostAttachment[] = [];
+  const failed: { file: File; error: string }[] = [];
+
+  // Enforce the per-post cap against documents already attached, so a
+  // retry or a second upload can't push a post over the limit even when
+  // each batch is small. Independent per-file results still apply within
+  // a batch that passes the cap.
+  const existing = await fetchPostAttachments(postId);
+  if (existing.length + files.length > MAX_DOCUMENTS_PER_POST) {
+    throw new Error(`A post can have at most ${MAX_DOCUMENTS_PER_POST} documents.`);
+  }
+
   for (const file of files) {
     try {
       const { extension, mime } = validateDocument(file);
@@ -78,11 +98,11 @@ export async function uploadPostDocuments(postId: string, files: File[]): Promis
       }
       uploaded.push(data as PostAttachment);
     } catch (error) {
-      const reason = error instanceof Error ? error.message : "Upload failed";
-      throw new Error(`${uploaded.length} of ${files.length} documents attached. ${file.name}: ${reason}`);
+      failed.push({ file, error: error instanceof Error ? error.message : "Upload failed" });
     }
   }
-  return uploaded;
+
+  return { uploaded, failed };
 }
 
 /** Private bucket: URLs are short-lived, never stored in a public post. */
@@ -106,4 +126,14 @@ export async function removePostAttachment(attachment: PostAttachment): Promise<
   if (!data?.length) throw new Error("Document not found or not removable.");
   const { error: cleanupError } = await supabase.storage.from(BUCKET).remove([attachment.storagePath]);
   if (cleanupError) throw new Error("Document removed from the post, but file cleanup failed. Please contact support.");
+}
+
+/** Human-readable file size. */
+export function formatSize(bytes: number): string {
+  return bytes < 1024 * 1024 ? `${Math.ceil(bytes / 1024)} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** Whether a document type can be previewed inline (text/CSV). */
+export function isPreviewable(mimeType: string): boolean {
+  return mimeType === "text/plain" || mimeType === "text/csv";
 }

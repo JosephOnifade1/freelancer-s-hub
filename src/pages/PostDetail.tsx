@@ -70,6 +70,7 @@ const CommentThread = ({ comment, postId, depth = 0, commentsEnabled = true, vot
   const [replyBody, setReplyBody] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editBody, setEditBody] = useState(comment.body);
+  const [isCommentReportOpen, setIsCommentReportOpen] = useState(false);
 
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -178,7 +179,7 @@ const CommentThread = ({ comment, postId, depth = 0, commentsEnabled = true, vot
               </span>
             </div>
 
-            {isOwnComment && (
+            {isOwnComment ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus:outline-none">
@@ -196,8 +197,26 @@ const CommentThread = ({ comment, postId, depth = 0, commentsEnabled = true, vot
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+            ) : user && (
+              <button
+                onClick={() => setIsCommentReportOpen(true)}
+                className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus:outline-none"
+                aria-label="Report comment"
+              >
+                <Flag className="h-3.5 w-3.5" />
+              </button>
             )}
           </div>
+
+          {user && (
+            <ReportDialog
+              open={isCommentReportOpen}
+              onOpenChange={setIsCommentReportOpen}
+              entityType="comment"
+              entityId={comment.id}
+              entityLabel="this comment"
+            />
+          )}
 
           {isEditing ? (
             <div className="mb-2">
