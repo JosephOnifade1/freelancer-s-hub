@@ -67,9 +67,9 @@ const Index = () => {
 
   return (
     <AppLayout>
-      <div className="mx-auto max-w-[1380px] px-4 py-6 md:px-6">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-          <div className="space-y-5 lg:col-span-8">
+      <div className="px-2 py-4">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+          <div className="space-y-5 lg:col-span-9">
             {profileIncomplete && !bannerDismissed && (
               <div className="flex flex-wrap items-center gap-3 rounded-xl border border-brand/30 bg-brand/5 p-4">
                 <p className="min-w-0 flex-1 text-sm leading-relaxed text-muted-foreground">
@@ -153,7 +153,7 @@ const Index = () => {
             </div>
           </div>
 
-          <div className="lg:col-span-4">
+          <div className="lg:col-span-3">
             <div className="sticky top-20">
               <FeedSidebar posts={posts} feedState={postsError ? "error" : isLoading ? "loading" : "ready"} currentUserUid={user?.uid} />
             </div>

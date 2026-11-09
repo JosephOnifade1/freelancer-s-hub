@@ -66,16 +66,16 @@ export function AppSidebar() {
   ] : [nav("Sign in", "/login", LogIn)];
 
   const renderItems = (items: typeof browse) => items.map((item) => (
-    <SidebarMenuItem key={item.url} className="px-4 sm:px-6">
-      <SidebarMenuButton asChild isActive={location.pathname === item.url} variant="ghost" className="h-10 overflow-hidden p-0 hover:bg-transparent">
+    <SidebarMenuItem key={item.url} className="px-2">
+      <SidebarMenuButton asChild isActive={location.pathname === item.url} variant="ghost" className="h-9 overflow-hidden p-0 hover:bg-transparent">
         <NavLink to={item.url} end className={({ isActive }: { isActive: boolean }) => cn(
-          "flex min-h-10 w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          "flex min-h-9 w-full items-center gap-2 rounded-lg px-2 py-1 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           isActive ? "bg-brand/10 text-brand border-brand/20" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
         )}>
-          <item.icon className="h-4 w-4 shrink-0" aria-hidden />
-          <span className="whitespace-nowrap">{item.title}</span>
+          <item.icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          <span className="text-xs font-medium whitespace-nowrap">{item.title}</span>
           {item.badge && (
-              <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-brand-foreground">
+              <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[9px] font-bold text-brand-foreground">
               {item.badge}
             </span>
           )}
@@ -86,19 +86,19 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="overflow-hidden">
-      <SidebarContent className="pt-4">
+      <SidebarContent className="pt-2">
         <SidebarGroup className="px-0">
-          <SidebarGroupLabel className="h-9 px-7 text-[10px] font-mono font-semibold text-muted-foreground/70 tracking-wider uppercase">Browse</SidebarGroupLabel>
+          <SidebarGroupLabel className="h-6 px-2 text-[10px] font-mono font-semibold text-muted-foreground/70 tracking-wider uppercase">Browse</SidebarGroupLabel>
           <SidebarGroupContent><SidebarMenu>{renderItems(browse)}</SidebarMenu></SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup className="px-0">
-          <SidebarGroupLabel className="h-9 px-7 text-[10px] font-mono font-semibold text-muted-foreground/70 tracking-wider uppercase">{user ? "Your workspace" : "Join Borynx"}</SidebarGroupLabel>
+          <SidebarGroupLabel className="h-6 px-2 text-[10px] font-mono font-semibold text-muted-foreground/70 tracking-wider uppercase">{user ? "Your workspace" : "Join Borynx"}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {user && <SidebarMenuItem className="px-4 sm:px-6">
+              {user && <SidebarMenuItem className="px-2">
                 <CreateCommunityModal>
-                  <SidebarMenuButton variant="ghost" className="h-auto min-h-10 cursor-pointer overflow-hidden p-0 hover:bg-transparent">
-                    <span className="flex w-full items-center gap-3 rounded-radius-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent/50 hover:text-foreground"><Plus className="h-4 w-4 shrink-0" /> New space</span>
+                  <SidebarMenuButton variant="ghost" className="h-9 cursor-pointer overflow-hidden p-0 hover:bg-transparent">
+                    <span className="flex w-full items-center gap-2 rounded-lg px-2 py-1 text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground"><Plus className="h-3.5 w-3.5 shrink-0" /> New space</span>
                   </SidebarMenuButton>
                 </CreateCommunityModal>
               </SidebarMenuItem>}
@@ -106,7 +106,7 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        {!user && <p className="px-7 pt-3 text-xs leading-relaxed text-muted-foreground">Browse public content freely. Sign in to post, join, apply or save.</p>}
+        {!user && <p className="px-2 pt-2 text-xs leading-relaxed text-muted-foreground">Browse public content freely. Sign in to post, join, apply or save.</p>}
       </SidebarContent>
     </Sidebar>
   );
