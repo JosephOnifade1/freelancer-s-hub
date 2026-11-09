@@ -48,6 +48,12 @@
     --brand-foreground: 0 0% 100%;
     --ring: 17 100% 55%;
 
+    /* ── Voting (Reddit theme) ────────────────────────────────── */
+    --upvote: 17 100% 55%;
+    --upvote-foreground: 0 0% 100%;
+    --downvote: 225 70% 55%;
+    --downvote-foreground: 0 0% 100%;
+
     /* ── Semantics ────────────────────────────────────────────── */
     --destructive: 0 72% 56%;
     --destructive-foreground: 0 0% 100%;
@@ -113,6 +119,12 @@
     --brand: 17 95% 45%;
     --brand-foreground: 0 0% 100%;
     --ring: 17 95% 45%;
+
+    /* ── Voting (Reddit theme) ────────────────────────────────── */
+    --upvote: 17 95% 45%;
+    --upvote-foreground: 0 0% 100%;
+    --downvote: 225 70% 45%;
+    --downvote-foreground: 0 0% 100%;
 
     /* ── Semantics ────────────────────────────────────────────── */
     --destructive: 0 72% 46%;
