@@ -170,29 +170,29 @@ const CommunityDetail = () => {
           <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" /> All spaces
         </button>
 
-        <header className="mb-6 rounded-xl border border-border bg-card p-5 md:p-6">
+        <header className="mb-6 rounded-2xl border border-border bg-card p-5 md:p-6">
           <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
             <div className="flex items-start gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-border bg-muted text-foreground">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-radius-md border border-border bg-muted text-foreground">
                 <Icon className="h-7 w-7" />
               </div>
               <div className="min-w-0 space-y-1.5">
-                <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">{community.name}</h1>
-                <p className="flex flex-wrap items-center gap-x-2 text-xs font-medium text-muted-foreground">
-                  <span className="tabular-nums ">b/{community.slug}</span>
+                <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">{community.name}</h1>
+                <p className="flex flex-wrap items-center gap-x-2 text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+                  <span className="tabular-nums">b/{community.slug}</span>
                   <span aria-hidden>·</span>
                   <span className="inline-flex items-center gap-1"><Globe className="h-3.5 w-3.5" /> Public</span>
                   <span aria-hidden>·</span>
-                  <span>{community.memberCount.toLocaleString()} {community.memberCount === 1 ? "member" : "members"}</span>
+                  <span className="tabular-nums">{community.memberCount.toLocaleString()} {community.memberCount === 1 ? "member" : "members"}</span>
                 </p>
-                <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">{community.description}</p>
+                <p className="max-w-2xl font-body text-sm leading-relaxed text-muted-foreground">{community.description}</p>
                 {community.topics.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {community.topics.map((t) => (
                       <Link
                         key={t}
                         to={`/tag/${t}`}
-                        className="rounded-md border border-border bg-background px-2 py-0.5 font-body text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+                        className="rounded-md border border-border bg-muted/50 px-2 py-0.5 font-body text-[11px] font-medium text-muted-foreground hover:border-brand hover:text-brand transition-colors"
                       >
                         #{t}
                       </Link>
@@ -203,19 +203,19 @@ const CommunityDetail = () => {
             </div>
 
             <div className="flex shrink-0 items-center gap-2">
-              <Button variant="outline" size="sm" onClick={copyInviteLink} className="gap-1.5">
+              <Button variant="outline" size="sm" onClick={copyInviteLink} className="gap-1.5 rounded-radius-md">
                 <Link2 className="h-3.5 w-3.5" /> Copy link
               </Button>
               {!user ? (
-                <Button size="sm" asChild><Link to="/login" state={{ from: location }}>Sign in to join</Link></Button>
+                <Button size="sm" asChild className="rounded-radius-md"><Link to="/login" state={{ from: location }}>Sign in to join</Link></Button>
               ) : membershipError ? (
                 <button type="button" onClick={() => refetchMembership()} className="text-xs text-destructive hover:underline">Couldn't check membership. Retry</button>
               ) : isJoined ? (
-                <Button variant="outline" size="sm" disabled={leaveMutation.isPending} onClick={() => leaveMutation.mutate()}>
+                <Button variant="outline" size="sm" disabled={leaveMutation.isPending} onClick={() => leaveMutation.mutate()} className="rounded-radius-md">
                   Joined
                 </Button>
               ) : (
-                <Button size="sm" disabled={joinMutation.isPending} onClick={() => joinMutation.mutate()}>
+                <Button size="sm" disabled={joinMutation.isPending} onClick={() => joinMutation.mutate()} className="rounded-radius-md">
                   Join space
                 </Button>
               )}
@@ -223,19 +223,19 @@ const CommunityDetail = () => {
           </div>
         </header>
 
-        <div className="mb-6 flex items-center gap-6 overflow-x-auto border-b border-border">
+        <div className="mb-6 flex items-center gap-6 overflow-x-auto border-b border-border pb-2">
           {TABS.map((tab) => {
             const isActive = activeTab === tab;
             return (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`relative whitespace-nowrap pb-3 text-sm font-semibold transition-colors ${
-                  isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                className={`relative whitespace-nowrap pb-2 text-sm font-medium transition-colors ${
+                  isActive ? "text-brand" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {tab}
-                {isActive && <motion.div layoutId="activeSpaceTab" className="absolute inset-x-0 bottom-0 h-0.5 bg-brand" />}
+                {isActive && <motion.div layoutId="activeSpaceTab" className="absolute inset-x-0 bottom-0 h-1 w-full bg-brand rounded-full" />}
               </button>
             );
           })}
