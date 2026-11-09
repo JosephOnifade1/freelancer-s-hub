@@ -35,7 +35,7 @@ import {
    - Flat surfaces only. No glow blobs, glassmorphism, gradient text, or
      floating badge clusters — the product UI carries the page.
    - One radius (rounded-lg/xl), hairline borders, generous whitespace.
-   - --brand (purple) is spent only on interactive accents: active tab,
+   - --brand (blue) is spent only on interactive accents: active tab,
      links, vote arrows. Primary buttons are plain primary (white on dark).
    - Type system: Space Grotesk (font-display) for headlines, Inter for
      body, JetBrains Mono (font-mono) for labels, budgets and counts.

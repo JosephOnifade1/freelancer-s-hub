@@ -174,7 +174,7 @@ export const CreateSpacePostModal: React.FC<CreateSpacePostModalProps> = ({
             onClick={() => setType("resource")}
             className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
               type === "resource"
-                ? "bg-purple-600 text-white shadow-sm"
+                ? "bg-brand text-white shadow-sm"
                 : "text-muted-foreground hover:text-foreground hover:bg-card/40"
             }`}
           >

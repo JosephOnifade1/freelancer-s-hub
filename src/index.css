@@ -44,9 +44,9 @@
     /* ── Actions & accents ────────────────────────────────────── */
     --primary: 0 0% 98%;
     --primary-foreground: 213 24% 7%;
-    --brand: 286 85% 60%;
+    --brand: 221 83% 53%;
     --brand-foreground: 0 0% 100%;
-    --ring: 286 85% 60%;
+    --ring: 221 83% 53%;
 
     /* ── Semantics ────────────────────────────────────────────── */
     --destructive: 0 72% 56%;
@@ -78,12 +78,12 @@
     /* ── Sidebar ──────────────────────────────────────────────── */
     --sidebar-background: 213 24% 7%;
     --sidebar-foreground: 220 15% 50%;
-    --sidebar-primary: 286 85% 60%;
+    --sidebar-primary: 221 83% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 14% 13%;
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 220 13% 15%;
-    --sidebar-ring: 286 85% 60%;
+    --sidebar-ring: 221 83% 53%;
   }
 
   .theme-light {
@@ -110,9 +110,9 @@
     /* ── Actions & accents ────────────────────────────────────── */
     --primary: 213 24% 9%;
     --primary-foreground: 0 0% 100%;
-    --brand: 286 72% 46%;
+    --brand: 221 79% 48%;
     --brand-foreground: 0 0% 100%;
-    --ring: 286 72% 46%;
+    --ring: 221 79% 48%;
 
     /* ── Semantics ────────────────────────────────────────────── */
     --destructive: 0 72% 46%;
@@ -144,12 +144,12 @@
     /* ── Sidebar ──────────────────────────────────────────────── */
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 220 10% 38%;
-    --sidebar-primary: 286 72% 46%;
+    --sidebar-primary: 221 79% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 16% 94%;
     --sidebar-accent-foreground: 213 24% 9%;
     --sidebar-border: 220 13% 90%;
-    --sidebar-ring: 286 72% 46%;
+    --sidebar-ring: 221 79% 48%;
   }
 }
 

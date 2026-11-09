@@ -45,7 +45,7 @@ export function VeteranCelebration() {
         }
 
         const particleCount = 50 * (timeLeft / duration);
-        // use violet and lime colors
+        // use lime and white colors
         confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }, colors: ['#D1FF4A', '#FFFFFF'] });
         confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }, colors: ['#D1FF4A', '#FFFFFF'] });
       }, 250);
