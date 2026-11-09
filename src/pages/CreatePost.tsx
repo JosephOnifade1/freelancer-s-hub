@@ -477,8 +477,8 @@ const CreatePost = () => {
         <p className="text-sm text-muted-foreground">{attachedFiles.length} {attachedFiles.length === 1 ? "document still needs" : "documents still need"} to be uploaded. We have not shown them as attached. You can retry without creating another post, or view the post and attach them later.</p>
         {attachedFiles.length > 0 && <ul className="list-disc pl-5 text-sm text-foreground">{attachedFiles.map((file, index) => <li key={`${file.name}-${index}`}>{file.name}</li>)}</ul>}
         <div className="flex flex-wrap gap-3">
-          {attachedFiles.length > 0 && <button type="button" onClick={submit} disabled={isSubmitting} className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">{isSubmitting ? "Uploading…" : "Retry document uploads"}</button>}
-          <Link to={selectedSpace.kind === "space" && selectedSpace.communitySlug ? `/b/${selectedSpace.communitySlug}/p/${publishedPostId}` : `/p/${publishedPostId}`} className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 py-2 text-sm font-semibold">View published post</Link>
+          {attachedFiles.length > 0 && <button type="button" onClick={submit} disabled={isSubmitting} className="min-h-11 rounded-radius-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">{isSubmitting ? "Uploading…" : "Retry document uploads"}</button>}
+          <Link to={selectedSpace.kind === "space" && selectedSpace.communitySlug ? `/b/${selectedSpace.communitySlug}/p/${publishedPostId}` : `/p/${publishedPostId}`} className="inline-flex min-h-11 items-center rounded-radius-md border border-border px-4 py-2 text-sm font-semibold">View published post</Link>
         </div>
       </div>
     </AppLayout>
@@ -509,7 +509,7 @@ const CreatePost = () => {
                 navigate(-1);
               }}
               aria-label="Close composer"
-              className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+              className="p-2 rounded-radius-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
               title="Close"
             >
               <X className="h-5 w-5" />
@@ -541,11 +541,11 @@ const CreatePost = () => {
           }}
         />
 
-        {draftRestored && <div role="status" className="flex flex-wrap items-center gap-3 rounded-lg border border-brand/30 bg-brand/5 p-3 text-sm text-foreground">
+        {draftRestored && <div role="status" className="flex flex-wrap items-center gap-3 rounded-radius-md border border-brand/30 bg-brand/5 p-3 text-sm text-foreground">
           <span className="flex-1">Your draft was restored from this device. Documents need to be reselected.</span>
           <button type="button" className="font-semibold text-brand hover:underline" onClick={discardDraft}>Start fresh</button>
         </div>}
-        {draftSaveError && <p role="alert" className="rounded-lg border border-destructive/40 p-3 text-sm text-destructive">Couldn't autosave on this device. Copy your text before leaving, or free up browser storage.</p>}
+        {draftSaveError && <p role="alert" className="rounded-radius-md border border-destructive/40 p-3 text-sm text-destructive">Couldn't autosave on this device. Copy your text before leaving, or free up browser storage.</p>}
 
         {/* Main Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -612,7 +612,7 @@ const CreatePost = () => {
 
                 {/* Poll Options Input (if Poll selected) */}
                 {postType === "poll" && (
-                  <div className="p-3 rounded-xl bg-brand/5 border border-brand/20 space-y-2.5 animate-in fade-in duration-300">
+                  <div className="p-3 rounded-2xl bg-brand/5 border border-brand/20 space-y-2.5 animate-in fade-in duration-300">
                     <span className="text-xs font-semibold text-brand flex items-center gap-1.5">
                       <BarChart2 className="h-3.5 w-3.5" /> Poll Options
                     </span>
@@ -654,7 +654,7 @@ const CreatePost = () => {
                   <button
                     type="button"
                     onClick={() => setPostType(postType === "poll" ? "discussion" : "poll")}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 border transition-all ${
+                    className={`px-3.5 py-1.5 rounded-radius-md text-xs font-semibold flex items-center gap-2 border transition-all ${
                       postType === "poll"
                         ? "bg-brand/20 border-brand/40 text-brand shadow-sm"
                         : "bg-muted/40 border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -667,7 +667,7 @@ const CreatePost = () => {
                   <button
                     type="button"
                     onClick={() => setPostType(postType === "question" ? "discussion" : "question")}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 border transition-all ${
+                    className={`px-3.5 py-1.5 rounded-radius-md text-xs font-semibold flex items-center gap-2 border transition-all ${
                       postType === "question"
                         ? "bg-brand/20 border-brand/40 text-brand shadow-sm"
                         : "bg-muted/40 border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -680,7 +680,7 @@ const CreatePost = () => {
                   <button
                     type="button"
                     onClick={() => setPostType(postType === "resource" ? "discussion" : "resource")}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 border transition-all ${
+                    className={`px-3.5 py-1.5 rounded-radius-md text-xs font-semibold flex items-center gap-2 border transition-all ${
                       postType === "resource"
                         ? "bg-brand/20 border-brand/40 text-brand shadow-sm"
                         : "bg-muted/40 border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -715,7 +715,7 @@ const CreatePost = () => {
                   <DropdownMenuTrigger asChild>
                     <button className="w-full rounded-2xl border border-border/50 bg-card p-3.5 flex items-center justify-between hover:border-brand/40 transition-colors shadow-sm group">
                       <div className="flex items-center gap-3">
-                        <div className={`h-9 w-9 rounded-xl ${selectedSpace.color} flex items-center justify-center font-bold shrink-0`}>
+                        <div className={`h-9 w-9 rounded-radius-md ${selectedSpace.color} flex items-center justify-center font-bold shrink-0`}>
                           <SpaceIcon className="h-4.5 w-4.5" />
                         </div>
                         <div className="text-left">
@@ -739,11 +739,11 @@ const CreatePost = () => {
                         <DropdownMenuItem
                           key={sp.id}
                           onClick={() => setSelectedSpace(sp)}
-                          className={`p-2.5 rounded-xl cursor-pointer flex items-center gap-3 ${
+                          className={`p-2.5 rounded-2xl cursor-pointer flex items-center gap-3 ${
                             isSelected ? "bg-muted text-foreground font-semibold" : ""
                           }`}
                         >
-                          <div className={`h-8 w-8 rounded-lg ${sp.color} flex items-center justify-center font-bold shrink-0`}>
+                          <div className={`h-8 w-8 rounded-radius-md ${sp.color} flex items-center justify-center font-bold shrink-0`}>
                             <IconComp className="h-4 w-4" />
                           </div>
                           <div>
@@ -772,7 +772,7 @@ const CreatePost = () => {
                   {tags.map((t) => (
                     <span
                       key={t}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand/10 border border-brand/20 text-xs font-semibold text-brand"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-radius-md bg-brand/10 border border-brand/20 text-xs font-semibold text-brand"
                     >
                       #{t}
                       <button
@@ -813,7 +813,7 @@ const CreatePost = () => {
                       <button
                         type="button"
                         onClick={() => setIsAddingTag(true)}
-                        className="h-8 w-8 rounded-xl border border-dashed border-border/80 bg-muted/30 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors"
+                        className="h-8 w-8 rounded-radius-md border border-dashed border-border/80 bg-muted/30 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors"
                         title="Add Tag"
                       >
                         <Plus className="h-4 w-4" />
@@ -840,9 +840,9 @@ const CreatePost = () => {
                   <button
                     type="button"
                     onClick={() => bodyImageInputRef.current?.click()}
-                    className="p-4 rounded-xl border border-border/50 bg-muted/20 hover:bg-brand/10 hover:border-brand/30 text-center space-y-2 transition-all group"
+                    className="p-4 rounded-radius-md border border-border/50 bg-muted/20 hover:bg-brand/10 hover:border-brand/30 text-center space-y-2 transition-all group"
                   >
-                    <div className="h-10 w-10 rounded-xl bg-muted text-foreground mx-auto flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <div className="h-10 w-10 rounded-radius-md bg-muted text-foreground mx-auto flex items-center justify-center group-hover:scale-105 transition-transform">
                       <ImageIcon className="h-5 w-5" />
                     </div>
                     <span className="block text-xs font-bold text-foreground">Image</span>
@@ -854,13 +854,13 @@ const CreatePost = () => {
                     onClick={() => {
                       setShowVideoInput(!showVideoInput);
                     }}
-                    className={`p-4 rounded-xl border text-center space-y-2 transition-all group ${
+                    className={`p-4 rounded-radius-md border text-center space-y-2 transition-all group ${
                       showVideoInput
                         ? "bg-brand/15 border-brand/40"
                         : "border-border/50 bg-muted/20 hover:bg-brand/10 hover:border-brand/30"
                     }`}
                   >
-                    <div className="h-10 w-10 rounded-xl bg-muted text-foreground mx-auto flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <div className="h-10 w-10 rounded-radius-md bg-muted text-foreground mx-auto flex items-center justify-center group-hover:scale-105 transition-transform">
                       <Video className="h-5 w-5" />
                     </div>
                     <span className="block text-xs font-bold text-foreground">Video</span>
@@ -870,9 +870,9 @@ const CreatePost = () => {
                   <button
                     type="button"
                     onClick={handleInsertCodeSnippet}
-                    className="p-4 rounded-xl border border-border/50 bg-muted/20 hover:bg-brand/10 hover:border-brand/30 text-center space-y-2 transition-all group"
+                    className="p-4 rounded-radius-md border border-border/50 bg-muted/20 hover:bg-brand/10 hover:border-brand/30 text-center space-y-2 transition-all group"
                   >
-                    <div className="h-10 w-10 rounded-xl bg-muted text-foreground mx-auto flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <div className="h-10 w-10 rounded-radius-md bg-muted text-foreground mx-auto flex items-center justify-center group-hover:scale-105 transition-transform">
                       <Code2 className="h-5 w-5" />
                     </div>
                     <span className="block text-xs font-bold text-foreground">Code</span>
@@ -882,9 +882,9 @@ const CreatePost = () => {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="p-4 rounded-xl border border-border/50 bg-muted/20 hover:bg-brand/10 hover:border-brand/30 text-center space-y-2 transition-all group"
+                    className="p-4 rounded-radius-md border border-border/50 bg-muted/20 hover:bg-brand/10 hover:border-brand/30 text-center space-y-2 transition-all group"
                   >
-                    <div className="h-10 w-10 rounded-xl bg-muted text-foreground mx-auto flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <div className="h-10 w-10 rounded-radius-md bg-muted text-foreground mx-auto flex items-center justify-center group-hover:scale-105 transition-transform">
                       <FileUp className="h-5 w-5" />
                     </div>
                     <span className="block text-xs font-bold text-foreground">File</span>
@@ -893,7 +893,7 @@ const CreatePost = () => {
 
                 {/* Video URL Prompt */}
                 {showVideoInput && (
-                  <div className="p-3 rounded-xl bg-muted/40 border border-border/50 space-y-2 animate-in fade-in duration-300">
+                  <div className="p-3 rounded-radius-md bg-muted/40 border border-border/50 space-y-2 animate-in fade-in duration-300">
                     <span className="text-xs font-semibold text-foreground">Embed Video Link</span>
                     <Input
                       value={videoUrl}
@@ -908,7 +908,7 @@ const CreatePost = () => {
                 {bodyImagePreviews.length > 0 && (
                   <div className="flex flex-wrap gap-3 pt-2">
                     {bodyImagePreviews.map((image, index) => (
-                      <div key={`${image.src}-${index}`} className="relative group w-24 h-24 rounded-xl border border-border/60 overflow-hidden bg-muted">
+                      <div key={`${image.src}-${index}`} className="relative group w-24 h-24 rounded-radius-md border border-border/60 overflow-hidden bg-muted">
                         <img src={image.src} alt={image.alt} className="h-full w-full object-cover" />
                         <button
                           type="button"
@@ -929,7 +929,7 @@ const CreatePost = () => {
                 {attachedFiles.length > 0 && (
                   <div className="space-y-1.5 pt-1">
                     {attachedFiles.map((file, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-xs p-2 rounded-lg bg-muted/40 border border-border/40">
+                      <div key={idx} className="flex items-center justify-between text-xs p-2 rounded-radius-md bg-muted/40 border border-border/40">
                         <span className="min-w-0 truncate">{file.name} · {(file.size / 1024).toFixed(1)} KB</span>
                         <button type="button" aria-label={`Remove ${file.name}`} onClick={() => setAttachedFiles(attachedFiles.filter((_, i) => i !== idx))} className="flex h-10 w-10 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground">
                           <X className="h-3.5 w-3.5" />
@@ -960,7 +960,7 @@ const CreatePost = () => {
                   <button
                     type="button"
                     onClick={() => setVisibility("public")}
-                    className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between transition-all ${
+                    className={`w-full p-3.5 rounded-radius-md border text-left flex items-center justify-between transition-all ${
                       visibility === "public"
                         ? "border-brand/50 bg-brand/10"
                         : "border-border/50 bg-muted/20 hover:border-border"
@@ -986,7 +986,7 @@ const CreatePost = () => {
                   <button
                     type="button"
                     onClick={() => setVisibility("members")}
-                    className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between transition-all ${
+                    className={`w-full p-3.5 rounded-radius-md border text-left flex items-center justify-between transition-all ${
                       visibility === "members"
                         ? "border-brand/50 bg-brand/10"
                         : "border-border/50 bg-muted/20 hover:border-border"
@@ -1010,7 +1010,7 @@ const CreatePost = () => {
                   <button
                     type="button"
                     onClick={() => setVisibility("admins")}
-                    className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between transition-all ${
+                    className={`w-full p-3.5 rounded-radius-md border text-left flex items-center justify-between transition-all ${
                       visibility === "admins"
                         ? "border-brand/50 bg-brand/10"
                         : "border-border/50 bg-muted/20 hover:border-border"
@@ -1037,7 +1037,7 @@ const CreatePost = () => {
                 {/* Toggles */}
                 <div className="space-y-3 pt-2 border-t border-border/40">
 
-                  <div className="flex items-center justify-between p-2 rounded-xl">
+                  <div className="flex items-center justify-between p-2 rounded-radius-md">
                     <div className="space-y-0.5">
                       <p className="font-heading text-xs font-bold text-foreground">Allow comments</p>
                       <p className="text-[11px] text-muted-foreground">When off, nobody can add new comments — existing comments stay visible</p>
@@ -1046,7 +1046,7 @@ const CreatePost = () => {
                   </div>
 
                   {!isProfileTarget && canPin && (
-                  <div className="flex items-center justify-between p-2 rounded-xl">
+                  <div className="flex items-center justify-between p-2 rounded-radius-md">
                     <div className="space-y-0.5">
                       <p className="font-heading text-xs font-bold text-foreground">Pin to B-Space</p>
                       <p className="text-[11px] text-muted-foreground">Pinned posts appear at the top of the space</p>
@@ -1066,7 +1066,7 @@ const CreatePost = () => {
               <button
                 type="button"
                 onClick={handleSaveDraft}
-                className="px-5 py-2.5 rounded-xl border border-border/60 bg-card hover:bg-muted text-xs font-semibold text-foreground transition-colors shadow-sm"
+                className="px-5 py-2.5 rounded-radius-md border border-border/60 bg-card hover:bg-muted text-xs font-semibold text-foreground transition-colors shadow-sm"
               >
                 Save draft
               </button>
@@ -1075,7 +1075,7 @@ const CreatePost = () => {
                 type="button"
                 onClick={submit}
                 disabled={isSubmitting || uploadingImages || selectedSpace.kind === "loading"}
-                className="px-6 py-2.5 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground font-heading text-sm font-semibold flex items-center gap-2 transition-colors disabled:opacity-50"
+                className="px-6 py-2.5 rounded-radius-md bg-primary hover:bg-primary/90 text-primary-foreground font-heading text-sm font-semibold flex items-center gap-2 transition-colors disabled:opacity-50"
               >
                 <Send className="h-3.5 w-3.5" />
                 <span>{isSubmitting ? "Publishing..." : uploadingImages ? "Uploading images..." : selectedSpace.kind === "loading" ? "Choose a target" : selectedSpace.kind === "space" ? `Post to ${selectedSpace.name}` : "Post to Profile"}</span>
@@ -1088,7 +1088,7 @@ const CreatePost = () => {
           <div className="lg:col-span-4 space-y-5">
 
             {/* Posting tips */}
-            <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+            <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
               <h3 className="font-heading text-sm font-bold text-foreground">Before you post</h3>
               <ul className="space-y-3 text-xs leading-relaxed">
                 <li><span className="font-semibold text-foreground">Say what you need.</span> <span className="text-muted-foreground">A specific title gets better answers than a broad one.</span></li>
@@ -1100,7 +1100,7 @@ const CreatePost = () => {
 
             {/* Card 2: Popular Tags in Selected Space */}
             {selectedSpace.popularTags.length > 0 && (
-            <div className="rounded-xl border border-border bg-card p-5 space-y-3.5">
+            <div className="rounded-2xl border border-border bg-card p-5 space-y-3.5">
               <h3 className="font-heading text-sm font-bold text-foreground">
                 Popular tags in {selectedSpace.name}
               </h3>
@@ -1111,7 +1111,7 @@ const CreatePost = () => {
                     key={t}
                     type="button"
                     onClick={() => addTag(t)}
-                    className="px-2.5 py-1 rounded-lg bg-muted/60 hover:bg-brand/15 border border-border/40 hover:border-brand/30 text-xs tabular-nums text-muted-foreground hover:text-brand transition-colors"
+                    className="px-2.5 py-1 rounded-radius-md bg-muted/60 hover:bg-brand/15 border border-border/40 hover:border-brand/30 text-xs tabular-nums text-muted-foreground hover:text-brand transition-colors"
                   >
                     #{t}
                   </button>
@@ -1121,7 +1121,7 @@ const CreatePost = () => {
             )}
 
             {/* Card 3: Posting as */}
-            <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+            <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
               <span className="tabular-nums text-[10px] font-bold text-muted-foreground">
                 Posting as
               </span>
