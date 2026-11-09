@@ -58,7 +58,7 @@ export function CommunityHoverCard({ slug, children, asChild = false }: Communit
             {/* Custom Cover Banner based on Community category */}
             <div className={cn(
               "h-16 w-full bg-gradient-to-br",
-              style?.bgGradient || "from-primary/20 via-purple-500/10 to-transparent"
+              style?.bgGradient || "from-primary/20 via-brand/10 to-transparent"
             )} />
             
             <div className="px-5 pb-5 -mt-8">
