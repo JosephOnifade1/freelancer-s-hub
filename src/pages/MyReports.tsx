@@ -11,8 +11,8 @@ import { fetchMyReports, type Report } from "@/lib/reports";
 import { formatTimeAgo, cn } from "@/lib/utils";
 
 const STATUS_LABELS: Record<Report["status"], { label: string; color: string }> = {
-  open: { label: "Open", color: "bg-amber/10 text-amber-800 border-amber/20" },
-  resolved: { label: "Resolved", color: "bg-emerald/10 text-emerald-800 border-emerald/20" },
+  open: { label: "Open", color: "bg-brand/10 text-brand border-brand/20" },
+  resolved: { label: "Resolved", color: "bg-success/10 text-success border-success/20" },
   dismissed: { label: "Dismissed", color: "bg-muted/50 text-muted-foreground border-border" },
 };
 
@@ -85,27 +85,27 @@ export default function MyReports() {
 
         {/* Summary stats */}
         <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="p-4 rounded-xl border border-border bg-card">
-            <div className="text-xs text-muted-foreground">Total filed</div>
-            <div className="mt-1 font-heading text-2xl font-bold text-foreground">
+          <div className="p-4 rounded-2xl border border-border bg-card">
+            <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Total filed</div>
+            <div className="mt-1 font-display text-2xl font-bold text-foreground tabular-nums">
               {reports.length}
             </div>
           </div>
-          <div className="p-4 rounded-xl border border-border bg-card">
-            <div className="text-xs text-muted-foreground">Open</div>
-            <div className="mt-1 font-heading text-2xl font-bold text-amber-800">
+          <div className="p-4 rounded-2xl border border-border bg-card">
+            <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Open</div>
+            <div className="mt-1 font-display text-2xl font-bold text-amber-800 tabular-nums">
               {openCount}
             </div>
           </div>
-          <div className="p-4 rounded-xl border border-border bg-card">
-            <div className="text-xs text-muted-foreground">Resolved</div>
-            <div className="mt-1 font-heading text-2xl font-bold text-emerald-800">
+          <div className="p-4 rounded-2xl border border-border bg-card">
+            <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Resolved</div>
+            <div className="mt-1 font-display text-2xl font-bold text-emerald-800 tabular-nums">
               {resolvedCount}
             </div>
           </div>
-          <div className="p-4 rounded-xl border border-border bg-card">
-            <div className="text-xs text-muted-foreground">Dismissed</div>
-            <div className="mt-1 font-heading text-2xl font-bold text-muted-foreground">
+          <div className="p-4 rounded-2xl border border-border bg-card">
+            <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Dismissed</div>
+            <div className="mt-1 font-display text-2xl font-bold text-muted-foreground tabular-nums">
               {dismissedCount}
             </div>
           </div>
@@ -118,10 +118,10 @@ export default function MyReports() {
               key={s}
               onClick={() => setStatusFilter(s)}
               className={cn(
-                "rounded-full px-3.5 py-1.5 font-body text-xs font-semibold capitalize transition-colors",
+                "rounded-full px-3.5 py-1.5 font-mono text-[11px] font-medium capitalize transition-colors",
                 statusFilter === s
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted/50 text-muted-foreground hover:text-foreground"
+                  ? "bg-brand/10 text-brand border-brand/20"
+                  : "bg-muted/50 text-muted-foreground border-border hover:text-foreground hover:border-brand/30"
               )}
             >
               {s}
@@ -140,7 +140,7 @@ export default function MyReports() {
             }
             action={
               statusFilter === "all" ? (
-                <Link to="/" className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
+                <Link to="/" className="rounded-radius-md bg-primary px-4 py-2 font-body text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
                   Browse posts
                 </Link>
               ) : undefined
@@ -153,7 +153,7 @@ export default function MyReports() {
               return (
                 <article
                   key={report.id}
-                  className="rounded-xl border border-border bg-card p-5"
+                  className="rounded-2xl border border-border bg-card p-5"
                 >
                   <div className="flex flex-wrap items-center gap-2 mb-2.5">
                     <span
