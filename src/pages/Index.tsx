@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
@@ -16,7 +16,10 @@ const TABS = ["For You", "Following"] as const;
 
 const Index = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  const goCreate = () => navigate("/submit");
   const activeTab = searchParams.get("feed") === "following" ? "Following" : "For You";
   const setActiveTab = (tab: (typeof TABS)[number]) =>
     setSearchParams(tab === "Following" ? { feed: "following" } : {}, { replace: true });
@@ -92,20 +95,20 @@ const Index = () => {
                 </button>
               </div>
             )}
-            <div className="flex items-center gap-6 border-b border-border">
+            <div className="flex items-center gap-6 border-b border-border pb-2">
               {TABS.map((tab) => {
                 const isActive = activeTab === tab;
                 return (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`relative pb-3 text-sm font-semibold transition-colors ${
-                      isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                    className={`relative pb-2 text-sm font-semibold transition-colors ${
+                      isActive ? "text-brand" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     {tab}
                     {isActive && (
-                      <motion.div layoutId="activeHomeTab" className="absolute inset-x-0 bottom-0 h-0.5 bg-brand" />
+                      <motion.div layoutId="activeHomeTab" className="absolute inset-x-0 bottom-0 h-1 w-full bg-brand rounded-full" />
                     )}
                   </button>
                 );
@@ -124,15 +127,25 @@ const Index = () => {
               ) : isLoading || followingLoading ? (
                 <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
               ) : displayedPosts.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-border bg-card p-10 text-center">
-                  <p className="font-heading text-base font-bold text-foreground">
+                <div className="rounded-2xl border border-dashed border-border bg-card p-10 text-center">
+                  <div className="flex items-center justify-center gap-2 mb-3">
+                    <PenTool className="h-5 w-5 text-muted-foreground/40" />
+                    <span className="font-body text-sm text-muted-foreground/40">Be the first to post</span>
+                  </div>
+                  <p className="font-display text-lg font-semibold text-foreground mb-1">
                     {activeTab === "Following" ? "No posts from people you follow" : "No posts yet"}
                   </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
+                  <p className="font-body text-sm text-muted-foreground mb-6 max-w-xs mx-auto">
                     {activeTab === "Following"
                       ? "Follow freelancers from their profile and their posts will show up here."
-                      : "Be the first to post a question, resource or poll."}
+                      : "Share a question, resource, or poll to start the conversation."}
                   </p>
+                  <button
+                    onClick={() => goCreate()}
+                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+                  >
+                    <PenTool className="h-4 w-4" /> Create post
+                  </button>
                 </div>
               ) : displayedPosts.map((post, i) => (
                 <PostCard key={post.id} post={post} index={i} />
