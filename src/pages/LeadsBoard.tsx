@@ -46,12 +46,12 @@ export default function LeadsBoard() {
           title="Opportunities"
           subtitle="Real, open projects posted by Borynx members. Apply without bidding credits."
           action={
-            <Link {...publish} className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <Link {...publish} className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-radius-md bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <Plus className="h-4 w-4" /> Post opportunity
             </Link>
           }
         />
-        <div className="mb-6 flex flex-col gap-3 rounded-xl border border-border bg-card p-4 sm:flex-row sm:items-center">
+        <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 sm:flex-row sm:items-center">
           <label className="relative min-w-0 flex-1">
             <span className="sr-only">Search opportunities</span>
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -59,13 +59,13 @@ export default function LeadsBoard() {
           </label>
           <label className="flex items-center gap-2 text-sm text-muted-foreground">
             Type
-            <select aria-label="Filter opportunity type" value={type} onChange={(event) => setType(event.target.value as (typeof TYPES)[number])} className="min-h-10 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <select aria-label="Filter opportunity type" value={type} onChange={(event) => setType(event.target.value as (typeof TYPES)[number])} className="min-h-10 rounded-radius-md border border-border bg-background px-3 font-body text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               {TYPES.map((value) => <option key={value} value={value}>{value === "All" ? "All types" : value}</option>)}
             </select>
           </label>
           <label className="flex items-center gap-2 text-sm text-muted-foreground">
             Sort
-            <select aria-label="Sort opportunities" value={sort} onChange={(event) => setSort(event.target.value as Sort)} className="min-h-10 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <select aria-label="Sort opportunities" value={sort} onChange={(event) => setSort(event.target.value as Sort)} className="min-h-10 rounded-radius-md border border-border bg-background px-3 font-body text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <option value="newest">Newest</option>
               <option value="most-applicants">Most applicants</option>
             </select>
@@ -89,8 +89,8 @@ export default function LeadsBoard() {
               ? "Try another keyword or select all types."
               : "Opportunities appear here when members post a real project. Be the first to post one."}
             action={search || type !== "All"
-              ? <button onClick={() => { setSearch(""); setType("All"); }} className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted">Clear filters</button>
-              : <Link {...publish} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Post an opportunity</Link>}
+              ? <button onClick={() => { setSearch(""); setType("All"); }} className="rounded-radius-md border border-border px-4 py-2 font-body text-sm font-medium text-foreground hover:bg-muted">Clear filters</button>
+              : <Link {...publish} className="rounded-radius-md bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground">Post an opportunity</Link>}
           />
         ) : (
           <>
