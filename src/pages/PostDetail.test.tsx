@@ -19,6 +19,7 @@ vi.mock("@/components/VerifiedBadge", () => ({ VerifiedBadge: () => <span /> }))
 vi.mock("@/components/editor/Editor", () => ({ Editor: () => <div /> }));
 vi.mock("@/components/editor/MarkdownRenderer", () => ({ MarkdownRenderer: ({ content }: { content: string }) => <div>{content}</div> }));
 vi.mock("@/components/ReportDialog", () => ({ ReportDialog: () => null }));
+vi.mock("@/components/PostAttachments", () => ({ PostAttachments: () => null }));
 vi.mock("@/components/ui/dropdown-menu", () => ({
   DropdownMenu: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DropdownMenuTrigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -26,7 +27,8 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
   DropdownMenuItem: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) =>
     <button type="button" onClick={onClick}>{children}</button>,
 }));
-vi.mock("@/hooks/auth-context", () => ({ useAuth: () => ({ user: { uid: "viewer" } }) }));
+const authState = vi.hoisted(() => ({ user: { uid: "viewer" } as { uid: string } | null }));
+vi.mock("@/hooks/auth-context", () => ({ useAuth: () => ({ user: authState.user }) }));
 vi.mock("@/lib/users", () => ({
   getUserProfile: vi.fn(async () => ({ uid: "viewer", username: "viewer", displayName: "Viewer", reputation: 0, savedPosts: {} })),
   toggleBookmark: vi.fn(),
@@ -67,6 +69,7 @@ const renderDetail = () => {
 
 describe("post detail interaction states", () => {
   beforeEach(() => {
+    authState.user = { uid: "viewer" };
     vi.clearAllMocks();
     vi.mocked(fetchPostById).mockResolvedValue({ ...basePost });
     vi.mocked(fetchComments).mockResolvedValue(comments);
@@ -151,5 +154,17 @@ describe("post detail interaction states", () => {
     fireEvent.click(screen.getByRole("button", { name: "Comment" }));
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Comment was rejected"));
     expect(textarea).toHaveValue("A helpful thought");
+  });
+
+  it("allows guests to read a public post and replies without exposing write actions", async () => {
+    authState.user = null;
+    renderDetail();
+    expect(await screen.findByText("Post body")).toBeInTheDocument();
+    expect(await screen.findByText("Deep reply")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /^Vote/ }).every((button) => button.hasAttribute("disabled"))).toBe(true);
+    expect(screen.queryByPlaceholderText("Share your thoughts...")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Bookmark post" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login");
+    expect(addComment).not.toHaveBeenCalled();
   });
 });

@@ -116,78 +116,50 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 // Looks a profile up by uid or username. Returns null when nobody matches, so
 // the UI can say "not found" instead of inventing a person.
-export const getUserProfile = async (identifier: string) => {
+export const getUserProfile = async (identifier: string): Promise<UserProfile | null> => {
   if (!identifier) return null;
-
   const clean = identifier.startsWith("@") ? identifier.substring(1).trim() : identifier.trim();
   if (!clean) return null;
 
-  try {
-    let profileToReturn: UserProfile | null = null;
-
-    // 1. UID (only query the uuid column with something shaped like a uuid)
-    if (UUID_RE.test(clean)) {
-      const { data: byUid } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("uid", clean)
-        .maybeSingle();
-      if (byUid) profileToReturn = byUid as UserProfile;
-    }
-
-    // 2. Username, case-insensitive. ilike treats _ and % as wildcards, so escape them.
-    if (!profileToReturn) {
-      const escaped = clean.replace(/[\\%_]/g, "\\$&");
-      const { data: byUsername } = await supabase
-        .from("profiles")
-        .select("*")
-        .ilike("username", escaped)
-        .maybeSingle();
-      if (byUsername) profileToReturn = byUsername as UserProfile;
-    }
-
-    // 3. Username registry
-    if (!profileToReturn) {
-      const escaped = clean.replace(/[\\%_]/g, "\\$&");
-      const { data: userRow } = await supabase
-        .from("usernames")
-        .select("uid")
-        .ilike("username", escaped)
-        .maybeSingle();
-
-      if (userRow?.uid) {
-        const { data: profileByUid } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("uid", userRow.uid)
-          .maybeSingle();
-        if (profileByUid) profileToReturn = profileByUid as UserProfile;
-      }
-    }
-
-    // 4. The signed-in user's own profile (covers "me" and a missing profile row)
-    if (!profileToReturn) {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const sessionUser = sessionData?.session?.user;
-      if (sessionUser) {
-        const sessionEmailName = sessionUser.email?.split("@")[0];
-        if (clean === "me" || clean === sessionUser.id || clean.toLowerCase() === sessionEmailName?.toLowerCase()) {
-          const ensured = await ensureUserProfile(sessionUser);
-          if (ensured) profileToReturn = ensured;
-        }
-      }
-    }
-
-    if (profileToReturn) {
-      const savedMap = await getSavedPostIds(profileToReturn.uid);
-      profileToReturn.savedPosts = savedMap;
-      return profileToReturn;
-    }
-  } catch (err) {
-    console.warn("getUserProfile exception:", err);
+  let profile: UserProfile | null = null;
+  if (UUID_RE.test(clean)) {
+    const { data, error } = await supabase.from("profiles").select("*").eq("uid", clean).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (data) profile = data as UserProfile;
   }
 
-  return null;
+  if (!profile) {
+    const escaped = clean.replace(/[\\%_]/g, "\\$&");
+    const { data, error } = await supabase.from("profiles").select("*").ilike("username", escaped).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (data) profile = data as UserProfile;
+  }
+
+  if (!profile) {
+    const escaped = clean.replace(/[\\%_]/g, "\\$&");
+    const { data, error } = await supabase.from("usernames").select("uid").ilike("username", escaped).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (data?.uid) {
+      const result = await supabase.from("profiles").select("*").eq("uid", data.uid).maybeSingle();
+      if (result.error) throw new Error(result.error.message);
+      if (result.data) profile = result.data as UserProfile;
+    }
+  }
+
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw new Error(sessionError.message);
+  const sessionUser = sessionData?.session?.user;
+  if (!profile && sessionUser) {
+    const sessionEmailName = sessionUser.email?.split("@")[0];
+    if (clean === "me" || clean === sessionUser.id || clean.toLowerCase() === sessionEmailName?.toLowerCase()) {
+      profile = await ensureUserProfile(sessionUser);
+    }
+  }
+  if (profile && sessionUser?.id === profile.uid) {
+    // Private bookmarks belong to the viewer, not everyone who visits their profile.
+    profile.savedPosts = await getSavedPostIds(profile.uid);
+  }
+  return profile;
 };
 
 export const getUserResourcesCount = async (uid: string) => {
@@ -214,19 +186,20 @@ export const checkUsernameAvailability = async (username: string) => {
   // A handle is taken if it is in the registry OR already on a profile —
   // the two can drift, and profiles.username is the unique constraint
   // that actually fails at insert time.
-  const { data: registered } = await supabase
+  const { data: registered, error: usernamesError } = await supabase
     .from("usernames")
     .select("username")
     .eq("username", clean)
     .maybeSingle();
+  if (usernamesError) throw new Error(usernamesError.message);
   if (registered) return false;
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profilesError } = await supabase
     .from("profiles")
     .select("uid")
     .ilike("username", clean)
     .maybeSingle();
-
+  if (profilesError) throw new Error(profilesError.message);
   return !profile;
 };
 
@@ -236,11 +209,12 @@ export const claimUsername = async (uid: string, desiredUsername: string, curren
   if (!isValidFormat) throw new Error("Invalid username format. Use 3-15 alphanumeric characters or underscores.");
 
   // Check if taken by someone else
-  const { data: existing } = await supabase
+  const { data: existing, error: lookupError } = await supabase
     .from("usernames")
     .select("uid")
     .eq("username", lowercaseUsername)
-    .single();
+    .maybeSingle();
+  if (lookupError) throw new Error(lookupError.message);
 
   if (existing && existing.uid !== uid) {
     throw new Error("Username is already taken.");
@@ -292,22 +266,12 @@ export const getUidByUsername = async (username: string) => {
 
 export const getSavedPostIds = async (uid: string): Promise<Record<string, boolean>> => {
   if (!uid) return {};
-  try {
-    const { data, error } = await supabase
-      .from("saved_posts")
-      .select("postId")
-      .eq("userId", uid);
-
-    if (error || !data) return {};
-    const map: Record<string, boolean> = {};
-    for (const row of data) {
-      if (row.postId) map[row.postId] = true;
-    }
-    return map;
-  } catch (err) {
-    console.warn("getSavedPostIds error:", err);
-    return {};
-  }
+  const { data, error } = await supabase.from("saved_posts").select("postId").eq("userId", uid);
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Could not load bookmarks.");
+  const map: Record<string, boolean> = {};
+  for (const row of data) if (row.postId) map[row.postId] = true;
+  return map;
 };
 
 export const toggleBookmark = async (uid: string, postId: string) => {
@@ -398,13 +362,14 @@ export const calculateReputation = async (uid: string) => {
 };
 
 export const getTopContributors = async (count = 5) => {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("profiles")
     .select("*")
     .order("reputation", { ascending: false })
     .limit(count);
 
-  return (data || []) as UserProfile[];
+  if (error || !data) throw new Error(error?.message || "Could not load contributors.");
+  return data as UserProfile[];
 };
 
 // Real list of user IDs this user follows, from the `follows` join table —

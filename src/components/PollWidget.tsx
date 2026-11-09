@@ -3,6 +3,7 @@ import { fetchPollByPostId, votePollOption } from "@/lib/polls";
 import { useAuth } from "@/hooks/auth-context";
 import { toast } from "sonner";
 import { Check } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 
 interface PollWidgetProps {
   postId: string;
@@ -10,6 +11,7 @@ interface PollWidgetProps {
 
 export function PollWidget({ postId }: PollWidgetProps) {
   const { user } = useAuth();
+  const location = useLocation();
   const queryClient = useQueryClient();
 
   const { data: poll, isLoading, isError, refetch } = useQuery({
@@ -43,6 +45,7 @@ export function PollWidget({ postId }: PollWidgetProps) {
   if (isLoading || !poll) return null;
 
   const hasVoted = !!poll.userVoteOptionId;
+  const showResults = hasVoted || !user;
 
   return (
     <div className="mt-2 space-y-1.5 border border-border/50 bg-card/50 p-3" onClick={(e) => e.stopPropagation()}>
@@ -53,11 +56,11 @@ export function PollWidget({ postId }: PollWidgetProps) {
         return (
           <button
             key={option.id}
-            disabled={hasVoted || voteMutation.isPending}
+            disabled={!user || hasVoted || voteMutation.isPending}
             onClick={() => voteMutation.mutate(option.id)}
             className="relative w-full overflow-hidden border border-border/60 text-left disabled:cursor-default"
           >
-            {hasVoted && (
+            {showResults && (
               <div
                 className="absolute inset-y-0 left-0 bg-muted"
                 style={{ width: `${pct}%` }}
@@ -68,7 +71,7 @@ export function PollWidget({ postId }: PollWidgetProps) {
                 {isSelected && <Check className="h-3.5 w-3.5 text-muted-foreground" />}
                 {option.label}
               </span>
-              {hasVoted && (
+              {showResults && (
                 <span className="text-muted-foreground tabular-nums">{pct}%</span>
               )}
             </div>
@@ -78,6 +81,7 @@ export function PollWidget({ postId }: PollWidgetProps) {
       <p className="pt-1 font-body text-[10px] text-muted-foreground">
         {poll.totalVotes} {poll.totalVotes === 1 ? "vote" : "votes"}
         {!hasVoted && !!user?.uid && " · tap to vote"}
+        {!user && <> · <Link to="/login" state={{ from: location }} className="font-semibold text-brand hover:underline">Sign in to vote</Link></>}
       </p>
     </div>
   );

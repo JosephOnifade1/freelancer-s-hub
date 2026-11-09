@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/auth-context";
 import { supabase } from "@/lib/supabase";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { QueryErrorState } from "@/components/QueryErrorState";
 import { getUserProfile } from "@/lib/users";
 import { toast } from "sonner";
 import { Loader2, Sparkles, X } from "lucide-react";
@@ -17,7 +19,12 @@ const DEFAULT_BIOS = ["", "New to Borynx!", "New freelancer on Borynx!", "New fr
 export default function Onboarding() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: existingProfile, isLoading: loading, isError: profileError, refetch: refetchProfile } = useQuery({
+    queryKey: ["profile", user?.uid],
+    queryFn: () => getUserProfile(user!.uid),
+    enabled: !!user?.uid,
+  });
   const [saving, setSaving] = useState(false);
 
   const [displayName, setDisplayName] = useState("");
@@ -28,20 +35,15 @@ export default function Onboarding() {
   const [available, setAvailable] = useState(true);
 
   useEffect(() => {
-    if (!user?.uid) return;
-    getUserProfile(user.uid)
-      .then((p) => {
-        if (p) {
-          setDisplayName(p.displayName || "");
-          setBio(DEFAULT_BIOS.includes((p.bio || "").trim()) ? "" : p.bio || "");
-          setLocation(p.location === "Earth" ? "" : p.location || "");
-          setWebsite(p.website || "");
-          setSkillsInput((p.skills || []).join(", "));
-          setAvailable(p.status !== "Busy");
-        }
-      })
-      .finally(() => setLoading(false));
-  }, [user]);
+    const p = existingProfile;
+    if (!p) return;
+    setDisplayName(p.displayName || "");
+    setBio(DEFAULT_BIOS.includes((p.bio || "").trim()) ? "" : p.bio || "");
+    setLocation(p.location === "Earth" ? "" : p.location || "");
+    setWebsite(p.website || "");
+    setSkillsInput((p.skills || []).join(", "));
+    setAvailable(p.status === "Available");
+  }, [existingProfile]);
 
   const skills = skillsInput
     .split(",")
@@ -70,6 +72,7 @@ export default function Onboarding() {
         })
         .eq("uid", user.uid);
       if (error) throw new Error(error.message);
+      queryClient.invalidateQueries({ queryKey: ["profile", user.uid] });
       toast.success("Profile saved. Welcome to Borynx!");
       navigate("/", { replace: true });
     } catch (error) {
@@ -89,6 +92,8 @@ export default function Onboarding() {
     );
   }
 
+  if (profileError || !existingProfile) return <AppLayout><div className="mx-auto max-w-xl px-4 py-16"><QueryErrorState title="Couldn't load your profile setup" onRetry={() => refetchProfile()} /></div></AppLayout>;
+
   return (
     <AppLayout>
       <div className="mx-auto max-w-2xl px-4 py-8 md:px-6">
@@ -101,8 +106,8 @@ export default function Onboarding() {
               Set up your freelancer profile
             </h1>
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              This is what clients and other freelancers see. A complete profile gets more profile
-              visits, follows, and lead responses — you can refine everything later in Settings.
+              Clients and other freelancers can read this public profile. Add a bio and skills to help
+              them understand your work. Setup is optional; you can update it later in Settings.
             </p>
           </div>
         </div>
@@ -179,7 +184,7 @@ export default function Onboarding() {
                 Show an availability badge on your profile so clients know you're taking projects.
               </p>
             </div>
-            <Switch checked={available} onCheckedChange={setAvailable} />
+            <Switch checked={available} onCheckedChange={setAvailable} aria-label="Open to work" />
           </div>
         </div>
 

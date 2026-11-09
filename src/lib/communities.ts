@@ -142,9 +142,10 @@ export const fetchCommunity = async (slug: string): Promise<CommunityData | null
     .from("communities")
     .select("*")
     .eq("slug", slug)
-    .single();
+    .maybeSingle();
 
-  if (error || !data) return null;
+  if (error) throw new Error(error.message);
+  if (!data) return null;
   return dbRowToCommunity(data);
 };
 
@@ -203,7 +204,8 @@ export const getUserCommunities = async (uid: string): Promise<string[]> => {
     .select("communitySlug")
     .eq("userId", uid);
 
-  if (error || !data) return [];
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Could not load space memberships.");
   return (data as CommunityMembershipRow[]).map((row) => row.communitySlug);
 };
 
@@ -224,7 +226,8 @@ export const fetchCommunityMembers = async (slug: string): Promise<CommunityMemb
     .select("userId, profiles(uid, username, displayName, avatarUrl, reputation, isVerifiedPro)")
     .eq("communitySlug", slug);
 
-  if (error || !data) return [];
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Could not load members.");
 
   return (data as unknown as CommunityMemberRow[])
     .map((row) => row.profiles)

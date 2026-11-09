@@ -24,7 +24,6 @@ interface CommentTimingRow {
   createdAt: string;
 }
 
-
 // ─── Most active this week (replaces the fake "Weekly Leaderboard" XP list) ──
 export interface ActiveContributor {
   uid: string;
@@ -38,13 +37,17 @@ export interface ActiveContributor {
 export const getMostActiveThisWeek = async (limit = 5): Promise<ActiveContributor[]> => {
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [{ data: posts }, { data: comments }] = await Promise.all([
+  const [{ data: posts, error: postsError }, { data: comments, error: commentsError }] = await Promise.all([
     supabase.from("posts").select("authorUid, createdAt").eq("isDeleted", false).gte("createdAt", sevenDaysAgo),
     supabase.from("comments").select("authorUid, createdAt").eq("isDeleted", false).gte("createdAt", sevenDaysAgo),
   ]);
 
+  if (postsError || commentsError || !posts || !comments) {
+    throw new Error(postsError?.message || commentsError?.message || "Could not load recent activity.");
+  }
+
   const counts: Record<string, number> = {};
-  [...(posts || []), ...(comments || [])].forEach((row: AuthoredRow) => {
+  [...posts, ...comments].forEach((row: AuthoredRow) => {
     if (!row.authorUid) return;
     counts[row.authorUid] = (counts[row.authorUid] || 0) + 1;
   });
@@ -56,14 +59,16 @@ export const getMostActiveThisWeek = async (limit = 5): Promise<ActiveContributo
 
   if (topUids.length === 0) return [];
 
-  const { data: profiles } = await supabase
+  const { data: profiles, error: profilesError } = await supabase
     .from("profiles")
     .select("uid, username, displayName, avatarUrl, isVerifiedPro")
     .in("uid", topUids);
 
+  if (profilesError || !profiles) throw new Error(profilesError?.message || "Could not load active contributors.");
+
   return topUids
     .map((uid) => {
-      const profile = ((profiles || []) as ProfileContributionRow[]).find((p) => p.uid === uid);
+      const profile = (profiles as ProfileContributionRow[]).find((p) => p.uid === uid);
       if (!profile) return null;
       return { ...profile, contributions: counts[uid] } as ActiveContributor;
     })
@@ -79,13 +84,17 @@ export interface StreakData {
 export const getUserStreak = async (uid: string): Promise<StreakData> => {
   const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [{ data: posts }, { data: comments }] = await Promise.all([
+  const [{ data: posts, error: postsError }, { data: comments, error: commentsError }] = await Promise.all([
     supabase.from("posts").select("createdAt").eq("authorUid", uid).eq("isDeleted", false).gte("createdAt", ninetyDaysAgo),
     supabase.from("comments").select("createdAt").eq("authorUid", uid).eq("isDeleted", false).gte("createdAt", ninetyDaysAgo),
   ]);
 
+  if (postsError || commentsError || !posts || !comments) {
+    throw new Error(postsError?.message || commentsError?.message || "Could not load your activity.");
+  }
+
   const activeDates = new Set<string>();
-  [...(posts || []), ...(comments || [])].forEach((row: AuthoredRow) => {
+  [...posts, ...comments].forEach((row: AuthoredRow) => {
     activeDates.add(new Date(row.createdAt).toISOString().slice(0, 10));
   });
 
@@ -125,14 +134,13 @@ export interface CommunityHealth {
 }
 
 export const getCommunityHealthStats = async (): Promise<CommunityHealth> => {
-  const { data: posts } = await supabase
+  const { data: posts, error: postsError } = await supabase
     .from("posts")
     .select("id, createdAt, commentCount")
     .eq("isDeleted", false);
 
-  if (!posts || posts.length === 0) {
-    return { helpfulRate: 0, avgResponseLabel: "—" };
-  }
+  if (postsError || !posts) throw new Error(postsError?.message || "Could not load post activity.");
+  if (posts.length === 0) return { helpfulRate: 0, avgResponseLabel: "—" };
 
   const postsWithReplies = (posts as PostHealthRow[]).filter((p) => (p.commentCount || 0) > 0);
   const helpfulRate = Math.round((postsWithReplies.length / posts.length) * 100);
@@ -141,15 +149,17 @@ export const getCommunityHealthStats = async (): Promise<CommunityHealth> => {
     return { helpfulRate, avgResponseLabel: "—" };
   }
 
-  const { data: firstComments } = await supabase
+  const { data: firstComments, error: commentsError } = await supabase
     .from("comments")
     .select("postId, createdAt")
     .eq("isDeleted", false)
     .in("postId", postsWithReplies.map((p) => p.id))
     .order("createdAt", { ascending: true });
 
+  if (commentsError || !firstComments) throw new Error(commentsError?.message || "Could not load response activity.");
+
   const firstCommentByPost: Record<string, string> = {};
-  ((firstComments || []) as CommentTimingRow[]).forEach((c) => {
+  (firstComments as CommentTimingRow[]).forEach((c) => {
     if (!firstCommentByPost[c.postId]) firstCommentByPost[c.postId] = c.createdAt;
   });
 

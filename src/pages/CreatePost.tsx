@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { X, BarChart2, HelpCircle, BookOpen, ChevronDown, ImageIcon, Video, Code2, FileUp, Search, CheckCircle2, Plus, Send, Globe, Users, ShieldAlert, Layout, User } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getUserProfile } from "@/lib/users";
 import { createPost } from "@/lib/posts";
 import { uploadImage } from "@/lib/uploads";
+import { DOCUMENT_ACCEPT, MAX_DOCUMENTS_PER_POST, uploadPostDocuments, validateDocument } from "@/lib/attachments";
+import { deleteDraft, readDraft, saveDraft } from "@/lib/drafts";
 import { fetchAllCommunities, getCommunityStyle } from "@/lib/communities";
 import { ResourceBodyEditor } from "@/components/editor/ResourceBodyEditor";
 import { ResourceMarkdownHelp } from "@/components/editor/ResourceMarkdownHelp";
@@ -161,8 +163,13 @@ const CreatePost = () => {
   const [bodyImages, setBodyImages] = useState<PendingBodyImage[]>([]);
   const [videoUrl, setVideoUrl] = useState("");
   const [showVideoInput, setShowVideoInput] = useState(false);
-  const [attachedFiles, setAttachedFiles] = useState<string[]>([]);
-  
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [publishedPostId, setPublishedPostId] = useState<string | null>(null);
+  const [draftHydrated, setDraftHydrated] = useState(false);
+  const [hasDraft, setHasDraft] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const [draftSaveError, setDraftSaveError] = useState(false);
+
   // Pinning is restricted to the space owner and platform staff — the
   // database rejects pinned posts from anyone else, so the toggle is
   // only offered when it will actually work.
@@ -242,10 +249,17 @@ const CreatePost = () => {
 
   const handleDocumentFiles = (files: FileList | null) => {
     if (!files?.length) return;
-    Array.from(files).forEach((f) => {
-      setAttachedFiles((prev) => [...prev, f.name]);
-    });
-    toast({ title: "File attached", description: `${files.length} file(s) attached successfully.` });
+    const selected = [...files];
+    try {
+      if (selected.length + attachedFiles.length > MAX_DOCUMENTS_PER_POST) {
+        throw new Error(`Attach up to ${MAX_DOCUMENTS_PER_POST} documents per post.`);
+      }
+      selected.forEach(validateDocument);
+      setAttachedFiles((previous) => [...previous, ...selected]);
+      toast({ title: "Documents queued", description: "Files will be uploaded when you publish. They are not saved in drafts." });
+    } catch (error) {
+      toast({ title: "Document not selected", description: error instanceof Error ? error.message : "Invalid file", variant: "destructive" });
+    }
   };
 
   const handleInsertCodeSnippet = () => {
@@ -254,37 +268,87 @@ const CreatePost = () => {
     toast({ title: "Code block added", description: "Markdown code snippet inserted into body." });
   };
 
-  const [hasDraft, setHasDraft] = useState<boolean>(() => !!localStorage.getItem("borynx_post_draft"));
+  // Restore account-specific drafts as soon as real targets are known. Files
+  // must be reselected after a refresh; browsers cannot persist File objects.
+  useEffect(() => {
+    if (draftHydrated || !user?.uid || profileLoading || spacesLoading) return;
+    const saved = readDraft(user.uid);
+    if (saved) {
+      setTitle(saved.title);
+      setBody(saved.body);
+      setPostType(saved.postType);
+      setTags(saved.tags);
+      setExternalLink(saved.externalLink);
+      setPollOptions(saved.pollOptions);
+      setVideoUrl(saved.videoUrl);
+      setBodyImages(saved.bodyImages);
+      setVisibility(saved.visibility);
+      setAllowComments(saved.allowComments);
+      setPinToSpace(saved.pinToSpace);
+      const target = B_SPACES.find((s) => s.id === saved.selectedTargetId);
+      setSelectedSpace(target || { ...LOADING_SPACE, id: `unavailable:${saved.selectedTargetId}`, name: "Draft target unavailable — choose a target" });
+      setHasDraft(true);
+      setDraftRestored(true);
+    }
+    setDraftHydrated(true);
+  }, [draftHydrated, user?.uid, profileLoading, spacesLoading, B_SPACES]);
+
+  const draftContents = useMemo(() => ({
+    title, body, postType, selectedTargetId: selectedSpace.id, tags,
+    externalLink, pollOptions, videoUrl, bodyImages, visibility, allowComments, pinToSpace,
+  }), [title, body, postType, selectedSpace.id, tags, externalLink, pollOptions, videoUrl, bodyImages, visibility, allowComments, pinToSpace]);
 
   const handleSaveDraft = () => {
-    const draft = { title, body, postType, selectedTargetId: selectedSpace.id, tags };
-    localStorage.setItem("borynx_post_draft", JSON.stringify(draft));
-    setHasDraft(true);
-    toast({ title: "Draft saved", description: "Your post draft has been saved locally." });
+    if (!user?.uid) return;
+    try {
+      saveDraft(user.uid, draftContents);
+      setHasDraft(true);
+      setDraftSaveError(false);
+      toast({ title: "Draft saved", description: "Text and settings saved on this device for your account. Reattach files after a reload." });
+    } catch (error) {
+      setDraftSaveError(true);
+      toast({ title: "Draft not saved", description: error instanceof Error ? error.message : "Could not save draft", variant: "destructive" });
+    }
   };
 
-  const handleLoadDraft = () => {
-    const saved = localStorage.getItem("borynx_post_draft");
-    if (saved) {
+  // Autosave text/settings, but never create a blank draft on first render.
+  useEffect(() => {
+    if (!draftHydrated || !user?.uid || publishedPostId) return;
+    if (!title.trim() && !body.trim() && !externalLink.trim() && tags.length === 0) return;
+    const timeout = window.setTimeout(() => {
       try {
-        const draft = JSON.parse(saved);
-        if (draft.title) setTitle(draft.title);
-        if (draft.body) setBody(draft.body);
-        if (draft.postType) setPostType(draft.postType);
-        if (draft.tags) setTags(draft.tags);
-        const savedTarget = B_SPACES.find((target) => target.id === draft.selectedTargetId);
-        if (savedTarget) setSelectedSpace(savedTarget);
-        toast({ title: "Draft loaded", description: "Restored your saved draft." });
+        saveDraft(user.uid, draftContents);
+        setHasDraft(true);
+        setDraftSaveError(false);
       } catch {
-        toast({ title: "No saved draft", description: "No valid draft found." });
+        setDraftSaveError(true);
       }
-    } else {
-      toast({ title: "No saved draft", description: "You don't have any saved drafts." });
-    }
+    }, 800);
+    return () => clearTimeout(timeout);
+  }, [draftHydrated, user?.uid, publishedPostId, draftContents, title, body, externalLink, tags.length]);
+
+  useEffect(() => {
+    if (attachedFiles.length === 0 && !draftSaveError) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [attachedFiles.length, draftSaveError]);
+
+  const discardDraft = () => {
+    if (!user?.uid || !window.confirm("Discard this draft and start a new post?")) return;
+    deleteDraft(user.uid);
+    setTitle(""); setBody(""); setTags([]); setExternalLink("");
+    setPollOptions(["Option 1", "Option 2"]); setVideoUrl(""); setBodyImages([]); setAttachedFiles([]);
+    setVisibility("public"); setAllowComments(true); setPinToSpace(false);
+    setHasDraft(false); setDraftRestored(false); setDraftSaveError(false);
   };
 
   // Submit Logic
   const submit = async () => {
+    if (isSubmitting) return;
     const trimmedTitle = title.trim();
     const trimmedBody = body.trim();
 
@@ -292,7 +356,7 @@ const CreatePost = () => {
     const imageMarkdown = shouldIncludePendingImages
       ? bodyImages.map((image) => `![${image.alt}](${image.src})`).join("\n\n")
       : "";
-    
+
     let finalBody = imageMarkdown
       ? [trimmedBody, imageMarkdown].filter(Boolean).join("\n\n")
       : body;
@@ -301,13 +365,13 @@ const CreatePost = () => {
       finalBody += `\n\n[Video Link](${videoUrl.trim()})`;
     }
 
-    if (!trimmedTitle || !finalBody.trim()) {
+    if (!publishedPostId && (!trimmedTitle || !finalBody.trim())) {
       toast({ title: "Missing fields", description: "Please enter a title and post description.", variant: "destructive" });
       return;
     }
 
     const cleanPollOptions = pollOptions.map((o) => o.trim()).filter(Boolean);
-    if (postType === "poll" && cleanPollOptions.length < 2) {
+    if (!publishedPostId && postType === "poll" && cleanPollOptions.length < 2) {
       toast({ title: "Poll needs options", description: "Add at least 2 poll options before publishing.", variant: "destructive" });
       return;
     }
@@ -317,7 +381,7 @@ const CreatePost = () => {
       return;
     }
 
-    if (selectedSpace.kind === "loading") {
+    if (!publishedPostId && selectedSpace.kind === "loading") {
       toast({
         title: "Choose a post target",
         description: spacesError ? "Spaces couldn't be loaded. Retry or select your profile." : "Wait for spaces to load, or select a valid target.",
@@ -326,58 +390,62 @@ const CreatePost = () => {
       return;
     }
 
-    if (selectedSpace.kind === "space" && !selectedSpace.communitySlug) {
+    if (!publishedPostId && selectedSpace.kind === "space" && !selectedSpace.communitySlug) {
       toast({ title: "Choose a space", description: "That space could not be loaded. Pick another target and try again.", variant: "destructive" });
       return;
     }
 
     setIsSubmitting(true);
+    let postId = publishedPostId;
     try {
-      const postPayload = {
-        title: trimmedTitle,
-        body: finalBody,
-        type: postType,
-        tags,
-        communitySlug: selectedSpace.kind === "space" ? selectedSpace.communitySlug : null,
-        author: { 
-          uid: user.uid,
-          name: profile?.displayName || profile?.username || "Anonymous",
-          reputation: profile?.reputation ?? 0,
-          avatar: profile?.avatarUrl,
-          isVerifiedPro: profile?.isVerifiedPro ?? false,
-        },
-        score: 0,
-        commentCount: 0,
-        timeAgo: "just now",
-        isPinned: selectedSpace.kind === "space" && pinToSpace,
-        allowComments,
-        visibility: isProfileTarget ? "public" as const : visibility,
-        ...(postType === "poll" ? { pollOptions: cleanPollOptions } : {}),
-      };
+      if (!postId) {
+        const postPayload = {
+          title: trimmedTitle,
+          body: finalBody,
+          type: postType,
+          tags,
+          communitySlug: selectedSpace.kind === "space" ? selectedSpace.communitySlug : null,
+          author: {
+            uid: user.uid,
+            name: profile?.displayName || profile?.username || "Anonymous",
+            reputation: profile?.reputation ?? 0,
+            avatar: profile?.avatarUrl,
+            isVerifiedPro: profile?.isVerifiedPro ?? false,
+          },
+          score: 0,
+          commentCount: 0,
+          timeAgo: "just now",
+          isPinned: selectedSpace.kind === "space" && pinToSpace,
+          allowComments,
+          visibility: isProfileTarget ? "public" as const : visibility,
+          ...(postType === "poll" ? { pollOptions: cleanPollOptions } : {}),
+        };
 
-      await createPost({
-        ...postPayload,
-        ...(postType === "resource" && externalLink.trim()
-          ? { externalLink: externalLink.trim() }
-          : {}),
-      });
-
-      // Clear draft
-      localStorage.removeItem("borynx_post_draft");
-      setHasDraft(false);
-
-      toast({ title: "Post published!", description: `Your post is live in ${selectedSpace.name}.` });
-      queryClient.invalidateQueries({ queryKey: ['posts'] });
-      if (selectedSpace.kind === "space" && selectedSpace.communitySlug) {
-        queryClient.invalidateQueries({ queryKey: ['communityPosts', selectedSpace.communitySlug] });
-        navigate(`/b/${selectedSpace.communitySlug}`);
-      } else {
-        // Profile post — navigate to the user's own profile
-        navigate(`/f/${profile?.username || user.uid}`);
+        postId = await createPost({
+          ...postPayload,
+          ...(postType === "resource" && externalLink.trim()
+            ? { externalLink: externalLink.trim() }
+            : {}),
+        });
+        if (!postId) throw new Error("Post was not saved. Please try again.");
+        setPublishedPostId(postId);
+        try { deleteDraft(user.uid); } catch { /* post is already live; never retry creation */ }
+        setHasDraft(false);
+        queryClient.invalidateQueries({ queryKey: ['posts'] });
       }
+
+      // Retry only the files that have not already been saved. An upload
+      // failure must never say "Post published with attachments" or re-post.
+      for (const file of attachedFiles) {
+        await uploadPostDocuments(postId, [file]);
+        setAttachedFiles((current) => current.filter((candidate) => candidate !== file));
+      }
+      toast({ title: "Post published", description: attachedFiles.length ? "Post and documents are ready to view." : "Your post is live." });
+      navigate(selectedSpace.kind === "space" && selectedSpace.communitySlug
+        ? `/b/${selectedSpace.communitySlug}/p/${postId}` : `/p/${postId}`);
     } catch (error: unknown) {
       const description = error instanceof Error ? error.message : "Failed to create post.";
-      toast({ title: "Error", description, variant: "destructive" });
+      toast({ title: postId ? "Post is live; documents need attention" : "Post not published", description, variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -385,10 +453,24 @@ const CreatePost = () => {
 
   const SpaceIcon = selectedSpace.icon;
 
+  if (publishedPostId) return (
+    <AppLayout>
+      <div className="mx-auto max-w-lg px-4 py-16 space-y-5" role="status">
+        <h1 className="font-heading text-2xl font-bold">Your post is live</h1>
+        <p className="text-sm text-muted-foreground">{attachedFiles.length} {attachedFiles.length === 1 ? "document still needs" : "documents still need"} to be uploaded. We have not shown them as attached. You can retry without creating another post, or view the post and attach them later.</p>
+        {attachedFiles.length > 0 && <ul className="list-disc pl-5 text-sm text-foreground">{attachedFiles.map((file, index) => <li key={`${file.name}-${index}`}>{file.name}</li>)}</ul>}
+        <div className="flex flex-wrap gap-3">
+          {attachedFiles.length > 0 && <button type="button" onClick={submit} disabled={isSubmitting} className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">{isSubmitting ? "Uploading…" : "Retry document uploads"}</button>}
+          <Link to={selectedSpace.kind === "space" && selectedSpace.communitySlug ? `/b/${selectedSpace.communitySlug}/p/${publishedPostId}` : `/p/${publishedPostId}`} className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 py-2 text-sm font-semibold">View published post</Link>
+        </div>
+      </div>
+    </AppLayout>
+  );
+
   return (
     <AppLayout>
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        
+
         {/* Top Header */}
         <div className="flex items-center justify-between pb-2 border-b border-border/40">
           <div className="flex items-center gap-3.5">
@@ -403,16 +485,13 @@ const CreatePost = () => {
           </div>
 
           <div className="flex items-center gap-4">
-            {hasDraft && (
-              <button 
-                onClick={handleLoadDraft}
-                className="text-xs font-semibold text-info hover:opacity-80 transition-colors flex items-center gap-1.5"
-              >
-                <span>Drafts (1)</span>
-              </button>
-            )}
+            {hasDraft && <Link to="/drafts" className="text-xs font-semibold text-info hover:underline">View draft</Link>}
             <button
-              onClick={() => navigate(-1)}
+              onClick={() => {
+                if (attachedFiles.length && !window.confirm("Selected documents won't be saved when you leave. Continue?")) return;
+                navigate(-1);
+              }}
+              aria-label="Close composer"
               className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
               title="Close"
             >
@@ -437,6 +516,7 @@ const CreatePost = () => {
           ref={fileInputRef}
           type="file"
           multiple
+          accept={DOCUMENT_ACCEPT}
           className="hidden"
           onChange={(event) => {
             handleDocumentFiles(event.target.files);
@@ -444,12 +524,18 @@ const CreatePost = () => {
           }}
         />
 
+        {draftRestored && <div role="status" className="flex flex-wrap items-center gap-3 rounded-lg border border-brand/30 bg-brand/5 p-3 text-sm text-foreground">
+          <span className="flex-1">Your draft was restored from this device. Documents need to be reselected.</span>
+          <button type="button" className="font-semibold text-brand hover:underline" onClick={discardDraft}>Start fresh</button>
+        </div>}
+        {draftSaveError && <p role="alert" className="rounded-lg border border-destructive/40 p-3 text-sm text-destructive">Couldn't autosave on this device. Copy your text before leaving, or free up browser storage.</p>}
+
         {/* Main Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          
+
           {/* Left Main Form Column */}
           <div className="lg:col-span-8 space-y-6">
-            
+
             {/* Section 1: What do you want to share? */}
             <div className="space-y-2">
               <h2 className="font-heading text-sm font-bold text-foreground">
@@ -457,7 +543,7 @@ const CreatePost = () => {
               </h2>
 
               <div className="rounded-2xl border border-border/50 bg-card p-4 sm:p-5 space-y-4 shadow-sm relative">
-                
+
                 {/* Title Input */}
                 <div className="space-y-1">
                   <Input
@@ -731,7 +817,7 @@ const CreatePost = () => {
               </p>
 
               <div className="rounded-2xl border border-border/50 bg-card p-4 sm:p-5 space-y-4 shadow-sm">
-                
+
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {/* Image Tile */}
                   <button
@@ -752,8 +838,8 @@ const CreatePost = () => {
                       setShowVideoInput(!showVideoInput);
                     }}
                     className={`p-4 rounded-xl border text-center space-y-2 transition-all group ${
-                      showVideoInput 
-                        ? "bg-brand/15 border-brand/40" 
+                      showVideoInput
+                        ? "bg-brand/15 border-brand/40"
                         : "border-border/50 bg-muted/20 hover:bg-brand/10 hover:border-brand/30"
                     }`}
                   >
@@ -819,13 +905,16 @@ const CreatePost = () => {
                   </div>
                 )}
 
-                {/* Attached Files List */}
+                {/* Queued files aren't uploaded until the post has an ID. */}
+                {attachedFiles.length > 0 && (
+                  <p role="status" className="text-xs text-muted-foreground">{attachedFiles.length} document{attachedFiles.length === 1 ? "" : "s"} queued. Uploaded on publish; files are not saved in drafts or across reloads. Up to {MAX_DOCUMENTS_PER_POST}, 10 MB each.</p>
+                )}
                 {attachedFiles.length > 0 && (
                   <div className="space-y-1.5 pt-1">
-                    {attachedFiles.map((fn, idx) => (
+                    {attachedFiles.map((file, idx) => (
                       <div key={idx} className="flex items-center justify-between text-xs p-2 rounded-lg bg-muted/40 border border-border/40">
-                        <span className="tabular-nums truncate">{fn}</span>
-                        <button onClick={() => setAttachedFiles(attachedFiles.filter((_, i) => i !== idx))} className="text-muted-foreground hover:text-foreground">
+                        <span className="min-w-0 truncate">{file.name} · {(file.size / 1024).toFixed(1)} KB</span>
+                        <button type="button" aria-label={`Remove ${file.name}`} onClick={() => setAttachedFiles(attachedFiles.filter((_, i) => i !== idx))} className="flex h-10 w-10 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground">
                           <X className="h-3.5 w-3.5" />
                         </button>
                       </div>
@@ -846,10 +935,10 @@ const CreatePost = () => {
               </p>
 
               <div className="rounded-2xl border border-border/50 bg-card p-4 sm:p-5 space-y-5 shadow-sm">
-                
+
                 {/* Visibility Options */}
                 <div className="space-y-2">
-                  
+
                   {/* Option 1: Public */}
                   <button
                     type="button"
@@ -930,7 +1019,7 @@ const CreatePost = () => {
 
                 {/* Toggles */}
                 <div className="space-y-3 pt-2 border-t border-border/40">
-                  
+
                   <div className="flex items-center justify-between p-2 rounded-xl">
                     <div className="space-y-0.5">
                       <p className="font-heading text-xs font-bold text-foreground">Allow comments</p>
@@ -955,13 +1044,14 @@ const CreatePost = () => {
             </div>
 
             {/* Bottom Actions Bar */}
+            <p className="text-xs text-muted-foreground" role="status">{hasDraft ? "Text and settings saved locally for your account. Files must be reselected after reload." : "Text and settings autosave on this device as you write."}</p>
             <div className="flex items-center justify-between pt-3">
               <button
                 type="button"
                 onClick={handleSaveDraft}
                 className="px-5 py-2.5 rounded-xl border border-border/60 bg-card hover:bg-muted text-xs font-semibold text-foreground transition-colors shadow-sm"
               >
-                Save Draft
+                Save draft
               </button>
 
               <button
@@ -979,7 +1069,7 @@ const CreatePost = () => {
 
           {/* Right Sidebar Column */}
           <div className="lg:col-span-4 space-y-5">
-            
+
             {/* Posting tips */}
             <div className="rounded-xl border border-border bg-card p-5 space-y-3">
               <h3 className="font-heading text-sm font-bold text-foreground">Before you post</h3>

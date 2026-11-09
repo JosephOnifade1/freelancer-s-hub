@@ -57,12 +57,13 @@ const rowToApplication = (row: ApplicationRow): LeadApplication => ({
 });
 
 const fetchApplicant = async (uid: string): Promise<ApplicationApplicant | undefined> => {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("profiles")
     .select("uid, username, displayName, avatarUrl, reputation, isVerifiedPro")
     .eq("uid", uid)
     .maybeSingle();
 
+  if (error) throw new Error(error.message);
   if (!data) return undefined;
   return {
     uid: data.uid,
@@ -195,10 +196,12 @@ export const updateApplicationStatus = async (
   applicationId: string,
   status: ApplicationStatus
 ): Promise<void> => {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("lead_applications")
     .update({ status })
-    .eq("id", applicationId);
+    .eq("id", applicationId)
+    .select("id");
 
   if (error) throw new Error(error.message);
+  if (!data?.length) throw new Error("Application not found or not editable.");
 };

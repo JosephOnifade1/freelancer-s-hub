@@ -19,7 +19,8 @@ const SEGMENT_LABELS: Record<string, string> = {
   u: "Profile",
   p: "Post",
   // Real navigable segments
-  l: "Leads",
+  l: "Opportunities",
+  pipeline: "My pipeline",
   new: "New Posts",
   popular: "Popular",
   tag: "Tag",
@@ -29,7 +30,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   bookmarks: "Bookmarks",
   achievements: "Achievements",
   // Leads sub-routes
-  post: "New Lead",
+  post: "Post opportunity",
   // Coming-soon pages
   drafts: "Drafts",
   premium: "Premium",

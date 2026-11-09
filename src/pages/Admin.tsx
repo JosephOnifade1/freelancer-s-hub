@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
+import { QueryErrorState } from "@/components/QueryErrorState";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useAuth } from "@/hooks/auth-context";
 import { getUserProfile } from "@/lib/users";
@@ -37,7 +38,7 @@ const Admin = () => {
   const [tab, setTab] = useState<AdminTab>("reports");
   const [statusFilter, setStatusFilter] = useState<ReportStatus>("open");
 
-  const { data: myProfile, isLoading: loadingProfile } = useQuery({
+  const { data: myProfile, isLoading: loadingProfile, isError: profileError, refetch: refetchProfile } = useQuery({
     queryKey: ["profile", user?.uid],
     queryFn: () => (user?.uid ? getUserProfile(user.uid) : null),
     enabled: !!user?.uid,
@@ -56,6 +57,8 @@ const Admin = () => {
       </AppLayout>
     );
   }
+
+  if (profileError) return <AppLayout><div className="mx-auto max-w-xl px-4 py-16"><QueryErrorState title="Couldn't check moderator access" onRetry={() => refetchProfile()} /></div></AppLayout>;
 
   if (!isModerator) {
     return (
@@ -125,7 +128,7 @@ function ReportsQueue({
 }) {
   const queryClient = useQueryClient();
 
-  const { data: reports = [], isLoading } = useQuery({
+  const { data: reports = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["reports", status],
     queryFn: () => fetchReports(status),
   });
@@ -163,7 +166,7 @@ function ReportsQueue({
         ))}
       </div>
 
-      {isLoading ? (
+      {isError ? <QueryErrorState title="Couldn't load reports" onRetry={() => refetch()} /> : isLoading ? (
         <div className="flex h-[30vh] items-center justify-center">
           <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
         </div>
@@ -217,7 +220,7 @@ function ReportsQueue({
               {report.status === "open" && (
                 <div className="mt-4 flex flex-wrap gap-2 border-t border-border/60 pt-4">
                   <button
-                    onClick={() => mutation.mutate({ id: report.id, status: "resolved", remove: true })}
+                    onClick={() => { if (window.confirm("Remove the reported content and resolve this report?")) mutation.mutate({ id: report.id, status: "resolved", remove: true }); }}
                     disabled={mutation.isPending}
                     className="rounded-lg bg-destructive px-4 py-2 font-body text-sm font-semibold text-destructive-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
                   >
@@ -252,7 +255,7 @@ function ReportsQueue({
 function VerifiedProManager({ isAdmin }: { isAdmin: boolean }) {
   const queryClient = useQueryClient();
 
-  const { data: users = [], isLoading } = useQuery({
+  const { data: users = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["moderationUsers"],
     queryFn: () => fetchModerationUsers(50),
   });
@@ -266,6 +269,8 @@ function VerifiedProManager({ isAdmin }: { isAdmin: boolean }) {
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to update Verified Pro."),
   });
+
+  if (isError) return <QueryErrorState title="Couldn't load moderation users" onRetry={() => refetch()} />;
 
   if (isLoading) {
     return (
@@ -314,7 +319,7 @@ function VerifiedProManager({ isAdmin }: { isAdmin: boolean }) {
 function RolesManager({ isAdmin, currentUid }: { isAdmin: boolean; currentUid?: string }) {
   const queryClient = useQueryClient();
 
-  const { data: users = [], isLoading } = useQuery({
+  const { data: users = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["moderationUsers"],
     queryFn: () => fetchModerationUsers(50),
   });
@@ -327,6 +332,8 @@ function RolesManager({ isAdmin, currentUid }: { isAdmin: boolean; currentUid?: 
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to update role."),
   });
+
+  if (isError) return <QueryErrorState title="Couldn't load moderation users" onRetry={() => refetch()} />;
 
   if (isLoading) {
     return (

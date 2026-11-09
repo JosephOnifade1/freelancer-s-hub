@@ -17,6 +17,7 @@ import { Editor } from "@/components/editor/Editor";
 import { MarkdownRenderer } from "@/components/editor/MarkdownRenderer";
 import { ReportDialog } from "@/components/ReportDialog";
 import { QueryErrorState } from "@/components/QueryErrorState";
+import { PostAttachments } from "@/components/PostAttachments";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -69,7 +70,7 @@ const CommentThread = ({ comment, postId, depth = 0, commentsEnabled = true, vot
   const [replyBody, setReplyBody] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editBody, setEditBody] = useState(comment.body);
-  
+
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const isOwnComment = user?.uid === comment.authorUid;
@@ -139,7 +140,7 @@ const CommentThread = ({ comment, postId, depth = 0, commentsEnabled = true, vot
               <span className="font-body text-[10px] text-muted-foreground">· {formatTimeAgo(comment.createdAt)}</span>
             </div>
             <p className="font-body text-sm text-muted-foreground/70 italic leading-relaxed mb-1">
-              This insight was removed by the author.
+              This comment was removed.
             </p>
           </div>
         </div>
@@ -155,7 +156,7 @@ const CommentThread = ({ comment, postId, depth = 0, commentsEnabled = true, vot
       {depth > 0 && <div className="absolute -left-[2px] top-4 h-4 w-4 border-l-2 border-b-2 border-brand/40 rounded-bl-lg" />}
       <div className="flex gap-3 py-3">
         <VoteControls score={comment.score || 0} entityId={comment.id} authorUid={comment.authorUid} type="comment" postIdForComment={postId} disabled={!votesEnabled} />
-        
+
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
@@ -176,7 +177,7 @@ const CommentThread = ({ comment, postId, depth = 0, commentsEnabled = true, vot
                 {comment.isEdited && <span className="italic">(edited)</span>}
               </span>
             </div>
-            
+
             {isOwnComment && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -197,14 +198,14 @@ const CommentThread = ({ comment, postId, depth = 0, commentsEnabled = true, vot
               </DropdownMenu>
             )}
           </div>
-          
+
           {isEditing ? (
             <div className="mb-2">
               <CommentTextarea value={editBody} onChange={setEditBody} placeholder="Edit your comment..." minRows={3} />
               <div className="flex justify-end gap-2 mt-2">
                 <button onClick={() => setIsEditing(false)} className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground">Cancel</button>
-                <button 
-                  onClick={() => updateMutation.mutate()} 
+                <button
+                  onClick={() => updateMutation.mutate()}
                   disabled={updateMutation.isPending || !editBody.trim()}
                   className="px-3 py-1 bg-primary text-primary-foreground text-xs rounded hover:opacity-90 disabled:opacity-50"
                 >
@@ -218,7 +219,7 @@ const CommentThread = ({ comment, postId, depth = 0, commentsEnabled = true, vot
               {comment.body}
             </p>
           )}
-          
+
           {commentsEnabled && (
             <button
               onClick={() => setIsReplying(!isReplying)}
@@ -232,13 +233,13 @@ const CommentThread = ({ comment, postId, depth = 0, commentsEnabled = true, vot
             <div className="mt-3 bg-card rounded-lg p-3 border border-brand/20 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
               <CommentTextarea value={replyBody} onChange={setReplyBody} placeholder="Write your reply..." minRows={2} />
               <div className="flex justify-end gap-2 mt-2">
-                <button 
+                <button
                   onClick={() => setIsReplying(false)}
                   className="px-3 py-1.5 font-body text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   onClick={() => submitReply.mutate()}
                   disabled={submitReply.isPending || !replyBody.trim()}
                   className="rounded-md bg-primary px-4 py-1.5 font-body text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-opacity shadow-sm"
@@ -250,7 +251,7 @@ const CommentThread = ({ comment, postId, depth = 0, commentsEnabled = true, vot
           )}
         </div>
       </div>
-      
+
       {comment.replies && comment.replies.map((r) => (
         <CommentThread key={r.id} comment={r} postId={postId} depth={depth + 1} commentsEnabled={commentsEnabled} votesEnabled={votesEnabled} />
       ))}
@@ -263,7 +264,7 @@ const PostDetail = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  
+
   const [newComment, setNewComment] = useState("");
   const [isEditingPost, setIsEditingPost] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
@@ -371,8 +372,8 @@ const PostDetail = () => {
   const activeCommentCount = useMemo(() => comments.filter((c) => !c.isDeleted).length, [comments]);
   // A removed post is frozen: no new comments/replies and no comment votes.
   // Comments-off only blocks new comments — existing votes still count.
-  const commentsEnabled = !!post && !post.isDeleted && post.allowComments !== false;
-  const votesEnabled = !!post && !post.isDeleted;
+  const commentsEnabled = !!user && !!post && !post.isDeleted && post.allowComments !== false;
+  const votesEnabled = !!user && !!post && !post.isDeleted;
 
   if (loadingPost) {
     return (
@@ -429,12 +430,12 @@ const PostDetail = () => {
                   <span className="font-body text-xs text-muted-foreground">{formatTimeAgo(post.createdAt)}</span>
                 </div>
                 <p className="font-body text-sm text-muted-foreground/70 italic leading-relaxed mb-4 bg-muted/30 p-3 rounded-md">
-                  The author has removed this content. Earlier comments remain visible, but replies and votes are closed.
+                  This post was removed. Earlier comments remain visible, but replies and votes are closed.
                 </p>
                 <div className="flex items-center justify-between pt-3 border-t border-border/50">
                   <div className="flex items-center gap-2">
                     <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted font-heading text-xs font-bold text-muted-foreground">?</div>
-                    <span className="font-body text-sm font-medium text-muted-foreground">Original Poster (Removed)</span>
+                    <span className="font-body text-sm font-medium text-muted-foreground">Removed post</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <div className="flex items-center gap-1 rounded-md px-2 py-1 font-body text-xs text-muted-foreground">
@@ -448,7 +449,7 @@ const PostDetail = () => {
         ) : (
           <div className="rounded-xl border border-border bg-card p-5 mb-6 shadow-sm">
             <div className="flex gap-4">
-              <VoteControls score={post.score || 0} entityId={post.id} authorUid={post.author?.uid} type="post" />
+              <VoteControls score={post.score || 0} entityId={post.id} authorUid={post.author?.uid} type="post" disabled={!user} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
@@ -464,13 +465,13 @@ const PostDetail = () => {
                     </span>
                   </div>
                 </div>
-                
+
                 <h1 className="font-heading text-2xl font-bold text-foreground leading-tight mb-3">
                   {post.title}
                 </h1>
 
                 {post.externalLink && (
-                  <a 
+                  <a
                     href={post.externalLink.startsWith('http') ? post.externalLink : `https://${post.externalLink}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -480,7 +481,7 @@ const PostDetail = () => {
                     Visit External Resource
                   </a>
                 )}
-                
+
                 {/* Post edit uses the full rich text editor — appropriate for post body */}
                 {isEditingPost ? (
                   <div className="mb-4">
@@ -493,8 +494,8 @@ const PostDetail = () => {
                     />
                     <div className="flex justify-end gap-2 mt-2">
                       <button onClick={() => setIsEditingPost(false)} className="px-3 py-1.5 text-sm font-body text-muted-foreground hover:text-foreground">Cancel</button>
-                      <button 
-                        onClick={() => updatePostMutation.mutate()} 
+                      <button
+                        onClick={() => updatePostMutation.mutate()}
                         disabled={updatePostMutation.isPending || !editPostBody.trim()}
                         className="px-4 py-1.5 bg-primary text-primary-foreground text-sm font-semibold rounded-md hover:opacity-90 disabled:opacity-50"
                       >
@@ -506,7 +507,7 @@ const PostDetail = () => {
                   /* MarkdownRenderer ONLY for the post body */
                   <MarkdownRenderer content={post.body} className="mb-4" />
                 )}
-                
+
                 <div className="flex flex-wrap gap-1.5 mb-4">
                   {(post.tags || []).map((tag) => (
                     <Link key={tag} to={`/tag/${tag}`} className="rounded-md bg-secondary px-2 py-0.5 font-body text-[11px] font-medium text-secondary-foreground hover:bg-brand/15 hover:text-brand transition-colors">
@@ -514,7 +515,7 @@ const PostDetail = () => {
                     </Link>
                   ))}
                 </div>
-                
+
                 <div className="flex items-center justify-between pt-3 border-t border-border/50">
                   <Link to={post.author?.uid ? `/f/${post.author.uid}` : "#"} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                     <div className="flex h-7 w-7 items-center justify-center rounded-full font-heading text-xs font-bold overflow-hidden bg-muted text-foreground">
@@ -539,7 +540,7 @@ const PostDetail = () => {
                     <button onClick={handleShare} className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
                       <Share2 className="h-3.5 w-3.5" />
                     </button>
-                    <button
+                    {user && <button
                       type="button"
                       aria-label={isSaved ? "Remove bookmark" : "Bookmark post"}
                       onClick={() => bookmarkMutation.mutate()}
@@ -547,8 +548,8 @@ const PostDetail = () => {
                       className={`rounded-md p-1.5 transition-colors hover:bg-secondary ${isSaved ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
                     >
                       <Bookmark className="h-3.5 w-3.5" fill={isSaved ? "currentColor" : "none"} />
-                    </button>
-                    {!isOwnPost && (
+                    </button>}
+                    {user && !isOwnPost && (
                       <button onClick={() => setIsReportOpen(true)} title="Report this post" className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
                         <Flag className="h-3.5 w-3.5" />
                       </button>
@@ -579,6 +580,12 @@ const PostDetail = () => {
           </div>
         )}
 
+        {!post.isDeleted && <PostAttachments postId={post.id} canUpload={!!isOwnPost} />}
+
+        {!user && !post.isDeleted && post.allowComments !== false && <div className="mb-6 rounded-lg border border-border bg-card p-4 text-center text-sm text-muted-foreground">
+          <Link to="/login" state={{ from: { pathname: window.location.pathname } }} className="font-semibold text-brand hover:underline">Sign in</Link> to comment, vote or save this post.
+        </div>}
+
         {/* Comment compose — blocked entirely when the author turned
             comments off (enforced in comments.ts + RLS as well) */}
         {!post.isDeleted && post.allowComments === false && (
@@ -589,7 +596,7 @@ const PostDetail = () => {
             </p>
           </div>
         )}
-        {!post.isDeleted && post.allowComments !== false && (
+        {user && !post.isDeleted && post.allowComments !== false && (
           <div className="rounded-xl border border-border bg-card p-4 mb-6 shadow-sm">
             <p className="font-body text-xs font-semibold text-muted-foreground mb-2 ">Leave a comment</p>
             <CommentTextarea
@@ -599,7 +606,7 @@ const PostDetail = () => {
               minRows={3}
             />
             <div className="flex justify-end mt-2">
-              <button 
+              <button
                 onClick={() => submitComment.mutate()}
                 disabled={submitComment.isPending || !newComment.trim()}
                 className="rounded-lg bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-opacity"
@@ -632,7 +639,7 @@ const PostDetail = () => {
                 ? "No comments are available for this removed post."
                 : post.allowComments === false
                   ? "No comments yet — and new comments are turned off for this post."
-                  : "No comments yet. Be the first to share your thoughts!"}
+                  : user ? "No comments yet. Be the first to share your thoughts!" : "No comments yet. Sign in to start the discussion."}
             </p>
           </div>
         ) : (

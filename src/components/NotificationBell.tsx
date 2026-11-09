@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, CheckCheck } from "lucide-react";
+import { Bell, CheckCheck, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/hooks/auth-context";
 import {
   fetchNotifications,
@@ -29,14 +30,14 @@ export function NotificationBell() {
   const queryClient = useQueryClient();
   const uid = user?.uid;
 
-  const { data: unread = 0 } = useQuery({
+  const { data: unread = 0, isError: countError, refetch: refetchCount } = useQuery({
     queryKey: ["unreadNotifications", uid],
     queryFn: () => (uid ? fetchUnreadNotificationCount(uid) : 0),
     enabled: !!uid,
     refetchInterval: 30_000,
   });
 
-  const { data: notifications = [] } = useQuery({
+  const { data: notifications = [], isLoading, isError: notificationsError, refetch: refetchNotifications } = useQuery({
     queryKey: ["notifications", uid],
     queryFn: () => (uid ? fetchNotifications(uid, 10) : []),
     enabled: !!uid,
@@ -51,11 +52,13 @@ export function NotificationBell() {
   const readMutation = useMutation({
     mutationFn: (id: string) => markNotificationRead(id),
     onSuccess: invalidate,
+    onError: (error: Error) => toast.error(error.message || "Couldn't mark notification as read"),
   });
 
   const readAllMutation = useMutation({
     mutationFn: () => (uid ? markAllNotificationsRead(uid) : Promise.resolve()),
     onSuccess: invalidate,
+    onError: (error: Error) => toast.error(error.message || "Couldn't mark notifications as read"),
   });
 
   if (!user) return null;
@@ -69,11 +72,13 @@ export function NotificationBell() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
+          aria-label={countError ? "Notifications, unread count unavailable" : unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
           className="relative rounded-full p-2 text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
         >
           <Bell className="h-5 w-5" />
-          {unread > 0 && (
+          {countError ? (
+            <span aria-hidden="true" className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-warning" />
+          ) : unread > 0 && (
             <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 font-mono text-[10px] font-bold text-brand-foreground">
               {unread > 9 ? "9+" : unread}
             </span>
@@ -84,7 +89,7 @@ export function NotificationBell() {
       <DropdownMenuContent align="end" className="w-[min(92vw,380px)] p-0">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <p className="font-heading text-sm font-bold text-foreground">Notifications</p>
-          {unread > 0 && (
+          {!countError && unread > 0 && (
             <button
               onClick={() => readAllMutation.mutate()}
               disabled={readAllMutation.isPending}
@@ -96,7 +101,21 @@ export function NotificationBell() {
         </div>
 
         <div className="max-h-[420px] overflow-y-auto">
-          {notifications.length === 0 ? (
+          {countError && (
+            <div role="alert" className="border-b border-border px-4 py-2.5 text-xs text-muted-foreground">
+              Unread count unavailable. <button type="button" onClick={() => void refetchCount()} className="font-semibold text-brand hover:underline">Try again</button>
+            </div>
+          )}
+          {notificationsError ? (
+            <div role="alert" className="px-4 py-8 text-center font-body text-sm text-muted-foreground">
+              <p>Couldn't load notifications.</p>
+              <button type="button" onClick={() => void refetchNotifications()} className="mt-2 font-semibold text-brand hover:underline">Try again</button>
+            </div>
+          ) : isLoading ? (
+            <div role="status" className="flex items-center justify-center gap-2 px-4 py-8 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" /> Loading notifications…
+            </div>
+          ) : notifications.length === 0 ? (
             <p className="px-4 py-10 text-center font-body text-sm text-muted-foreground">
               Nothing yet. Replies, upvotes, follows, and application updates will land here.
             </p>

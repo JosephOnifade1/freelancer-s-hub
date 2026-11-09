@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
@@ -16,7 +16,10 @@ const TABS = ["For You", "Following"] as const;
 
 const Index = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("For You");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("feed") === "following" ? "Following" : "For You";
+  const setActiveTab = (tab: (typeof TABS)[number]) =>
+    setSearchParams(tab === "Following" ? { feed: "following" } : {}, { replace: true });
   const [bannerDismissed, setBannerDismissed] = useState(
     () => sessionStorage.getItem("borynx_profile_banner_dismissed") === "1"
   );
@@ -41,14 +44,22 @@ const Index = () => {
   const { data: followingIds = [], isLoading: followingLoading, isError: followingError, refetch: refetchFollowing } = useQuery({
     queryKey: ["followingIds", user?.uid],
     queryFn: () => (user?.uid ? getFollowingIds(user.uid) : []),
-    enabled: !!user?.uid && activeTab === "Following",
+    enabled: !!user?.uid,
   });
 
   const displayedPosts = useMemo(() => {
     if (activeTab === "Following") {
       return posts.filter((p) => p.author?.uid && followingIds.includes(p.author.uid));
     }
-    return posts;
+    // Engagement with a recency decay, plus a modest boost for followed
+    // authors. Unlike the former chronological list this is a real ranking.
+    const now = Date.now();
+    const score = (post: (typeof posts)[number]) => {
+      const ageDays = Math.max(0, (now - (post.createdAt || now)) / 86_400_000);
+      const followed = post.author?.uid && followingIds.includes(post.author.uid) ? 5 : 0;
+      return (1 + Math.max(0, post.score || 0) + (post.commentCount || 0) * 0.5 + followed) / (1 + ageDays / 7);
+    };
+    return [...posts].sort((a, b) => score(b) - score(a) || (b.createdAt || 0) - (a.createdAt || 0));
   }, [posts, activeTab, followingIds]);
 
   return (
@@ -101,15 +112,16 @@ const Index = () => {
               })}
             </div>
 
+            <p className="text-xs text-muted-foreground">{activeTab === "For You" ? "Active posts ranked by votes, replies and recency, with people you follow boosted." : "Recent posts from people you follow."} <Link to="/new" className="font-semibold text-brand hover:underline">See newest posts</Link></p>
             <ComposerBar />
 
             <div className="space-y-3">
-              {postsError || (activeTab === "Following" && followingError) ? (
+              {postsError || followingError ? (
                 <QueryErrorState
                   title="Couldn't load the feed"
-                  onRetry={() => { refetchPosts(); if (activeTab === "Following") refetchFollowing(); }}
+                  onRetry={() => { refetchPosts(); refetchFollowing(); }}
                 />
-              ) : isLoading || (activeTab === "Following" && followingLoading) ? (
+              ) : isLoading || followingLoading ? (
                 <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
               ) : displayedPosts.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-border bg-card p-10 text-center">
@@ -130,7 +142,7 @@ const Index = () => {
 
           <div className="lg:col-span-4">
             <div className="sticky top-20">
-              <FeedSidebar posts={posts} currentUserUid={user?.uid} />
+              <FeedSidebar posts={posts} feedState={postsError ? "error" : isLoading ? "loading" : "ready"} currentUserUid={user?.uid} />
             </div>
           </div>
         </div>

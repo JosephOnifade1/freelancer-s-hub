@@ -1,26 +1,26 @@
 import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useLocation } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/auth-context";
 import { fetchLeadById } from "@/lib/leads";
+import { fetchPipeline, saveOpportunity } from "@/lib/pipeline";
+import { QueryErrorState } from "@/components/QueryErrorState";
 import { ReportDialog } from "@/components/ReportDialog";
 import {
   applyToLead,
   fetchMyApplication,
   updateApplicationStatus,
 } from "@/lib/applications";
-import { 
-  ArrowLeft, 
-  DollarSign, 
-  MapPin, 
-  Calendar, 
-  Users, 
-  ShieldCheck, 
-  ExternalLink,
-  MessageCircle,
+import {
+  ArrowLeft,
+  DollarSign,
+  MapPin,
+  Users,
+  ShieldCheck,
   Share2,
   BadgeCheck,
+  BookmarkPlus,
   CheckCircle2,
   Send
 } from "lucide-react";
@@ -43,24 +43,46 @@ import { Textarea } from "@/components/ui/textarea";
 const LeadDetail = () => {
   const { leadId } = useParams<{ leadId: string }>();
   const { user } = useAuth();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const [isApplyOpen, setIsApplyOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [proposalText, setProposalText] = useState("");
   const [isSubmittingProposal, setIsSubmittingProposal] = useState(false);
 
-  const { data: lead, isLoading } = useQuery({
+  const { data: lead, isLoading, isError: leadError, refetch: refetchLead } = useQuery({
     queryKey: ['lead', leadId],
     queryFn: () => leadId ? fetchLeadById(leadId) : null,
     enabled: !!leadId,
   });
 
   // Real application state from lead_applications (replaces local-only flag).
-  const { data: myApplication } = useQuery({
+  const { data: myApplication, isError: applicationError, refetch: refetchApplication } = useQuery({
     queryKey: ['myApplication', leadId, user?.uid],
     queryFn: () => (leadId && user?.uid ? fetchMyApplication(leadId, user.uid) : null),
     enabled: !!leadId && !!user?.uid,
   });
+
+  const { data: pipeline = [], isError: pipelineError, refetch: refetchPipeline } = useQuery({
+    queryKey: ['pipeline', user?.uid],
+    queryFn: () => fetchPipeline(user!.uid),
+    enabled: !!user?.uid,
+  });
+  const tracked = pipeline.some((item) => item.leadId === leadId);
+  const [savingToPipeline, setSavingToPipeline] = useState(false);
+  const handleSaveToPipeline = async () => {
+    if (!user?.uid || !lead || savingToPipeline) return;
+    setSavingToPipeline(true);
+    try {
+      await saveOpportunity(user.uid, lead);
+      await queryClient.invalidateQueries({ queryKey: ['pipeline', user.uid] });
+      toast.success('Saved to your private pipeline');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not save to pipeline');
+    } finally {
+      setSavingToPipeline(false);
+    }
+  };
 
   const hasApplied = !!myApplication && myApplication.status !== "withdrawn";
   const isOwnLead = !!user?.uid && !!lead && lead.postedBy.uid === user.uid;
@@ -78,16 +100,6 @@ const LeadDetail = () => {
       toast.success("Opportunity link copied to clipboard!");
     } catch {
       toast.error("Failed to copy link.");
-    }
-  };
-
-  const handleMessageClient = () => {
-    // No DM system exists yet; messaging unlock state follows the REAL
-    // application status instead of a promise disconnected from any data.
-    if (myApplication?.status === "accepted") {
-      toast.info("Your proposal was accepted. Open the client's profile to continue the conversation.");
-    } else {
-      toast.info("Messaging unlocks once the client accepts your proposal. You can view the client's profile meanwhile.");
     }
   };
 
@@ -140,14 +152,20 @@ const LeadDetail = () => {
     );
   }
 
+  if (leadError) {
+    return <AppLayout><div className="mx-auto max-w-4xl px-4 py-12">
+      <QueryErrorState title="Couldn't load this opportunity" onRetry={() => refetchLead()} />
+    </div></AppLayout>;
+  }
+
   if (!lead) {
     return (
       <AppLayout>
         <div className="mx-auto max-w-4xl px-4 py-20 text-center">
            <h2 className="font-heading text-2xl font-bold">Opportunity not found</h2>
-           <p className="font-body text-muted-foreground mt-2 mb-6">The lead you are looking for may have been closed or removed.</p>
+           <p className="font-body text-muted-foreground mt-2 mb-6">This opportunity may have been removed, or the link may be incorrect.</p>
            <Link to="/l">
-             <Button variant="outline">Back to Bounty Board</Button>
+             <Button variant="outline">Back to opportunities</Button>
            </Link>
         </div>
       </AppLayout>
@@ -158,7 +176,7 @@ const LeadDetail = () => {
     <AppLayout>
       <div className="mx-auto max-w-4xl px-4 py-8">
         <Link to="/l" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8 group">
-          <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" /> Back to Bounty Board
+          <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" /> Back to opportunities
         </Link>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -188,13 +206,9 @@ const LeadDetail = () => {
                   <MapPin className="h-4 w-4 text-muted-foreground" />
                   {lead.location}
                 </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  Apply by: Flexible
-                </div>
                 <div className="flex items-center gap-2 text-success font-bold">
                   <DollarSign className="h-4 w-4" />
-                  {lead.budget}
+                  {lead.budget} {lead.currency}
                 </div>
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-muted-foreground" />
@@ -248,13 +262,15 @@ const LeadDetail = () => {
 
               <div className="space-y-3">
                 <Button
-                  onClick={() => setIsApplyOpen(true)}
-                  disabled={hasApplied || isOwnLead || !isOpen}
-                  className={`w-full h-12 font-heading font-bold text-base rounded-xl transition-all ${
+                  onClick={user ? () => setIsApplyOpen(true) : undefined}
+                  disabled={hasApplied || isOwnLead || !isOpen || applicationError}
+                  asChild={!user && isOpen && !isOwnLead}
+                  className={`w-full min-h-12 font-heading font-bold text-base rounded-xl transition-all ${
                     hasApplied ? "bg-success/20 text-success border border-success/30 hover:bg-success/30" : ""
                   }`}
                 >
-                  {hasApplied ? (
+                  {!user && isOpen ? <Link to="/login" state={{ from: location }}>Sign in to apply</Link> : (
+                  hasApplied ? (
                     <span className="flex items-center gap-2">
                       <CheckCircle2 className="h-5 w-5" /> Applied
                     </span>
@@ -263,9 +279,10 @@ const LeadDetail = () => {
                   ) : !isOpen ? (
                     "Applications Closed"
                   ) : (
-                    "Apply Now"
-                  )}
+                    "Apply now"
+                  ))}
                 </Button>
+                {applicationError && <p role="alert" className="text-xs text-destructive">Couldn't check your applications. <button onClick={() => refetchApplication()} className="underline">Retry</button></p>}
                 {myApplication?.status === "pending" && (
                   <Button
                     onClick={handleWithdraw}
@@ -275,13 +292,13 @@ const LeadDetail = () => {
                     Withdraw application
                   </Button>
                 )}
-                <Button 
-                  onClick={handleMessageClient}
-                  variant="outline" 
-                  className="w-full h-12 font-heading font-bold text-base rounded-xl gap-2"
-                >
-                  <MessageCircle className="h-4 w-4" /> Message Client
-                </Button>
+                {user && !isOwnLead && (
+                  <Button variant="outline" className="w-full min-h-11 gap-2" onClick={handleSaveToPipeline}
+                    disabled={savingToPipeline || tracked || pipelineError}>
+                    <BookmarkPlus className="h-4 w-4" /> {tracked ? "In your pipeline" : savingToPipeline ? "Saving…" : "Track in My pipeline"}
+                  </Button>
+                )}
+                {pipelineError && user && <p role="alert" className="text-xs text-destructive">Couldn't check your pipeline. <button onClick={() => refetchPipeline()} className="underline">Retry</button></p>}
               </div>
 
               <div className="mt-6 pt-6 border-t border-border/50 space-y-4">
@@ -307,30 +324,30 @@ const LeadDetail = () => {
               </div>
 
               <div className="mt-6 flex items-center justify-between gap-4">
-                 <button 
+                 <button
                    onClick={handleShare}
                    className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
                  >
                     <Share2 className="h-3.5 w-3.5" /> Share
                  </button>
-                 <button
+                 {user && !isOwnLead && <button
                    onClick={() => setIsReportOpen(true)}
                    className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
                  >
                     <ShieldCheck className="h-3.5 w-3.5" /> Report
-                 </button>
+                 </button>}
               </div>
             </div>
           </div>
         </div>
 
-        <ReportDialog
+        {user && <ReportDialog
           open={isReportOpen}
           onOpenChange={setIsReportOpen}
           entityType="lead"
           entityId={lead.id}
           entityLabel="this lead"
-        />
+        />}
 
         {/* Apply Dialog */}
         <Dialog open={isApplyOpen} onOpenChange={setIsApplyOpen}>

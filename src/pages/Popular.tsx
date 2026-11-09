@@ -55,7 +55,7 @@ const Popular = () => {
           </div>
           <div className="hidden lg:block w-72 shrink-0">
             <div className="sticky top-20">
-              <FeedSidebar posts={posts} currentUserUid={user?.uid} />
+              <FeedSidebar posts={posts} feedState={postsError ? "error" : isLoading ? "loading" : "ready"} currentUserUid={user?.uid} />
             </div>
           </div>
         </div>

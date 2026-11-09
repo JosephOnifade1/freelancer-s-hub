@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { PenTool, HelpCircle, FileText, BarChart2 } from "lucide-react";
 import { useAuth } from "@/hooks/auth-context";
@@ -36,6 +36,15 @@ export function ComposerBar({ spaceSlug, placeholder = "Start a post" }: Compose
     if (spaceSlug) params.set("space", spaceSlug);
     navigate(`/submit?${params.toString()}`);
   };
+
+  if (!user) {
+    const params = new URLSearchParams({ type: "discussion" });
+    if (spaceSlug) params.set("space", spaceSlug);
+    return <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
+      <span className="flex-1">Want to join the conversation?</span>
+      <Link to="/login" state={{ from: { pathname: "/submit", search: `?${params}` } }} className="inline-flex min-h-10 items-center rounded-lg bg-primary px-4 font-semibold text-primary-foreground">Sign in to post</Link>
+    </div>;
+  }
 
   const avatar = user?.photoURL || profile?.avatarUrl;
   const initial = (profile?.displayName || profile?.username || user?.displayName || "?").charAt(0).toUpperCase();

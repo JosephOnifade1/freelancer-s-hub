@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
+import { QueryErrorState } from "@/components/QueryErrorState";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useAuth } from "@/hooks/auth-context";
 import {
@@ -37,13 +38,13 @@ const Applications = () => {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<"received" | "sent">("received");
 
-  const { data: received = [], isLoading: loadingReceived } = useQuery({
+  const { data: received = [], isLoading: loadingReceived, isError: receivedError, refetch: refetchReceived } = useQuery({
     queryKey: ["receivedApplications", user?.uid],
     queryFn: () => (user?.uid ? fetchReceivedApplications(user.uid) : []),
     enabled: !!user?.uid,
   });
 
-  const { data: sent = [], isLoading: loadingSent } = useQuery({
+  const { data: sent = [], isLoading: loadingSent, isError: sentError, refetch: refetchSent } = useQuery({
     queryKey: ["myApplications", user?.uid],
     queryFn: () => (user?.uid ? fetchMyApplications(user.uid) : []),
     enabled: !!user?.uid,
@@ -67,6 +68,8 @@ const Applications = () => {
   });
 
   const isLoading = tab === "received" ? loadingReceived : loadingSent;
+  const isError = tab === "received" ? receivedError : sentError;
+  const retry = tab === "received" ? refetchReceived : refetchSent;
   const active = tab === "received" ? received : sent;
   const pendingReceived = received.filter((a) => a.status === "pending").length;
 
@@ -75,7 +78,7 @@ const Applications = () => {
       <div className="mx-auto max-w-4xl px-4 py-6">
         <PageHeader
           title="Applications"
-          subtitle="Review proposals for your leads, and track the ones you've sent."
+          subtitle="Review proposals for opportunities you posted, and track the ones you've sent."
         />
 
         {/* Tabs */}
@@ -104,7 +107,7 @@ const Applications = () => {
         </div>
 
         <div className="mt-6 space-y-4">
-          {isLoading ? (
+          {isError ? <QueryErrorState title="Couldn't load applications" onRetry={() => retry()} /> : isLoading ? (
             <div className="flex h-[40vh] items-center justify-center">
               <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
             </div>
@@ -113,10 +116,10 @@ const Applications = () => {
               <EmptyState
                 icon={Inbox}
                 title="No applications yet"
-                description="When freelancers apply to leads you post, their proposals will show up here for review."
+                description="When freelancers apply to opportunities you post, their proposals will show up here for review."
                 action={
                   <Link to="/l/post" className="rounded-lg bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground hover:opacity-90">
-                    Post a lead
+                    Post an opportunity
                   </Link>
                 }
               />
@@ -124,10 +127,10 @@ const Applications = () => {
               <EmptyState
                 icon={Briefcase}
                 title="You haven't applied to anything"
-                description="Browse the Leads Board and send your first proposal — it'll be tracked here."
+                description="Browse opportunities and send your first proposal — it'll be tracked here."
                 action={
                   <Link to="/l" className="rounded-lg bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground hover:opacity-90">
-                    Browse leads
+                    Browse opportunities
                   </Link>
                 }
               />

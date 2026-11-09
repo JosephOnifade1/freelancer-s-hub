@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
@@ -19,6 +19,10 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { fetchAllCommunities, type CommunityData } from "@/lib/communities";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { QueryErrorState } from "@/components/QueryErrorState";
 import {
   Accordion,
   AccordionContent,
@@ -37,8 +41,7 @@ import {
      body, JetBrains Mono (font-mono) for labels, budgets and counts.
    ══════════════════════════════════════════════════════════════════════════ */
 
-/* Fallback mirrors the seed in supabase_schema.sql. Live data replaces it
-   (communities are public-read); member counts render only from live data. */
+/* Example categories only for clearly labeled product illustrations, NEVER the live directory. */
 const FALLBACK_SPACES: CommunityData[] = [
   { slug: "design", name: "Design", description: "UI, UX, branding, illustration.", category: "Design", topics: ["ui", "ux", "branding"], memberCount: 0, ownerId: "system", createdAt: "" },
   { slug: "dev", name: "Freelance Dev", description: "Web, mobile, full-stack devs going solo.", category: "Development", topics: ["web", "mobile", "backend"], memberCount: 0, ownerId: "system", createdAt: "" },
@@ -158,9 +161,7 @@ function LeadRow({ lead, last = false }: { lead: (typeof EXAMPLE_LEADS)[number];
       </div>
       <div className="shrink-0 text-right">
         <p className="font-mono text-sm font-semibold text-success">{lead.budget}</p>
-        <Link to="/signup" className="mt-0.5 inline-block font-body text-xs font-semibold text-brand hover:underline">
-          Apply
-        </Link>
+        <span className="mt-0.5 inline-block font-body text-xs text-muted-foreground">Example only</span>
       </div>
     </div>
   );
@@ -217,7 +218,7 @@ function AppPreview({ spaces }: { spaces: CommunityData[] }) {
         {/* right rail */}
         <aside className="hidden border-l border-border lg:block">
           <p className="border-b border-border px-4 py-3 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70">
-            Latest leads
+            Example opportunities
           </p>
           {EXAMPLE_LEADS.slice(0, 2).map((lead) => (
             <div key={lead.title} className="border-b border-border/60 px-4 py-3.5">
@@ -250,7 +251,7 @@ const TABS: { id: TabId; label: string; heading: string; body: string; bullets: 
     id: "feed",
     label: "Feed",
     heading: "A feed ranked by freelancers, for freelancers.",
-    body: "Pricing, clients, tools, taxes — the conversations that actually move a solo business, sorted Hot, Best, or New. No algorithmic rage-bait.",
+    body: "Pricing, clients, tools, taxes — the conversations that move a solo business, sorted by relevance, score or recency.",
     bullets: ["Discussions, questions, resources & polls", "Follow people, filter by tag", "Upvotes surface what works"],
   },
   {
@@ -265,7 +266,7 @@ const TABS: { id: TabId; label: string; heading: string; body: string; bullets: 
     label: "Leads",
     heading: "Work, without the bidding war.",
     body: "Clients and freelancers post projects, bounties, and retainers with budgets up front. Apply with your profile — never with paid credits.",
-    bullets: ["Budgets shown on every lead", "Apply with your Borynx profile", "Track applications on one board"],
+    bullets: ["Browse opportunities without signing in", "Apply with a proposal when signed in", "Track applications and your private pipeline"],
   },
   {
     id: "reputation",
@@ -321,7 +322,7 @@ function TabPanel({ tab, spaces, spacesLive }: { tab: TabId; spaces: CommunityDa
           <LeadRow key={lead.title} lead={lead} last={i === EXAMPLE_LEADS.length - 1} />
         ))}
         <p className="border-t border-border/60 px-4 py-3 font-body text-xs text-muted-foreground sm:px-5">
-          Example leads. Full details are visible to members.
+          Illustrative examples — these are not live jobs. <Link to="/l" className="font-semibold text-brand hover:underline">Browse real opportunities →</Link>
         </p>
       </div>
     );
@@ -360,27 +361,27 @@ function TabPanel({ tab, spaces, spacesLive }: { tab: TabId; spaces: CommunityDa
 /* ─── Page ──────────────────────────────────────────────────────────────── */
 const Landing = () => {
   const reduceMotion = useReducedMotion();
-  const [spaces, setSpaces] = useState<CommunityData[]>(FALLBACK_SPACES);
-  const [spacesLive, setSpacesLive] = useState(false);
+  const { data: spaces = [], isLoading: spacesLoading, isError: spacesError, refetch: refetchSpaces } = useQuery({
+    queryKey: ["communities"], queryFn: fetchAllCommunities,
+  });
+  const spacesLive = !spacesLoading && !spacesError;
+  const previewSpaces = spaces.length ? spaces : FALLBACK_SPACES;
   const [tab, setTab] = useState<TabId>("feed");
-  const activeTab = TABS.find((t) => t.id === tab) ?? TABS[0];
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchAllCommunities()
-      .then((live) => {
-        if (!cancelled && live.length > 0) {
-          setSpaces(live);
-          setSpacesLive(true);
-        }
-      })
-      .catch(() => {
-        /* fallback stays */
+  const [googlePending, setGooglePending] = useState(false);
+  const signInWithGoogle = async () => {
+    if (googlePending) return;
+    setGooglePending(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google", options: { redirectTo: `${window.location.origin}/` },
       });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+      if (error) throw error;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't start Google sign-in");
+      setGooglePending(false);
+    }
+  };
+  const activeTab = TABS.find((t) => t.id === tab) ?? TABS[0];
 
   const rise = (delay = 0) => ({
     initial: { opacity: 0, y: reduceMotion ? 0 : 14 },
@@ -433,12 +434,11 @@ const Landing = () => {
             </motion.p>
 
             <motion.div {...rise(0.24)} className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Link
-                to="/signup"
-                className="inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-lg bg-primary px-6 text-[15px] font-semibold text-primary-foreground transition-opacity hover:opacity-90 sm:w-auto"
+              <button type="button" onClick={signInWithGoogle} disabled={googlePending}
+                className="inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-lg bg-primary px-6 text-[15px] font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50 sm:w-auto"
               >
-                <GoogleMark /> Continue with Google
-              </Link>
+                <GoogleMark /> {googlePending ? "Connecting…" : "Continue with Google"}
+              </button>
               <Link
                 to="/signup"
                 className="inline-flex h-12 w-full items-center justify-center rounded-lg border border-border px-6 text-[15px] font-semibold text-foreground transition-colors hover:bg-muted sm:w-auto"
@@ -452,20 +452,23 @@ const Landing = () => {
           </div>
 
           <motion.div {...rise(0.35)} className="mx-auto mt-16 max-w-5xl">
-            <AppPreview spaces={spaces} />
+            <p className="mb-2 text-right font-mono text-[11px] text-muted-foreground">Illustrative product preview · not live posts or opportunities</p>
+            <AppPreview spaces={previewSpaces} />
           </motion.div>
 
           <motion.p
             {...rise(0.4)}
             className="mt-10 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center font-mono text-xs text-muted-foreground"
           >
-            <span className="text-muted-foreground/70">{spaces.length} B-Spaces:</span>
-            {spaces.map((s, i) => (
-              <span key={s.slug}>
-                <a href="#spaces" className="transition-colors hover:text-brand">b/{s.slug}</a>
-                {i < spaces.length - 1 && <span className="ml-3 text-muted-foreground/40">/</span>}
-              </span>
-            ))}
+            {spacesLive && spaces.length ? <>
+              <span className="text-muted-foreground/70">{spaces.length} B-Spaces:</span>
+              {spaces.map((s, i) => (
+                <span key={s.slug}>
+                  <a href="#spaces" className="transition-colors hover:text-brand">b/{s.slug}</a>
+                  {i < spaces.length - 1 && <span className="ml-3 text-muted-foreground/40">/</span>}
+                </span>
+              ))}
+            </> : <Link to="/communities" className="font-semibold text-brand hover:underline">Browse current spaces →</Link>}
           </motion.p>
         </div>
       </header>
@@ -549,7 +552,8 @@ const Landing = () => {
                 transition={{ duration: 0.28 }}
                 className="overflow-hidden rounded-xl border border-border bg-card"
               >
-                <TabPanel tab={tab} spaces={spaces} spacesLive={spacesLive} />
+                {tab === "spaces" && !spaces.length && <p className="border-b border-border/60 px-5 py-2 text-xs text-muted-foreground">Illustrative space categories, not live listings</p>}
+                <TabPanel tab={tab} spaces={previewSpaces} spacesLive={spacesLive && !!spaces.length} />
               </motion.div>
             </AnimatePresence>
           </div>
@@ -559,7 +563,7 @@ const Landing = () => {
             {[
               { k: "0 credits", v: "to apply to any lead. Budgets are shown up front, always." },
               { k: "100 → 5,000", v: "reputation range, from Rising Voice to Veteran Freelancer." },
-              { k: `${spaces.length} spaces`, v: "live in the directory — design, dev, writing, marketing, video, consulting." },
+              { k: spacesLive ? `${spaces.length} spaces` : "Spaces", v: spacesLive ? "currently in the public directory." : "Browse the directory to see current communities." },
             ].map((stat) => (
               <div key={stat.k}>
                 <p className="font-display text-2xl font-semibold tracking-tight text-foreground">{stat.k}</p>
@@ -580,17 +584,20 @@ const Landing = () => {
             </div>
             <p className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
               <span className={`h-1.5 w-1.5 rounded-full ${spacesLive ? "bg-success" : "bg-warning"}`} aria-hidden="true" />
-              {spacesLive ? "Live directory" : "Starter spaces"}
+              {spacesError ? "Directory unavailable" : spacesLoading ? "Loading directory" : "Public directory"}
             </p>
           </div>
 
-          <div className="mt-10 grid gap-px overflow-hidden rounded-xl border border-border bg-border/60 sm:grid-cols-2 lg:grid-cols-3">
-            {spaces.map((space) => {
+          {spacesError ? <div className="mt-10"><QueryErrorState title="Couldn't load spaces" onRetry={() => refetchSpaces()} /></div>
+            : spacesLoading ? <p role="status" className="mt-10 text-sm text-muted-foreground">Loading current spaces…</p>
+            : !spaces.length ? <p className="mt-10 text-sm text-muted-foreground">No spaces in the directory yet. <Link to="/communities" className="font-semibold text-brand hover:underline">Check the directory</Link> later.</p>
+            : <div className="mt-10 grid gap-px overflow-hidden rounded-xl border border-border bg-border/60 sm:grid-cols-2 lg:grid-cols-3">
+              {spaces.map((space) => {
               const Icon = SPACE_ICONS[space.slug] ?? Users;
               return (
                 <Link
                   key={space.slug}
-                  to="/signup"
+                  to={`/b/${space.slug}`}
                   className="group bg-card p-6 transition-colors hover:bg-muted/40"
                 >
                   <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-foreground">
@@ -603,16 +610,14 @@ const Landing = () => {
                   <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{space.description}</p>
                   <p className="mt-4 flex items-center justify-between">
                     <span className="font-mono text-[11px] text-muted-foreground">
-                      {spacesLive && space.memberCount > 0
-                        ? `${space.memberCount.toLocaleString()} members`
-                        : space.topics.slice(0, 3).map((t) => `#${t}`).join("  ")}
+                      {space.memberCount.toLocaleString()} {space.memberCount === 1 ? "member" : "members"}
                     </span>
                     <ArrowUpRight className="h-4 w-4 text-muted-foreground transition-all group-hover:translate-x-0.5 group-hover:text-brand" />
                   </p>
                 </Link>
               );
             })}
-          </div>
+          </div>}
         </div>
       </section>
 
@@ -627,7 +632,7 @@ const Landing = () => {
             {[
               {
                 q: "Is Borynx free?",
-                a: "Yes — joining, posting, joining B-Spaces, and browsing leads is free. Create an account with email or Google and you're in.",
+                a: "Browsing public posts, spaces, profiles and opportunities is free without an account. Sign in with email or Google to post, join spaces or apply. No bidding credits.",
               },
               {
                 q: "Who can join? I'm just starting out.",
@@ -671,12 +676,11 @@ const Landing = () => {
             Join the freelancers building their businesses in the open on Borynx.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link
-              to="/signup"
-              className="inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-lg bg-primary px-6 text-[15px] font-semibold text-primary-foreground transition-opacity hover:opacity-90 sm:w-auto"
+            <button type="button" onClick={signInWithGoogle} disabled={googlePending}
+              className="inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-lg bg-primary px-6 text-[15px] font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50 sm:w-auto"
             >
-              <GoogleMark /> Continue with Google
-            </Link>
+              <GoogleMark /> {googlePending ? "Connecting…" : "Continue with Google"}
+            </button>
             <Link
               to="/signup"
               className="inline-flex h-12 w-full items-center justify-center gap-1.5 rounded-lg border border-border px-6 text-[15px] font-semibold text-foreground transition-colors hover:bg-muted sm:w-auto"
