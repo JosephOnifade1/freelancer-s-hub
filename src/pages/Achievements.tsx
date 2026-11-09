@@ -297,27 +297,27 @@ export default function Achievements() {
         </AnimatePresence>
 
         <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="p-4 rounded-xl border border-border bg-card">
-            <div className="text-xs text-muted-foreground">Reputation</div>
-            <div className="mt-1 font-heading text-2xl font-bold text-foreground">
+          <div className="p-4 rounded-2xl border border-border bg-card">
+            <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Reputation</div>
+            <div className="mt-1 font-display text-2xl font-bold text-foreground tabular-nums">
               {reputation.toLocaleString()}
             </div>
           </div>
-          <div className="p-4 rounded-xl border border-border bg-card">
-            <div className="text-xs text-muted-foreground">Badges unlocked</div>
-            <div className="mt-1 font-heading text-2xl font-bold text-foreground">
+          <div className="p-4 rounded-2xl border border-border bg-card">
+            <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Badges unlocked</div>
+            <div className="mt-1 font-display text-2xl font-bold text-foreground tabular-nums">
               {unlockedCount} / {totalBadges}
             </div>
           </div>
-          <div className="p-4 rounded-xl border border-border bg-card">
-            <div className="text-xs text-muted-foreground">Posts</div>
-            <div className="mt-1 font-heading text-2xl font-bold text-foreground">
+          <div className="p-4 rounded-2xl border border-border bg-card">
+            <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Posts</div>
+            <div className="mt-1 font-display text-2xl font-bold text-foreground tabular-nums">
               {myPosts.length.toLocaleString()}
             </div>
           </div>
-          <div className="p-4 rounded-xl border border-border bg-card">
-            <div className="text-xs text-muted-foreground">Day streak</div>
-            <div className="mt-1 font-heading text-2xl font-bold text-foreground">
+          <div className="p-4 rounded-2xl border border-border bg-card">
+            <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Day streak</div>
+            <div className="mt-1 font-display text-2xl font-bold text-foreground tabular-nums">
               {streakDays.toLocaleString()}
             </div>
           </div>
@@ -373,20 +373,20 @@ export default function Achievements() {
           </p>
         </div>
 
-        <div className="mb-6 flex items-center gap-6 border-b border-border">
+        <div className="mb-6 flex items-center gap-6 border-b border-border pb-2">
           {(["Badges", "Activity"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`relative pb-3 text-sm font-semibold transition-colors ${
-                tab === t ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+              className={`relative pb-2 text-sm font-semibold transition-colors ${
+                tab === t ? "text-brand" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {t}
               {tab === t && (
                 <motion.div
                   layoutId="achTab"
-                  className="absolute inset-x-0 bottom-0 h-0.5 bg-brand"
+                  className="absolute inset-x-0 bottom-0 h-1 w-full bg-brand rounded-full"
                 />
               )}
             </button>
@@ -422,12 +422,12 @@ export default function Achievements() {
                   return (
                     <div
                       key={bp.badge.id}
-                      className={`rounded-xl border p-4 ${
+                      className={`rounded-2xl border p-5 ${
                         done ? "border-brand/40 bg-brand/5" : "border-border"
                       }`}
                     >
                       <div className="flex items-start gap-3">
-                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-radius-md ${
                           done
                             ? "bg-primary text-primary-foreground"
                             : "bg-muted text-muted-foreground"
@@ -436,7 +436,7 @@ export default function Achievements() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            <p className="text-sm font-semibold text-foreground">
+                            <p className="font-body text-sm font-medium text-foreground">
                               {bp.badge.name}
                             </p>
                             {done ? (
@@ -460,7 +460,7 @@ export default function Achievements() {
                               {bp.current} / {bp.badge.target}
                             </span>
                           </div>
-                          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
+                          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted/50">
                             <div
                               className="h-full rounded-full bg-brand transition-all duration-500"
                               style={{ width: `${pct}%` }}

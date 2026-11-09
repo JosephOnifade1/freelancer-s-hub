@@ -16,12 +16,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 
 const Section = ({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) => (
-  <div className="rounded-xl border border-border bg-card p-6">
-    <h2 className="font-heading text-lg font-semibold text-foreground mb-1">{title}</h2>
-    {description && (
-      <p className="font-body text-sm text-muted-foreground mb-4">{description}</p>
-    )}
-    <div className="space-y-4">{children}</div>
+  <div className="rounded-2xl border border-border bg-card p-6">
+    <div className="space-y-2 mb-5">
+      <h2 className="font-display text-lg font-bold text-foreground tracking-tight">{title}</h2>
+      {description && (
+        <p className="font-body text-sm text-muted-foreground">{description}</p>
+      )}
+    </div>
+    <div className="space-y-5">{children}</div>
   </div>
 );
 
@@ -155,14 +157,14 @@ const Settings = () => {
           <Section title="Account" description="Your login email and password.">
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" defaultValue={user?.email || ""} disabled />
+              <Input id="email" type="email" defaultValue={user?.email || ""} disabled className="bg-muted/50" />
               {user?.email_confirmed_at || isDemoMode ? (
-                <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Email verified
+                <p className="flex items-center gap-2 text-[11px] font-mono text-muted-foreground">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-success" /> Email verified
                 </p>
               ) : (
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="flex items-center gap-1 text-xs text-amber-600">
+                  <p className="flex items-center gap-2 text-[11px] font-mono text-destructive">
                     <XCircle className="h-3.5 w-3.5" /> Email not verified yet
                   </p>
                   <button
@@ -180,13 +182,13 @@ const Settings = () => {
                         setResendingConfirm(false);
                       }
                     }}
-                    className="text-xs font-medium text-brand hover:underline disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 text-[11px] font-mono font-medium text-brand hover:underline disabled:opacity-50"
                   >
                     {resendingConfirm ? "Sending..." : "Resend confirmation email"}
                   </button>
                 </div>
               )}
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[11px] font-mono text-muted-foreground">
                 To change your password, request a reset link. Email changes are not available here.
               </p>
               <div>
@@ -205,7 +207,7 @@ const Settings = () => {
                       setSendingReset(false);
                     }
                   }}
-                  className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
+                  className="rounded-radius-md border border-border bg-background px-4 py-2 font-body text-xs font-medium text-foreground hover:bg-muted disabled:opacity-50 transition-colors"
                 >
                   {sendingReset ? "Sending..." : "Send password reset email"}
                 </button>
@@ -222,7 +224,7 @@ const Settings = () => {
             <div className="grid gap-2 relative">
               <Label htmlFor="username">Username (@handle)</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium select-none">@</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-mono font-medium select-none">@</span>
                 <Input
                   id="username"
                   className="pl-7"
@@ -236,10 +238,10 @@ const Settings = () => {
                   {usernameStatus === "invalid" && <XCircle className="h-4 w-4 text-destructive" />}
                 </div>
               </div>
-              {usernameStatus === "available" && <p className="text-xs text-success">Username is available!</p>}
-              {usernameStatus === "taken" && <p className="text-xs text-destructive">Username is already taken.</p>}
-              {usernameStatus === "invalid" && <p className="text-xs text-destructive">Must be 3-15 lowercase letters, numbers, or underscores.</p>}
-              {usernameStatus === "unavailable" && <p role="alert" className="text-xs text-destructive">Couldn't check username availability. Try again when connected.</p>}
+              {usernameStatus === "available" && <p className="text-[10px] font-mono text-success">Username is available!</p>}
+              {usernameStatus === "taken" && <p className="text-[10px] font-mono text-destructive">Username is already taken.</p>}
+              {usernameStatus === "invalid" && <p className="text-[10px] font-mono text-destructive">Must be 3-15 lowercase letters, numbers, or underscores.</p>}
+              {usernameStatus === "unavailable" && <p role="alert" className="text-[10px] font-mono text-destructive">Couldn't check username availability. Try again when connected.</p>}
             </div>
 
             <div className="grid gap-2">
@@ -261,7 +263,7 @@ const Settings = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-body text-sm font-medium text-foreground">Open to work</p>
-                <p className="font-body text-xs text-muted-foreground">Your work status appears on your public profile after you save.</p>
+                <p className="font-body text-xs font-mono text-muted-foreground">Your work status appears on your public profile after you save.</p>
               </div>
               <Switch checked={available} onCheckedChange={setAvailable} aria-label="Open to work" />
             </div>
@@ -271,7 +273,7 @@ const Settings = () => {
             <button
               onClick={handleSave}
               disabled={isSaving || (username !== originalUsername && usernameStatus !== "available")}
-              className="rounded-lg bg-primary px-5 py-2.5 font-body text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+              className="rounded-radius-md bg-primary px-5 py-2.5 font-body text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2 transition-colors"
             >
               {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
               Save changes
