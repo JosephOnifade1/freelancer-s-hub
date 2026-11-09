@@ -10,6 +10,7 @@ import { SidebarProvider } from "@/components/ui/sidebar.tsx";
 import { lazy, Suspense, type CSSProperties } from "react";
 
 const Index = lazy(() => import("./pages/Index.tsx"));
+const Leaderboard = lazy(() => import("./pages/Leaderboard.tsx"));
 const NewFeed = lazy(() => import("./pages/NewFeed.tsx"));
 const Popular = lazy(() => import("./pages/Popular.tsx"));
 const TagFeed = lazy(() => import("./pages/TagFeed.tsx"));
@@ -134,6 +135,7 @@ const App = () => (
               <Route path="/new"          element={<NewFeed />} />
               <Route path="/following"    element={<ProtectedRoute><Navigate to="/?feed=following" replace /></ProtectedRoute>} />
               <Route path="/popular"      element={<Popular />} />
+              <Route path="/leaderboard"  element={<Leaderboard />} />
               <Route path="/submit"       element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
               <Route path="/tag/:tagName" element={<TagFeed />} />
 
