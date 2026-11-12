@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
+import { useCurrentParams } from "@/hooks/useCurrentParams";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -29,7 +30,7 @@ type Tab = (typeof TABS)[number];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const CommunityDetail = () => {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug } = useCurrentParams<{ slug: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();

@@ -1,14 +1,15 @@
-import { useNavigate, useLocation, Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import { useCurrentPathname } from "@/hooks/useCurrentPathname";
 import { useEffect } from "react";
 import { ArrowLeft, Home, Search } from "lucide-react";
 
 const NotFound = () => {
-  const location = useLocation();
+  const pathname = useCurrentPathname();
   const navigate = useNavigate();
 
   useEffect(() => {
-    console.error("404 Error: Non-existent route accessed:", location.pathname);
-  }, [location.pathname]);
+    console.error("404 Error: Non-existent route accessed:", pathname);
+  }, [pathname]);
 
   return (
     <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center px-4">
@@ -19,7 +20,7 @@ const NotFound = () => {
           Page not found
         </h1>
         <p className="font-body text-muted-foreground mb-2 text-sm leading-relaxed">
-          The page <code className="bg-muted px-1.5 py-0.5 rounded text-xs tabular-nums ">{location.pathname}</code> doesn't exist.
+          The page <code className="bg-muted px-1.5 py-0.5 rounded text-xs tabular-nums ">{pathname}</code> doesn't exist.
         </p>
         <p className="font-body text-sm text-muted-foreground/70 mb-8">
           It may have been moved, deleted, or you may have typed the URL incorrectly.

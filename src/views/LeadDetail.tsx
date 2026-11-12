@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useParams, Link, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { useCurrentParams } from "@/hooks/useCurrentParams";
 import { AppLayout } from "@/components/AppLayout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/auth-context";
@@ -41,7 +42,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 
 const LeadDetail = () => {
-  const { leadId } = useParams<{ leadId: string }>();
+  const { leadId } = useCurrentParams<{ leadId: string }>();
   const { user } = useAuth();
   const location = useLocation();
   const queryClient = useQueryClient();
