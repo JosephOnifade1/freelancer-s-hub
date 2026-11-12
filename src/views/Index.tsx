@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { Loader2, PenTool } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/hooks/auth-context";
 import { useQuery } from "@tanstack/react-query";

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import CreatePost from "./CreatePost";
+import CreatePost from "@/views/CreatePost";
 import { createPost } from "@/lib/posts";
 import { fetchAllCommunities, type CommunityData } from "@/lib/communities";
 import { getUserProfile } from "@/lib/users";

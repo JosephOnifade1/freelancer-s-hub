@@ -3,53 +3,53 @@ import { BrowserRouter, Route, Routes, Navigate, useParams } from "react-router-
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { SidebarProvider } from "@/components/ui/sidebar.tsx";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 // Page imports are route-level lazy chunks. This keeps editor-heavy and
 // feature-specific pages out of the first JavaScript payload.
 import { lazy, Suspense, type CSSProperties } from "react";
 
-const Index = lazy(() => import("./pages/Index.tsx"));
-const Leaderboard = lazy(() => import("./pages/Leaderboard.tsx"));
-const MyReports = lazy(() => import("./pages/MyReports.tsx"));
-const NewFeed = lazy(() => import("./pages/NewFeed.tsx"));
-const Popular = lazy(() => import("./pages/Popular.tsx"));
-const TagFeed = lazy(() => import("./pages/TagFeed.tsx"));
-const Communities = lazy(() => import("./pages/Communities.tsx"));
-const Bookmarks = lazy(() => import("./pages/Bookmarks.tsx"));
-const Achievements = lazy(() => import("./pages/Achievements.tsx"));
-const ProfileDetail = lazy(() => import("./pages/Profile.tsx"));
-const UserMeRedirect = lazy(() => import("./pages/UserMeRedirect.tsx"));
-const LeadsBoard = lazy(() => import("./pages/LeadsBoard.tsx"));
-const Pipeline = lazy(() => import("./pages/Pipeline.tsx"));
-const Applications = lazy(() => import("./pages/Applications.tsx"));
-const Notifications = lazy(() => import("./pages/Notifications.tsx"));
-const Privacy = lazy(() => import("./pages/Privacy.tsx"));
-const Terms = lazy(() => import("./pages/Terms.tsx"));
-const Admin = lazy(() => import("./pages/Admin.tsx"));
-const LeadDetail = lazy(() => import("./pages/LeadDetail.tsx"));
-const CreateLead = lazy(() => import("./pages/CreateLead.tsx"));
-const Settings = lazy(() => import("./pages/Settings.tsx"));
-const CreatePost = lazy(() => import("./pages/CreatePost.tsx"));
-const PostDetail = lazy(() => import("./pages/PostDetail.tsx"));
-const CommunityDetail = lazy(() => import("./pages/CommunityDetail.tsx"));
-const NotFound = lazy(() => import("./pages/NotFound.tsx"));
-const Login = lazy(() => import("./pages/Login.tsx"));
-const Signup = lazy(() => import("./pages/Signup.tsx"));
-const ForgotPassword = lazy(() => import("./pages/ForgotPassword.tsx"));
-const ResetPassword = lazy(() => import("./pages/ResetPassword.tsx"));
-const Onboarding = lazy(() => import("./pages/Onboarding.tsx"));
-const Landing = lazy(() => import("./pages/Landing.tsx"));
-const Drafts = lazy(() => import("./pages/Drafts.tsx"));
+const Index = lazy(() => import("./views/Index"));
+const Leaderboard = lazy(() => import("./views/Leaderboard"));
+const MyReports = lazy(() => import("./views/MyReports"));
+const NewFeed = lazy(() => import("./views/NewFeed"));
+const Popular = lazy(() => import("./views/Popular"));
+const TagFeed = lazy(() => import("./views/TagFeed"));
+const Communities = lazy(() => import("./views/Communities"));
+const Bookmarks = lazy(() => import("./views/Bookmarks"));
+const Achievements = lazy(() => import("./views/Achievements"));
+const ProfileDetail = lazy(() => import("./views/Profile"));
+const UserMeRedirect = lazy(() => import("./views/UserMeRedirect"));
+const LeadsBoard = lazy(() => import("./views/LeadsBoard"));
+const Pipeline = lazy(() => import("./views/Pipeline"));
+const Applications = lazy(() => import("./views/Applications"));
+const Notifications = lazy(() => import("./views/Notifications"));
+const Privacy = lazy(() => import("./views/Privacy"));
+const Terms = lazy(() => import("./views/Terms"));
+const Admin = lazy(() => import("./views/Admin"));
+const LeadDetail = lazy(() => import("./views/LeadDetail"));
+const CreateLead = lazy(() => import("./views/CreateLead"));
+const Settings = lazy(() => import("./views/Settings"));
+const CreatePost = lazy(() => import("./views/CreatePost"));
+const PostDetail = lazy(() => import("./views/PostDetail"));
+const CommunityDetail = lazy(() => import("./views/CommunityDetail"));
+const NotFound = lazy(() => import("./views/NotFound"));
+const Login = lazy(() => import("./views/Login"));
+const Signup = lazy(() => import("./views/Signup"));
+const ForgotPassword = lazy(() => import("./views/ForgotPassword"));
+const ResetPassword = lazy(() => import("./views/ResetPassword"));
+const Onboarding = lazy(() => import("./views/Onboarding"));
+const Landing = lazy(() => import("./views/Landing"));
+const Drafts = lazy(() => import("./views/Drafts"));
 
 // Component imports
-import { ProtectedRoute } from "./components/ProtectedRoute.tsx";
-import { ErrorBoundary } from "./components/ErrorBoundary.tsx";
-import { AppLayout } from "./components/AppLayout.tsx";
-import { ComingSoon } from "./components/ComingSoon.tsx";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { AppLayout } from "./components/AppLayout";
+import { ComingSoon } from "./components/ComingSoon";
 
-import { useAuth } from "./hooks/auth-context.ts";
-import { AuthProvider } from "./hooks/useAuth.tsx";
+import { useAuth } from "./hooks/auth-context";
+import { AuthProvider } from "./hooks/useAuth";
 
 // ─── Query Client ───────────────────────────────────────────────────────────
 const queryClient = new QueryClient({

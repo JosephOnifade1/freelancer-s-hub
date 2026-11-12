@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import PostDetail from "./PostDetail";
+import PostDetail from "@/views/PostDetail";
 import { fetchPostById, incrementPostViews, updatePost, softDeletePost } from "@/lib/posts";
 import { toggleBookmark } from "@/lib/users";
 import { addComment, fetchComments, type CommentData } from "@/lib/comments";
