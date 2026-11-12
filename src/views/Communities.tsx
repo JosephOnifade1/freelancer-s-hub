@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { AppLink } from "@/components/AppLink";
+import { loginPath } from "@/lib/return-path";
 import { motion } from "framer-motion";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Compass, Plus, Search } from "lucide-react";
@@ -190,7 +192,7 @@ const Communities = () => {
                       onClick={() => toggle(space.slug, isJoined)} className="min-h-10 shrink-0 gap-1.5 rounded-radius-md">
                       {isJoined ? <><Check className="h-3.5 w-3.5" /> Joined</> : "Join"}
                     </Button> : <Button variant="outline" size="sm" asChild className="min-h-10 shrink-0 rounded-radius-md">
-                      <Link to="/login" state={{ from: { pathname: `/b/${space.slug}` } }}>Sign in to join</Link>
+                      <AppLink href={loginPath(`/b/${space.slug}`)}>Sign in to join</AppLink>
                     </Button>}
                   </motion.div>
                 );
@@ -217,7 +219,7 @@ const Communities = () => {
                   <Plus className="h-4 w-4" /> Create space
                 </Button>
               </CreateCommunityModal> : <Button asChild variant="outline" className="mt-4 w-full gap-1.5">
-                <Link to="/login" state={{ from: { pathname: "/communities" } }}>Sign in to create a space</Link>
+                <AppLink href={loginPath("/communities")}>Sign in to create a space</AppLink>
               </Button>}
             </div>
 

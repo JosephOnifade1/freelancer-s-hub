@@ -52,7 +52,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [queryClient]);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } finally {
+      // Phase 1: drop the viewer and their cached rows *before* the caller
+      // redirects.
+      //  • `setUser(null)` — the SIGNED_OUT auth event usually arrives a tick
+      //    later; until it does the header would still render the old identity.
+      //    Clearing first means no stale authenticated UI is ever painted.
+      //  • `queryClient.clear()` — the uid-change effect above only fires on the
+      //    *next* session, so without this a shared device could briefly read
+      //    the previous account's cached rows.
+      // Both run even if `signOut` throws (e.g. offline), because the local
+      // session must not survive a failed network call.
+      setUser(null);
+      lastUid.current = null;
+      queryClient.clear();
+    }
   };
 
   return (

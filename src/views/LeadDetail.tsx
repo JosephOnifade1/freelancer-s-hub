@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { usePathname } from "next/navigation";
+import { Link } from "react-router-dom";
+import { AppLink } from "@/components/AppLink";
+import { loginPath } from "@/lib/return-path";
 import { useCurrentParams } from "@/hooks/useCurrentParams";
 import { AppLayout } from "@/components/AppLayout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -44,7 +47,7 @@ import { Textarea } from "@/components/ui/textarea";
 const LeadDetail = () => {
   const { leadId } = useCurrentParams<{ leadId: string }>();
   const { user } = useAuth();
-  const location = useLocation();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
   const [isApplyOpen, setIsApplyOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
@@ -270,7 +273,7 @@ const LeadDetail = () => {
                     hasApplied ? "bg-success/20 text-success border border-success/30 hover:bg-success/30" : ""
                   }`}
                 >
-                  {!user && isOpen ? <Link to="/login" state={{ from: location }}>Sign in to apply</Link> : (
+                  {!user && isOpen ? <AppLink href={loginPath(pathname)}>Sign in to apply</AppLink> : (
                   hasApplied ? (
                     <span className="flex items-center gap-2">
                       <CheckCircle2 className="h-5 w-5" /> Applied

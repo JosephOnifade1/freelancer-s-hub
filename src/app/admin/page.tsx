@@ -2,6 +2,7 @@
 
 import nextDynamic from "next/dynamic";
 import { Loader2 } from "lucide-react";
+import { AuthGate } from "@/components/AuthGate";
 
 // Client-only shell — the view reads the Supabase session and browser storage at
 // render time, so it is mounted with `ssr: false` (see src/app/page.tsx).
@@ -15,5 +16,9 @@ const View = nextDynamic(() => import("@/views/Admin"), {
 });
 
 export default function AdminRoute() {
-  return <View />;
+  return (
+    <AuthGate>
+      <View />
+    </AuthGate>
+  );
 }

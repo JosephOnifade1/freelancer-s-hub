@@ -145,19 +145,26 @@ describe("compatibility adapter reduction", () => {
 });
 
 // ─── Authentication boundary ────────────────────────────────────────────────
-describe("authentication boundary untouched", () => {
-  it("keeps auth views on the compatibility layer", () => {
-    for (const file of ["views/Login.tsx", "views/Signup.tsx", "components/ProtectedRoute.tsx"]) {
+describe("authentication boundary (Phase 1: auth views are native)", () => {
+  it("keeps only the legacy ProtectedRoute on the compatibility layer", () => {
+    const legacy = read("components/ProtectedRoute.tsx");
+    expect(legacy).toContain('from "react-router-dom"');
+    for (const file of ["views/Login.tsx", "views/Signup.tsx"]) {
       const src = read(file);
-      expect(src, file).toContain('from "react-router-dom"');
-      expect(src, file).not.toContain('from "next/navigation"');
+      expect(src, file).not.toContain('from "react-router-dom"');
+      expect(src, file).toContain('from "next/navigation"');
     }
   });
 
-  it("keeps the post-auth redirect contract (location.state) intact", () => {
+  it("keeps the post-auth redirect contract on the validated `?from=` query", () => {
     expect(read("lib/auth.ts")).toContain("postAuthRedirect");
-    expect(read("views/Login.tsx")).toContain("postAuthRedirect(location.state)");
-    expect(read("views/Signup.tsx")).toContain("postAuthRedirect(location.state)");
+    expect(read("lib/auth.ts")).toContain("sanitizeReturnPath");
+    for (const file of ["views/Login.tsx", "views/Signup.tsx"]) {
+      const src = read(file);
+      expect(src, file).toContain("readReturnPath");
+      expect(src, file).toContain("postAuthRedirect(");
+      expect(src, file).not.toContain("location.state");
+    }
   });
 
   it("does not alter the auth provider or session module", () => {

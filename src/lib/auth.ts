@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { getErrorMessage } from "./utils";
+import { sanitizeReturnPath, DEFAULT_RETURN_PATH } from "./return-path";
 
 /**
  * Shared helpers for the auth completion flows (login redirect,
@@ -14,23 +15,16 @@ export const normalizeUsername = (raw: string): string =>
 
 export const isValidUsername = (username: string): boolean => USERNAME_RE.test(username);
 
-type LocationLike = { pathname?: string; search?: string } | undefined;
 
 /**
- * Where to send a user after a successful login/signup: back to the
- * page ProtectedRoute originally bounced them from, else home.
+ * Where to send a user after a successful login/signup.
+ *
+ * Phase 1: the destination now travels in the URL (`/login?from=…`) instead of
+ * React Router `location.state`, so it is validated through `sanitizeReturnPath`
+ * — an unvalidated value here would be an open redirect.
  */
-export function postAuthRedirect(state: unknown): string {
-  const from = (state as { from?: LocationLike } | null | undefined)?.from;
-  if (
-    from?.pathname &&
-    from.pathname !== "/login" &&
-    from.pathname !== "/signup" &&
-    from.pathname !== "/forgot-password"
-  ) {
-    return `${from.pathname}${from.search ?? ""}`;
-  }
-  return "/";
+export function postAuthRedirect(from: string | null | undefined): string {
+  return sanitizeReturnPath(from, DEFAULT_RETURN_PATH);
 }
 
 export function authErrorMessage(error: unknown, fallback: string): string {

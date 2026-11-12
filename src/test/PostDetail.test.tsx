@@ -164,7 +164,8 @@ describe("post detail interaction states", () => {
     expect(screen.getAllByRole("button", { name: /^Vote/ }).every((button) => button.hasAttribute("disabled"))).toBe(true);
     expect(screen.queryByPlaceholderText("Share your thoughts...")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Bookmark post" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login");
+    // Phase 1: the sign-in link now carries the validated return path.
+    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login?from=%2Fp%2Fpost-1");
     expect(addComment).not.toHaveBeenCalled();
   });
 });

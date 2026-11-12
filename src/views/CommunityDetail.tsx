@@ -1,6 +1,9 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { usePathname } from "next/navigation";
+import { AppLink } from "@/components/AppLink";
+import { loginPath } from "@/lib/return-path";
 import { useCurrentParams } from "@/hooks/useCurrentParams";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
@@ -33,7 +36,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CommunityDetail = () => {
   const { slug } = useCurrentParams<{ slug: string }>();
   const router = useRouter();
-  const location = useLocation();
+  const pathname = usePathname();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<Tab>("Feed");
@@ -209,7 +212,7 @@ const CommunityDetail = () => {
                 <Link2 className="h-3.5 w-3.5" /> Copy link
               </Button>
               {!user ? (
-                <Button size="sm" asChild className="rounded-radius-md"><Link to="/login" state={{ from: location }}>Sign in to join</Link></Button>
+                <Button size="sm" asChild className="rounded-radius-md"><AppLink href={loginPath(pathname)}>Sign in to join</AppLink></Button>
               ) : membershipError ? (
                 <button type="button" onClick={() => refetchMembership()} className="text-xs text-destructive hover:underline">Couldn't check membership. Retry</button>
               ) : isJoined ? (

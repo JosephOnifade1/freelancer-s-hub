@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { useParams, Link, useLocation } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
+import { usePathname } from "next/navigation";
+import { AppLink } from "@/components/AppLink";
+import { loginPath } from "@/lib/return-path";
 import { VoteControls } from "@/components/VoteControls";
 import { MapPin, Calendar, Camera, Loader2, Edit2, ArrowLeft, Check, Link as LinkIcon } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
@@ -23,7 +26,7 @@ type Tab = "Threads" | "Resources" | "B-Spaces" | "Bookmarks";
 export default function Profile() {
   const { uid, username, handle } = useParams();
   const { user: currentUser } = useAuth();
-  const pageLocation = useLocation();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -241,7 +244,7 @@ export default function Profile() {
                         Edit profile
                       </Link>
                     ) : !currentUser ? (
-                      <Link to="/login" state={{ from: pageLocation }} className="inline-flex min-h-10 items-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground">Sign in to follow</Link>
+                      <AppLink href={loginPath(pathname)} className="inline-flex min-h-10 items-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground">Sign in to follow</AppLink>
                     ) : followingError ? (
                       <button type="button" onClick={() => refetchFollow()} className="text-xs text-destructive hover:underline">Follow status unavailable. Retry</button>
                     ) : (

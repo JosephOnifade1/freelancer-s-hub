@@ -1,5 +1,8 @@
 import { useMemo, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { usePathname } from "next/navigation";
+import { Link } from "react-router-dom";
+import { AppLink } from "@/components/AppLink";
+import { loginPath } from "@/lib/return-path";
 import { useQuery } from "@tanstack/react-query";
 import { Briefcase, Plus, Search } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
@@ -17,7 +20,7 @@ type Sort = "newest" | "most-applicants";
 /** The public marketplace only displays actual rows from the leads table. */
 export default function LeadsBoard() {
   const { user } = useAuth();
-  const location = useLocation();
+  const pathname = usePathname();
   const [search, setSearch] = useState("");
   const [type, setType] = useState<(typeof TYPES)[number]>("All");
   const [sort, setSort] = useState<Sort>("newest");
@@ -37,7 +40,7 @@ export default function LeadsBoard() {
         : b.applicantsCount - a.applicantsCount || b.postedAt - a.postedAt);
   }, [leads, search, sort, type]);
 
-  const publish = user ? { to: "/l/post" } : { to: "/login", state: { from: { pathname: "/l/post" } } };
+  const publish = user ? { href: "/l/post" } : { href: loginPath("/l/post") };
 
   return (
     <AppLayout>
@@ -46,9 +49,9 @@ export default function LeadsBoard() {
           title="Opportunities"
           subtitle="Real, open projects posted by Borynx members. Apply without bidding credits."
           action={
-            <Link {...publish} className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-radius-md bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <AppLink {...publish} className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-radius-md bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <Plus className="h-4 w-4" /> Post opportunity
-            </Link>
+            </AppLink>
           }
         />
         <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 sm:flex-row sm:items-center">
@@ -90,7 +93,7 @@ export default function LeadsBoard() {
               : "Opportunities appear here when members post a real project. Be the first to post one."}
             action={search || type !== "All"
               ? <button onClick={() => { setSearch(""); setType("All"); }} className="rounded-radius-md border border-border px-4 py-2 font-body text-sm font-medium text-foreground hover:bg-muted">Clear filters</button>
-              : <Link {...publish} className="rounded-radius-md bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground">Post an opportunity</Link>}
+              : <AppLink {...publish} className="rounded-radius-md bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground">Post an opportunity</AppLink>}
           />
         ) : (
           <>
@@ -100,7 +103,7 @@ export default function LeadsBoard() {
             </div>
           </>
         )}
-        {!user && <p className="mt-6 text-center text-sm text-muted-foreground">You can browse without an account. <Link to="/login" state={{ from: location }} className="font-semibold text-brand hover:underline">Sign in</Link> to apply or save an opportunity.</p>}
+        {!user && <p className="mt-6 text-center text-sm text-muted-foreground">You can browse without an account. <AppLink href={loginPath(pathname)} className="font-semibold text-brand hover:underline">Sign in</AppLink> to apply or save an opportunity.</p>}
       </div>
     </AppLayout>
   );

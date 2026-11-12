@@ -1,6 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Link } from "react-router-dom";
+import { usePathname } from "next/navigation";
+import { AppLink } from "@/components/AppLink";
+import { loginPath } from "@/lib/return-path";
 import { useCurrentParams } from "@/hooks/useCurrentParams";
 import { ArrowLeft, MessageSquare, Share2, Bookmark, Loader2, MoreHorizontal, Edit2, Trash2, Eye, ExternalLink, Flag } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
@@ -285,6 +288,7 @@ const PostDetail = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const router = useRouter();
+  const pathname = usePathname();
 
   const [newComment, setNewComment] = useState("");
   const [isEditingPost, setIsEditingPost] = useState(false);
@@ -604,7 +608,7 @@ const PostDetail = () => {
         {!post.isDeleted && <PostAttachments postId={post.id} canUpload={!!isOwnPost} />}
 
         {!user && !post.isDeleted && post.allowComments !== false && <div className="mb-6 rounded-2xl border border-border bg-card p-4 text-center font-body text-sm text-muted-foreground">
-          <Link to="/login" state={{ from: { pathname: window.location.pathname } }} className="font-medium text-brand hover:underline">Sign in</Link> to comment, vote or save this post.
+          <AppLink href={loginPath(pathname)} className="font-medium text-brand hover:underline">Sign in</AppLink> to comment, vote or save this post.
         </div>}
 
         {/* Comment compose — blocked entirely when the author turned

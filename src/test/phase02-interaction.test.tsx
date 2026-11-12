@@ -301,28 +301,22 @@ describe("console hygiene during mounts", () => {
   });
 });
 
-describe("adapter: React Router `state` bridge (post-login redirect)", () => {
-  it("carries Link state through history.state into useLocation", async () => {
-    const { Link, useLocation } = await import("@/lib/navigation");
-    const Probe = () => {
-      const location = useLocation();
-      return (
-        <div>
-          <Link to="/login" state={{ from: { pathname: "/l/post" } }}>
-            signin
-          </Link>
-          <span data-testid="state">{JSON.stringify(location.state)}</span>
-        </div>
-      );
-    };
-    wrap(<Probe />);
-    expect(screen.getByTestId("state")).toHaveTextContent("null");
-    fireEvent.click(screen.getByText("signin"));
-    // The state must be readable before/at navigation, so the login view can
-    // bounce the user back instead of always landing on "/".
-    expect(window.history.state?.__borynx_nav_state).toEqual({ from: { pathname: "/l/post" } });
+describe("auth return path: `?from=` query contract (Phase 1)", () => {
+  it("round-trips the return destination through the query string, not history.state", async () => {
+    const { loginPath, readReturnPath } = await import("@/lib/return-path");
     const { postAuthRedirect } = await import("@/lib/auth");
-    expect(postAuthRedirect(window.history.state.__borynx_nav_state)).toBe("/l/post");
+
+    // Producers build the href...
+    const href = loginPath("/l/post");
+    expect(href).toBe("/login?from=%2Fl%2Fpost");
+
+    // ...the login view reads it back and sanitises it.
+    const params = new URLSearchParams(href.split("?")[1]);
+    expect(readReturnPath(params.get("from"))).toBe("/l/post");
+    expect(postAuthRedirect(readReturnPath(params.get("from")))).toBe("/l/post");
+
+    // Nothing is left on history.state — the bridge is gone.
+    expect(window.history.state?.__borynx_nav_state).toBeUndefined();
   });
 
   it("useLocation exposes a leading-? search string", async () => {

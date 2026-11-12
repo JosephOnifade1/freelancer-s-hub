@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { useNavigate, Link, Navigate, useLocation } from "react-router-dom";
+import { AppLink as Link } from "@/components/AppLink";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase, isDemoMode } from "../lib/supabase";
 import { ensureUserProfile, checkUsernameAvailability } from "../lib/users";
 import { postAuthRedirect, resendConfirmationEmail, authErrorMessage, normalizeUsername, isValidUsername } from "../lib/auth";
+import { readReturnPath } from "../lib/return-path";
 import { useAuth } from "../hooks/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,10 +22,11 @@ export default function Signup() {
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid" | "unavailable">("idle");
   const [confirmationSentTo, setConfirmationSentTo] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
-  const redirectTo = postAuthRedirect(location.state);
+  // Validated URL parameter — see lib/return-path.ts.
+  const redirectTo = postAuthRedirect(readReturnPath(searchParams?.get("from")));
 
   // Live username availability check (debounced), same rules as Settings.
   useEffect(() => {
@@ -89,7 +92,7 @@ export default function Signup() {
         setConfirmationSentTo(email);
       } else {
         toast.success("Account created. Let's set up your profile!");
-        navigate("/onboarding", { replace: true });
+        router.replace("/onboarding");
       }
     } catch (error) {
       const message = authErrorMessage(error, "Failed to create account.");
@@ -150,7 +153,7 @@ export default function Signup() {
       }
 
       toast.success("Logged in as Demo Freelancer!");
-      navigate(redirectTo, { replace: true });
+      router.replace(redirectTo);
     } catch (error) {
       toast.error(authErrorMessage(error, "Demo login failed."));
     } finally {
@@ -171,10 +174,13 @@ export default function Signup() {
     }
   };
 
-  // Already signed in? Skip the form.
-  if (!authLoading && user) {
-    return <Navigate to={redirectTo} replace />;
-  }
+  // Already signed in? Skip the form. Phase 1: redirect in an effect rather
+  // than during render (see the same note in views/Login.tsx).
+  const alreadySignedIn = !authLoading && !!user;
+  useEffect(() => {
+    if (alreadySignedIn) router.replace(redirectTo);
+  }, [alreadySignedIn, redirectTo, router]);
+  if (alreadySignedIn) return null;
 
   if (confirmationSentTo) {
     return (
@@ -194,7 +200,7 @@ export default function Signup() {
             <Button className="w-full" onClick={handleResendConfirmation} disabled={resending}>
               {resending ? "Sending..." : "Resend confirmation email"}
             </Button>
-            <Button variant="outline" className="w-full" onClick={() => navigate("/login")}>
+            <Button variant="outline" className="w-full" onClick={() => router.push("/login")}>
               Go to log in
             </Button>
           </CardFooter>
@@ -208,7 +214,8 @@ export default function Signup() {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: window.location.origin + "/" },
+        // Return to the validated destination after the OAuth round trip.
+    options: { redirectTo: window.location.origin + redirectTo },
       });
       if (error) throw error;
     } catch (error) {
@@ -222,7 +229,7 @@ export default function Signup() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex items-center gap-2 mb-2">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="h-8 w-8">
+            <Button variant="ghost" size="icon" onClick={() => router.push("/")} className="h-8 w-8">
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <CardTitle className="text-2xl font-bold tracking-tight">Create an account</CardTitle>
@@ -297,9 +304,9 @@ export default function Signup() {
             </Button>
             <p className="text-center text-xs text-muted-foreground">
               By signing up you agree to our{" "}
-              <Link to="/terms" className="text-brand hover:underline">Terms of Service</Link>{" "}
+              <Link href="/terms" className="text-brand hover:underline">Terms of Service</Link>{" "}
               and{" "}
-              <Link to="/privacy" className="text-brand hover:underline">Privacy Policy</Link>.
+              <Link href="/privacy" className="text-brand hover:underline">Privacy Policy</Link>.
             </p>
 
             {isDemoMode && (
@@ -344,7 +351,7 @@ export default function Signup() {
 
             <div className="text-sm text-center text-muted-foreground pt-2">
               Already have an account?{" "}
-              <Link to="/login" className="text-brand hover:underline font-medium">
+              <Link href="/login" className="text-brand hover:underline font-medium">
                 Log in
               </Link>
             </div>
