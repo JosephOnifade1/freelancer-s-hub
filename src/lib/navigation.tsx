@@ -24,11 +24,38 @@ export interface CompatibleLinkProps
   replace?: boolean;
   scroll?: boolean;
   prefetch?: boolean;
-  state?: unknown; // accepted and ignored in Next.js
+  /** React Router's `state`. Next has no equivalent, so the adapter writes it
+   *  to `history.state` on click and `useLocation()` reads it back (see below). */
+  state?: unknown;
+}
+
+export // ── React Router `state` bridge ──────────────────────────────────────────────
+// Next.js has no per-navigation state object. React Router's `state` is only
+// used by the auth flow (`ProtectedRoute` → `/login` → back to the original
+// page), so the adapter stores it on `history.state` and `useLocation()`
+// surfaces it again. No Storage / cookies are involved.
+const STATE_KEY = "__borynx_nav_state";
+
+function writeHistoryState(value: unknown) {
+  if (typeof window === "undefined") return;
+  try {
+    window.history.replaceState({ ...(window.history.state || {}), [STATE_KEY]: value }, "");
+  } catch {
+    /* history is unavailable (e.g. sandboxed iframe) — redirect falls back to "/" */
+  }
+}
+
+function readHistoryState(): unknown {
+  if (typeof window === "undefined") return null;
+  try {
+    return (window.history.state as Record<string, unknown> | null)?.[STATE_KEY] ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export const Link = forwardRef<HTMLAnchorElement, CompatibleLinkProps>(
-  ({ to, href, replace, scroll, prefetch, state, children, ...props }, ref) => {
+  ({ to, href, replace, scroll, prefetch, state, children, ...rest }, ref) => {
     let resolvedHref = href || "/";
     if (to) {
       if (typeof to === "string") {
@@ -45,7 +72,14 @@ export const Link = forwardRef<HTMLAnchorElement, CompatibleLinkProps>(
         replace={replace}
         scroll={scroll}
         prefetch={prefetch}
-        {...props}
+        {...rest}
+        onClick={(event) => {
+          // Persist React Router `state` for the destination route. Next only
+          // re-renders on click when navigation actually happens; modifier
+          // clicks and external handlers keep their normal behaviour.
+          if (state !== undefined) writeHistoryState(state);
+          rest.onClick?.(event);
+        }}
       >
         {children}
       </NextLink>
@@ -104,6 +138,8 @@ export function useNavigate() {
       return;
     }
 
+    if (options?.state !== undefined) writeHistoryState(options.state);
+
     if (options?.replace) {
       router.replace(to);
     } else {
@@ -116,13 +152,16 @@ export function useNavigate() {
 export function useLocation() {
   const pathname = useNextPathname() || "/";
   const searchParams = useNextSearchParams();
-  const search = searchParams ? `?${searchParams.toString()}` : "";
+  const query = searchParams ? searchParams.toString() : "";
+  // React Router exposes `search` with a leading "?" (or "" when empty) —
+  // `postAuthRedirect` concatenates it directly onto `pathname`.
+  const search = query ? `?${query}` : "";
 
   return {
     pathname,
     search,
     hash: "",
-    state: null,
+    state: readHistoryState(),
     key: "default",
   };
 }
@@ -178,6 +217,7 @@ export function useSearchParams(): [
 export function Navigate({
   to,
   replace,
+  state,
 }: {
   to: string;
   replace?: boolean;
@@ -186,12 +226,13 @@ export function Navigate({
   const router = useNextRouter();
 
   React.useEffect(() => {
+    if (state !== undefined) writeHistoryState(state);
     if (replace) {
       router.replace(to);
     } else {
       router.push(to);
     }
-  }, [router, to, replace]);
+  }, [router, to, replace, state]);
 
   return null;
 }

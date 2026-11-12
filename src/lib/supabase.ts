@@ -1,28 +1,67 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { MockSupabaseClient, seedMockData } from "./mockSupabase";
 
-// Support both Vite (import.meta.env) and Next.js (process.env) conventions
-const getEnv = (viteKey: string, nextKey: string): string => {
-  if (typeof process !== "undefined" && process.env && process.env[nextKey]) {
-    return process.env[nextKey] as string;
-  }
-  if (typeof process !== "undefined" && process.env && process.env[viteKey]) {
-    return process.env[viteKey] as string;
-  }
-  try {
-    // `import.meta.env` only exists in the Vite build; in the Next build the
-    // `process.env` lookups above win (NEXT_PUBLIC_* is inlined at build time).
-    const viteEnv = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env;
-    if (viteEnv && viteEnv[viteKey]) return viteEnv[viteKey] as string;
-  } catch {
-    // ignore
-  }
-  return "";
-};
+/**
+ * Environment resolution.
+ *
+ * The two build systems inline environment variables differently, and both
+ * require *literal* access expressions:
+ *
+ *  - Vite replaces `import.meta.env.VITE_*` at build time.
+ *  - Next/Turbopack replaces `process.env.NEXT_PUBLIC_*` at build time.
+ *
+ * A dynamic read such as `process.env[key]` is NOT inlined by Next, so it
+ * silently yields `undefined` in the browser bundle. Every lookup below is
+ * therefore spelled out literally; nothing is read through a computed key.
+ *
+ * Only `NEXT_PUBLIC_*` / `VITE_*` values are referenced, so nothing here can
+ * pull a server-only secret into a client bundle.
+ */
+const nextPublicSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const nextPublicSupabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const nextPublicDemoMode = readNextPublicEnv("NEXT_PUBLIC_DEMO_MODE");
 
-const supabaseUrl = getEnv("VITE_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL");
-const supabaseAnonKey = getEnv("VITE_SUPABASE_ANON_KEY", "NEXT_PUBLIC_SUPABASE_ANON_KEY");
-const demoModeEnv = getEnv("VITE_DEMO_MODE", "NEXT_PUBLIC_DEMO_MODE");
+const viteSupabaseUrl = readViteEnv("VITE_SUPABASE_URL");
+const viteSupabaseAnonKey = readViteEnv("VITE_SUPABASE_ANON_KEY");
+const viteDemoMode = readViteEnv("VITE_DEMO_MODE");
+
+/**
+ * `import.meta.env` only exists in the Vite build. Reading it once at module
+ * scope is fine: Vite replaces it statically, and Next/Webpack leave a plain
+ * property access on an object that is simply `undefined` there.
+ */
+const viteEnv = (
+  import.meta as ImportMeta & { env?: Record<string, string | undefined> }
+).env;
+
+function readViteEnv(key: string): string | undefined {
+  try {
+    return viteEnv?.[key];
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Reads a single `NEXT_PUBLIC_*` value.
+ *
+ * The identifier must appear literally in the source for Next's compiler to
+ * inline it — `process.env.someKey` in a variable (including a plain
+ * `const x = process.env.FOO` moved into a helper) resolves to nothing. Each
+ * supported variable is listed explicitly; anything else is not public config.
+ */
+function readNextPublicEnv(key: "NEXT_PUBLIC_DEMO_MODE"): string | undefined {
+  switch (key) {
+    case "NEXT_PUBLIC_DEMO_MODE":
+      return process.env.NEXT_PUBLIC_DEMO_MODE;
+    default:
+      return undefined;
+  }
+}
+
+const supabaseUrl = nextPublicSupabaseUrl || viteSupabaseUrl || "";
+const supabaseAnonKey = nextPublicSupabaseAnonKey || viteSupabaseAnonKey || "";
+const demoModeEnv = nextPublicDemoMode || viteDemoMode || "";
 
 const isPlaceholder =
   !supabaseUrl ||
