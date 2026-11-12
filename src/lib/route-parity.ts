@@ -34,6 +34,11 @@ export const APP_ROUTES = [
   "/my-reports",
   "/drafts",
   "/admin",
+  // Phase 0.5: legacy SPA routes that had no App Router equivalent (404 on Next).
+  "/pricing",
+  "/status",
+  "/premium",
+  "/u/[username]",
   "/tag/[tagName]",
   "/b/[slug]",
   "/b/[slug]/p/[id]",

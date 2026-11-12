@@ -63,32 +63,19 @@ describe("React 19 view rendering (Next.js 16 entry points)", () => {
   });
 });
 
-describe("NavLink adapter (className render props)", () => {
-  it("never stringifies a className render prop into the class attribute", async () => {
-    const { NavLink } = await import("@/lib/navigation");
-    const html = renderToString(
-      <NavLink to="/l" className={({ isActive }) => (isActive ? "active-link" : "idle-link")} />
-    );
-    expect(html).toContain("idle-link");
-    expect(html).not.toContain("isActive");
-    expect(html).not.toContain("&gt;");
-  });
-});
-
 describe("react-router-dom compatibility adapter", () => {
   it("keeps the exported surface used by components", async () => {
     const nav = await import("@/lib/navigation");
+    // Phase 0.5 removed the exports with zero consumers (NavLink, and the
+    // MemoryRouter/Routes/Route testing stubs). What remains is what production
+    // code actually imports.
     for (const name of [
       "Link",
-      "NavLink",
       "useNavigate",
       "useLocation",
       "useParams",
       "useSearchParams",
       "Navigate",
-      "MemoryRouter",
-      "Routes",
-      "Route",
     ]) {
       expect(nav).toHaveProperty(name);
     }

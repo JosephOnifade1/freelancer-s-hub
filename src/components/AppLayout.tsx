@@ -1,10 +1,11 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { useRouter } from "next/navigation";
 import { useSidebar } from "@/components/ui/sidebar-context";
 import { AppSidebar } from "@/components/AppSidebar";
 import { VeteranCelebration } from "./VeteranCelebration";
 import { NotificationBell } from "./NotificationBell";
 import { Plus, User, LogOut, Settings, Search, X, FileText, Sparkles, Monitor, Sun, Moon, Shield, Check, Briefcase } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/auth-context";
 import { getUserProfile, UserProfile } from "@/lib/users";
 import { useState, useEffect, useRef } from "react";
@@ -33,7 +34,7 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
+  const router = useRouter();
   const { data: profile, isError: profileError, refetch: refetchProfile } = useQuery({
     queryKey: ["profile", user?.uid],
     queryFn: () => getUserProfile(user!.uid),
@@ -77,7 +78,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate("/login");
+    router.push("/login");
   };
 
   // Keyboard Shortcuts
@@ -144,7 +145,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   ];
 
   const handleNav = (url: string) => {
-    navigate(url);
+    router.push(url);
     setIsSearchExpanded(false);
     setSearchQuery("");
     searchInputRef.current?.blur();
@@ -494,7 +495,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             >
               <div className="py-2">
                 <button
-                  onClick={() => { navigate(user ? `/f/${profile?.username || user.uid}` : '/login'); setIsAvatarMenuOpen(false); }}
+                  onClick={() => { router.push(user ? `/f/${profile?.username || user.uid}` : '/login'); setIsAvatarMenuOpen(false); }}
                   className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground transition-all hover:bg-white/5 hover:text-foreground group"
                 >
                   <User className="h-4 w-4 shrink-0" />
@@ -517,7 +518,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 </button>
 
                 <button
-                  onClick={() => { navigate('/drafts'); setIsAvatarMenuOpen(false); }}
+                  onClick={() => { router.push('/drafts'); setIsAvatarMenuOpen(false); }}
                   className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground transition-all hover:bg-white/5 hover:text-foreground group"
                 >
                   <FileText className="h-4 w-4 shrink-0" />
@@ -525,7 +526,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 </button>
 
                 <button
-                  onClick={() => { navigate('/premium'); setIsAvatarMenuOpen(false); }}
+                  onClick={() => { router.push('/premium'); setIsAvatarMenuOpen(false); }}
                   className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground transition-all hover:bg-white/5 hover:text-foreground group"
                 >
                   <Shield className="h-4 w-4 shrink-0" />
@@ -551,7 +552,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 </button>
 
                 <button
-                  onClick={() => { navigate('/settings'); setIsAvatarMenuOpen(false); }}
+                  onClick={() => { router.push('/settings'); setIsAvatarMenuOpen(false); }}
                   className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground transition-all hover:bg-white/5 hover:text-foreground group"
                 >
                   <Settings className="h-4 w-4 shrink-0" />

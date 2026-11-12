@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Flag, Loader2, Clock, ShieldCheck } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
@@ -18,7 +18,6 @@ const STATUS_LABELS: Record<Report["status"], { label: string; color: string }> 
 
 export default function MyReports() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<Report["status"] | "all">("all");
 
   const { data: reports = [], isLoading, isError, refetch } = useQuery({

@@ -1,4 +1,5 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, CheckCheck, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -26,7 +27,7 @@ import { cn } from "@/lib/utils";
  */
 export function NotificationBell() {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const uid = user?.uid;
 
@@ -65,7 +66,7 @@ export function NotificationBell() {
 
   const handleOpen = (n: AppNotification) => {
     if (!n.isRead) readMutation.mutate(n.id);
-    navigate(notificationLink(n));
+    router.push(notificationLink(n));
   };
 
   return (

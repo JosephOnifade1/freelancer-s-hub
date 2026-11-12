@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/navigation";
+
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { Input } from "@/components/ui/input";
@@ -21,7 +22,7 @@ import { createLead, LeadType } from "@/lib/leads";
 import { X, DollarSign, MapPin, Briefcase } from "lucide-react";
 
 const CreateLead = () => {
-  const navigate = useNavigate();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { data: profile } = useQuery({
@@ -122,7 +123,7 @@ const CreateLead = () => {
       }
       queryClient.invalidateQueries({ queryKey: ["leads"] });
       toast.success("Opportunity posted successfully!");
-      navigate(`/l/${id}`);
+      router.push(`/l/${id}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to post opportunity.");
     } finally {
@@ -238,7 +239,7 @@ const CreateLead = () => {
 
           <div className="pt-6 border-t border-border flex items-center justify-end gap-3">
              <Button type="button" variant="ghost" onClick={() => {
-               if (!hasUnsavedWork || window.confirm("Discard this opportunity? Your changes have not been saved.")) navigate("/l");
+               if (!hasUnsavedWork || window.confirm("Discard this opportunity? Your changes have not been saved.")) router.push("/l");
              }}>Cancel</Button>
              <Button type="submit" disabled={isSubmitting} className="px-8">
                {isSubmitting ? "Posting..." : "Publish Opportunity"}

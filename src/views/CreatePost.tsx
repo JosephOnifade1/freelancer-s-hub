@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useRouter } from "next/navigation";
+import { Link, useSearchParams } from "react-router-dom";
 import { X, BarChart2, HelpCircle, BookOpen, ChevronDown, ImageIcon, Video, Code2, FileUp, Search, CheckCircle2, Plus, Send, Globe, Users, ShieldAlert, Layout, User } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { Input } from "@/components/ui/input";
@@ -62,7 +63,7 @@ const LOADING_SPACE: BSpaceOption = {
 };
 
 const CreatePost = () => {
-  const navigate = useNavigate();
+  const router = useRouter();
   const [searchParams] = useSearchParams();
   const bodyImageInputRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -468,7 +469,7 @@ const CreatePost = () => {
       // "your post is live" screen so the user can retry the uploads without
       // silently losing them by navigating away.
       if (remaining === 0) {
-        navigate(selectedSpace.kind === "space" && selectedSpace.communitySlug
+        router.push(selectedSpace.kind === "space" && selectedSpace.communitySlug
           ? `/b/${selectedSpace.communitySlug}/p/${postId}` : `/p/${postId}`);
       }
     } catch (error: unknown) {
@@ -517,7 +518,7 @@ const CreatePost = () => {
             <button
               onClick={() => {
                 if (attachedFiles.length && !window.confirm("Selected documents won't be saved when you leave. Continue?")) return;
-                navigate(-1);
+                router.back();
               }}
               aria-label="Close composer"
               className="p-2 rounded-radius-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
@@ -1169,6 +1170,5 @@ const CreatePost = () => {
     </AppLayout>
   );
 };
-
 
 export default CreatePost;

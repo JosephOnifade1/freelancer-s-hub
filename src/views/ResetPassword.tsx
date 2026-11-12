@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useRouter } from "next/navigation";
+import { Link } from "react-router-dom";
 import { supabase, isDemoMode } from "../lib/supabase";
 import { updatePassword, authErrorMessage } from "../lib/auth";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ export default function ResetPassword() {
   const [phase, setPhase] = useState<Phase>("checking");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const navigate = useNavigate();
+  const router = useRouter();
 
   useEffect(() => {
     let settled = false;
@@ -76,7 +77,7 @@ export default function ResetPassword() {
       await updatePassword(password);
       setPhase("done");
       toast.success("Password updated. You're signed in with your new password.");
-      setTimeout(() => navigate("/", { replace: true }), 1200);
+      setTimeout(() => router.replace("/"), 1200);
     } catch (error) {
       setPhase("ready");
       toast.error(authErrorMessage(error, "Could not update your password. The reset link may have expired — request a new one."));
@@ -115,7 +116,7 @@ export default function ResetPassword() {
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-3">
-              <Button className="w-full" onClick={() => navigate("/forgot-password")}>
+              <Button className="w-full" onClick={() => router.push("/forgot-password")}>
                 Request a new reset link
               </Button>
               <Link to="/login" className="text-sm text-muted-foreground hover:text-brand hover:underline">

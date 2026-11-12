@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +9,7 @@ import { Truck, Code, Megaphone, Palette, Briefcase, Network, Plus, Check } from
 import { createCommunity } from "@/lib/communities";
 import { useAuth } from "@/hooks/auth-context";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+
 import { cn, getErrorMessage } from "@/lib/utils";
 
 const NICHE_TOPICS = [
@@ -24,7 +25,7 @@ export function CreateCommunityModal({ children }: { children?: React.ReactNode 
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const router = useRouter();
 
   // Form State
   const [name, setName] = useState("");
@@ -96,7 +97,7 @@ export function CreateCommunityModal({ children }: { children?: React.ReactNode 
 
       toast.success(`Welcome to ${name}!`);
       setOpen(false);
-      navigate(`/b/${slug}`);
+      router.push(`/b/${slug}`);
     } catch (err) {
       setError(getErrorMessage(err, "Failed to create community."));
     } finally {

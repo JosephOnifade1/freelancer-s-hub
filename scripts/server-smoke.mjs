@@ -16,6 +16,8 @@ const routes = [
   "/submit", "/onboarding", "/settings", "/pipeline", "/applications",
   "/notifications", "/bookmarks", "/achievements", "/my-reports", "/drafts",
   "/admin", "/tag/react", "/l/post", "/l/lead-1", "/f/me",
+  // Phase 0.5: legacy SPA routes restored on the App Router.
+  "/pricing", "/status", "/premium", "/u/joseph",
   // redirect-only aliases from src/App.tsx
   "/b", "/p", "/f", "/u", "/following",
 ];

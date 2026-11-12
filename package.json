@@ -16,7 +16,11 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck:legacy": "tsc --noEmit -p tsconfig.legacy.json",
+    "dev:legacy": "vite --port 8080",
+    "build:legacy": "vite build",
+    "preview:legacy": "vite preview --port 8080"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
