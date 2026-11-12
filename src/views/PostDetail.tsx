@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useCurrentParams } from "@/hooks/useCurrentParams";
 import { ArrowLeft, MessageSquare, Share2, Bookmark, Loader2, MoreHorizontal, Edit2, Trash2, Eye, ExternalLink, Flag } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { VoteControls } from "@/components/VoteControls";
@@ -279,7 +280,7 @@ const CommentThread = ({ comment, postId, depth = 0, commentsEnabled = true, vot
 };
 
 const PostDetail = () => {
-  const { id } = useParams();
+  const { id } = useCurrentParams<{ id: string }>();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();

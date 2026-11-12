@@ -239,7 +239,7 @@ const MIGRATED = [
 const SEAM = "hooks/useCurrentPathname.ts";
 
 /**
- * Production files still importing `react-router-dom` after Phase 0.3.
+ * Production files still importing `react-router-dom` after Phase 0.4.
  *
  * These are intentionally left for later phases: navigation writers, view-level
  * `useLocation`/`useParams` consumers, and the auth/protected-route surface.
@@ -258,6 +258,7 @@ const REMAINING_ADAPTER_CONSUMERS = [
   "components/PollWidget.tsx",
   "components/ProtectedRoute.tsx",
   "components/modals/CreateCommunityModal.tsx",
+  "hooks/useCurrentParams.ts",
   "hooks/useCurrentPathname.ts",
   "views/Communities.tsx",
   "views/CommunityDetail.tsx",

@@ -1,4 +1,5 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { useCurrentParams } from "@/hooks/useCurrentParams";
 import { AppLayout } from "@/components/AppLayout";
 import { PostCard } from "@/components/PostCard";
 import { FeedSidebar } from "@/components/FeedSidebar";
@@ -9,7 +10,7 @@ import { QueryErrorState } from "@/components/QueryErrorState";
 import { Loader2, Hash, ArrowLeft } from "lucide-react";
 
 const TagFeed = () => {
-  const { tagName } = useParams<{ tagName: string }>();
+  const { tagName } = useCurrentParams<{ tagName: string }>();
   const navigate = useNavigate();
 
   const { data: posts = [], isLoading, isError: postsError, refetch: refetchPosts } = useQuery({

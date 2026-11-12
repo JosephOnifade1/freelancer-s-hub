@@ -22,6 +22,10 @@ import { useLocation } from "react-router-dom";
  * step 7), delete the fallback here — the hook then collapses to `usePathname()`.
  */
 export function useCurrentPathname(): string {
+  // Both hooks are called unconditionally (React's rules-of-hooks). `usePathname()`
+  // is populated only inside the App Router; there `react-router-dom` is aliased to
+  // the compatibility adapter, whose `useLocation()` is itself backed by
+  // `usePathname()`, so both branches agree.
   const nextPathname = usePathname();
   const { pathname } = useLocation();
   return nextPathname || pathname || "/";
