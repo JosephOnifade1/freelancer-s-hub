@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useRouter } from "next/navigation";
+import { Link } from "react-router-dom";
 import { FileText, Trash2, PenLine, Clock } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
@@ -10,7 +11,7 @@ import { toast } from "sonner";
 
 export default function Drafts() {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const router = useRouter();
   const [draft, setDraft] = useState(() => readDraft(user?.uid || ""));
 
   const handleDelete = () => {
@@ -35,7 +36,7 @@ export default function Drafts() {
                 <h2 className="truncate text-base font-bold text-foreground">{draft.title || <span className="italic text-muted-foreground">Untitled draft</span>}</h2>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <button onClick={() => navigate("/submit?restore=1")} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground"><PenLine className="h-4 w-4" /> Continue editing</button>
+                <button onClick={() => router.push("/submit?restore=1")} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground"><PenLine className="h-4 w-4" /> Continue editing</button>
                 <button onClick={handleDelete} aria-label="Delete draft" className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:ring-2 focus-visible:ring-ring"><Trash2 className="h-4 w-4" /></button>
               </div>
             </div>

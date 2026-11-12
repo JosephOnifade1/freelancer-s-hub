@@ -246,23 +246,23 @@ const SEAM = "hooks/useCurrentPathname.ts";
  * `views/Communities.tsx` additionally passes React Router `state` (the
  * `history.state` bridge), which has no native equivalent yet.
  * `src/lib/navigation.tsx` (the adapter itself) is excluded — it must resolve the
- * real package in the Vite build.
+ * real package in the Vite build. `src/legacy-next/*` are included: they are the
+ * rollback snapshot's `next/*` shims, which legitimately import React Router.
  */
 const REMAINING_ADAPTER_CONSUMERS = [
   "App.tsx",
   "components/AppLayout.tsx",
   "components/AppLink.tsx",
-  "components/ComingSoon.tsx",
   "components/ComposerBar.tsx",
   "components/NotificationBell.tsx",
   "components/PollWidget.tsx",
   "components/ProtectedRoute.tsx",
-  "components/modals/CreateCommunityModal.tsx",
   "hooks/useCurrentParams.ts",
   "hooks/useCurrentPathname.ts",
+  "legacy-next/next-link.tsx",
+  "legacy-next/next-navigation.ts",
   "views/Communities.tsx",
   "views/CommunityDetail.tsx",
-  "views/CreateLead.tsx",
   "views/CreatePost.tsx",
   "views/Drafts.tsx",
   "views/ForgotPassword.tsx",
@@ -272,14 +272,10 @@ const REMAINING_ADAPTER_CONSUMERS = [
   "views/Login.tsx",
   "views/MyReports.tsx",
   "views/NotFound.tsx",
-  "views/Notifications.tsx",
-  "views/Onboarding.tsx",
   "views/PostDetail.tsx",
   "views/Profile.tsx",
   "views/ResetPassword.tsx",
   "views/Signup.tsx",
-  "views/TagFeed.tsx",
-  "views/UserMeRedirect.tsx",
 ].sort();
 
 /** Authentication / protected-route files Phase 0.3 must not touch. */
@@ -325,9 +321,13 @@ describe("adapter boundaries", () => {
 
   it("keeps the compatibility layer available for unmigrated code", () => {
     const adapter = readFileSync(join(SRC, "lib/navigation.tsx"), "utf8");
-    for (const api of ["Link", "NavLink", "useNavigate", "useLocation", "useParams", "useSearchParams", "Navigate"]) {
+    // Phase 0.5 reduced the adapter: `NavLink` and the testing stubs were
+    // removed once they had zero production consumers.
+    for (const api of ["Link", "useNavigate", "useLocation", "useParams", "useSearchParams", "Navigate"]) {
       expect(adapter).toContain(api);
     }
+    expect(adapter).not.toContain("export const NavLink");
+    expect(adapter).not.toContain("export const MemoryRouter");
   });
 
   it("keeps react-router-dom as a dependency for the Vite build", () => {

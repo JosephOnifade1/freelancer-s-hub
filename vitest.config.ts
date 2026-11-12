@@ -11,6 +11,12 @@ export default defineConfig({
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
   },
   resolve: {
-    alias: { "@": path.resolve(__dirname, "./src") },
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+      // Mirrors vite.config.ts: tests render the React Router runtime, so app
+      // code that imports `next/navigation` gets the legacy shim.
+      "next/navigation": path.resolve(__dirname, "./src/legacy-next/next-navigation.ts"),
+      "next/link": path.resolve(__dirname, "./src/legacy-next/next-link.tsx"),
+    },
   },
 });

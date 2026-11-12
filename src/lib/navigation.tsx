@@ -88,39 +88,6 @@ export const Link = forwardRef<HTMLAnchorElement, CompatibleLinkProps>(
 );
 Link.displayName = "CompatibleLink";
 
-// Compatible NavLink component
-export interface NavLinkProps extends Omit<CompatibleLinkProps, "className"> {
-  className?: string | ((props: { isActive: boolean; isPending: boolean }) => string | undefined);
-  activeClassName?: string;
-  pendingClassName?: string;
-}
-
-export const NavLink = forwardRef<HTMLAnchorElement, NavLinkProps>(
-  ({ to, href, className, activeClassName, pendingClassName, children, ...props }, ref) => {
-    const pathname = useNextPathname() || "/";
-    let target = href || "/";
-    if (to) {
-      if (typeof to === "string") target = to;
-      else if (typeof to === "object") target = to.pathname || "/";
-    }
-
-    const isActive = target === "/" ? pathname === "/" : pathname.startsWith(target);
-    const navProps = { isActive, isPending: false };
-
-    // Per React Router's NavLink contract, a function `className` is ALWAYS a
-    // render prop and its result must never be stringified into the DOM.
-    const computedClass = typeof className === "function" ? className(navProps) : className;
-    const classes = [computedClass, isActive && activeClassName].filter(Boolean).join(" ");
-
-    return (
-      <Link ref={ref} to={to} href={href} className={classes || undefined} {...props}>
-        {children}
-      </Link>
-    );
-  }
-);
-NavLink.displayName = "CompatibleNavLink";
-
 // Compatible useNavigate hook
 export function useNavigate() {
   const router = useNextRouter();
@@ -236,8 +203,3 @@ export function Navigate({
 
   return null;
 }
-
-// Stubs for testing utilities if imported in test files
-export const MemoryRouter = ({ children }: { children: React.ReactNode }) => <>{children}</>;
-export const Routes = ({ children }: { children: React.ReactNode }) => <>{children}</>;
-export const Route = () => null;

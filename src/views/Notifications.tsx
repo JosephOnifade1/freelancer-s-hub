@@ -1,5 +1,6 @@
-import { useNavigate } from "react-router-dom";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
@@ -19,7 +20,7 @@ import { toast } from "sonner";
 
 const Notifications = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const uid = user?.uid;
 
@@ -51,7 +52,7 @@ const Notifications = () => {
 
   const handleOpen = (n: AppNotification) => {
     if (!n.isRead) readMutation.mutate(n.id);
-    navigate(notificationLink(n));
+    router.push(notificationLink(n));
   };
 
   return (

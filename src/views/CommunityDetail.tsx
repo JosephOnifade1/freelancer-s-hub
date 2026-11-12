@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { useNavigate, Link, useLocation } from "react-router-dom";
+import { useRouter } from "next/navigation";
+import { Link, useLocation } from "react-router-dom";
 import { useCurrentParams } from "@/hooks/useCurrentParams";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
@@ -31,7 +32,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const CommunityDetail = () => {
   const { slug } = useCurrentParams<{ slug: string }>();
-  const navigate = useNavigate();
+  const router = useRouter();
   const location = useLocation();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -141,7 +142,7 @@ const CommunityDetail = () => {
         <div className="mx-auto max-w-md px-4 py-24 text-center">
           <h1 className="font-heading text-xl font-bold text-foreground">This space doesn't exist</h1>
           <p className="mt-2 text-sm text-muted-foreground">b/{slug} isn't a B-Space yet. Browse the directory to find one.</p>
-          <Button className="mt-6" onClick={() => navigate("/communities")}>Browse spaces</Button>
+          <Button className="mt-6" onClick={() => router.push("/communities")}>Browse spaces</Button>
         </div>
       </AppLayout>
     );
@@ -165,7 +166,7 @@ const CommunityDetail = () => {
     <AppLayout>
       <div className="mx-auto max-w-[1340px] px-4 py-5 md:px-6">
         <button
-          onClick={() => navigate("/communities")}
+          onClick={() => router.push("/communities")}
           className="group mb-4 inline-flex items-center gap-1.5 font-body text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" /> All spaces

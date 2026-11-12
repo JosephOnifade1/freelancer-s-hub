@@ -1,5 +1,5 @@
-import { useNavigate } from "react-router-dom";
 import { useCurrentParams } from "@/hooks/useCurrentParams";
+import { useRouter } from "next/navigation";
 import { AppLayout } from "@/components/AppLayout";
 import { PostCard } from "@/components/PostCard";
 import { FeedSidebar } from "@/components/FeedSidebar";
@@ -11,7 +11,7 @@ import { Loader2, Hash, ArrowLeft } from "lucide-react";
 
 const TagFeed = () => {
   const { tagName } = useCurrentParams<{ tagName: string }>();
-  const navigate = useNavigate();
+  const router = useRouter();
 
   const { data: posts = [], isLoading, isError: postsError, refetch: refetchPosts } = useQuery({
     queryKey: ['posts'],
@@ -35,7 +35,7 @@ const TagFeed = () => {
       <div className="mx-auto max-w-6xl px-4 py-6">
         {/* SPA-safe back navigation */}
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => router.back()}
           className="inline-flex items-center gap-1.5 mb-5 font-body text-sm text-muted-foreground hover:text-foreground transition-colors group"
         >
           <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" /> Back

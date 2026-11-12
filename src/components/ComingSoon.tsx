@@ -1,5 +1,5 @@
 import { LucideIcon, Rocket } from "lucide-react";
-import { Link } from "react-router-dom";
+import { AppLink as Link } from "@/components/AppLink";
 
 interface ComingSoonProps {
   title?: string;
@@ -35,7 +35,7 @@ export const ComingSoon = ({
       </p>
 
       <Link
-        to={backTo}
+        href={backTo}
         className="inline-flex items-center gap-2 rounded-xl bg-brand/10 border border-brand/20 px-5 py-2.5 font-body text-sm font-semibold text-brand hover:bg-brand/15 transition-colors"
       >
         {backLabel}

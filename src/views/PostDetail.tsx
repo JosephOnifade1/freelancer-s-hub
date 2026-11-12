@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useRouter } from "next/navigation";
+import { Link } from "react-router-dom";
 import { useCurrentParams } from "@/hooks/useCurrentParams";
 import { ArrowLeft, MessageSquare, Share2, Bookmark, Loader2, MoreHorizontal, Edit2, Trash2, Eye, ExternalLink, Flag } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
@@ -283,7 +284,7 @@ const PostDetail = () => {
   const { id } = useCurrentParams<{ id: string }>();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
+  const router = useRouter();
 
   const [newComment, setNewComment] = useState("");
   const [isEditingPost, setIsEditingPost] = useState(false);
@@ -356,7 +357,7 @@ const PostDetail = () => {
       queryClient.invalidateQueries({ queryKey: ['posts'] });
       if (post?.communitySlug) queryClient.invalidateQueries({ queryKey: ['communityPosts', post.communitySlug] });
       toast.success("Post deleted");
-      navigate('/');
+      router.push('/');
     },
     onError: (e: Error) => toast.error(e.message || "Failed to delete post")
   });
@@ -434,7 +435,7 @@ const PostDetail = () => {
     <AppLayout>
       <div className="mx-auto max-w-3xl px-4 py-6">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => router.back()}
           className="inline-flex items-center gap-1 mb-6 font-body text-[11px] font-mono text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" /> Back

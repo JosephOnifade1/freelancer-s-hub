@@ -1,12 +1,13 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/navigation";
+
 import { useAuth } from "@/hooks/auth-context";
 import { useQuery } from "@tanstack/react-query";
 import { getUserProfile } from "@/lib/users";
 
 const UserMeRedirect = () => {
   const { user, loading } = useAuth();
-  const navigate = useNavigate();
+  const router = useRouter();
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.uid],
@@ -16,11 +17,11 @@ const UserMeRedirect = () => {
 
   useEffect(() => {
     if (!loading && user && (profile !== undefined)) {
-      navigate(`/f/${profile?.username || user.uid}`);
+      router.push(`/f/${profile?.username || user.uid}`);
     } else if (!loading && !user) {
-      navigate("/login");
+      router.push("/login");
     }
-  }, [user, loading, profile, navigate]);
+  }, [user, loading, profile, router]);
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center">

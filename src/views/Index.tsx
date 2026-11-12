@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { Link, useSearchParams, useNavigate } from "react-router-dom";
+import { useRouter } from "next/navigation";
+import { Link, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Loader2, PenTool } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
@@ -16,10 +17,10 @@ const TABS = ["For You", "Following"] as const;
 
 const Index = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const router = useRouter();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const goCreate = () => navigate("/submit");
+  const goCreate = () => router.push("/submit");
   const activeTab = searchParams.get("feed") === "following" ? "Following" : "For You";
   const setActiveTab = (tab: (typeof TABS)[number]) =>
     setSearchParams(tab === "Following" ? { feed: "following" } : {}, { replace: true });

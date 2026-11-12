@@ -1,11 +1,12 @@
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { useRouter } from "next/navigation";
 import { useCurrentPathname } from "@/hooks/useCurrentPathname";
 import { useEffect } from "react";
 import { ArrowLeft, Home, Search } from "lucide-react";
 
 const NotFound = () => {
   const pathname = useCurrentPathname();
-  const navigate = useNavigate();
+  const router = useRouter();
 
   useEffect(() => {
     console.error("404 Error: Non-existent route accessed:", pathname);
@@ -28,7 +29,7 @@ const NotFound = () => {
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => router.back()}
             className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-2.5 font-body text-sm font-semibold text-foreground hover:bg-accent transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />

@@ -122,18 +122,41 @@ inventory, and `src/test/phase02-interaction.test.tsx` fails if `src/app` gains 
 loses a page without updating it. Redirect-only aliases (`/b`, `/p`, `/f`, `/u`,
 `/following`) exist on both sides.
 
-### Navigation in migrated components
+### Navigation: Next.js is the canonical runtime
 
-Phase 0.3 moved leaf components and read-only views off the React Router adapter.
-Because **the Next app and the Vite app share one source tree**, migrated files
-must not import `next/link` directly: outside the App Router it bails out of
-client-side navigation and every click becomes a full page reload. Use
-`AppLink` (`@/components/AppLink`) instead — it renders `next/link` in the Next
-build and React Router's `Link` under Vite. For the current path (active states,
-breadcrumbs) use `useCurrentPathname()` from `@/hooks/useCurrentPathname`.
+**Phase 0.5 froze the Vite app as a legacy rollback snapshot.** The App Router is
+the only active development target. New code imports navigation natively:
 
-When the Vite build is retired, delete the React Router branches in `AppLink`
-and `useCurrentPathname` and import `next/link` / `usePathname` directly.
+```ts
+import Link from "next/link";
+import { useRouter, usePathname, useParams, useSearchParams } from "next/navigation";
+```
+
+Do not add React Router imports or dual-runtime abstractions to new code, and do
+not require Vite compatibility for new features.
+
+Still on the compatibility adapter (`src/lib/navigation.tsx`), pending later
+phases: `Link` with React Router `state=` (the `/login` redirect bridge) in
+`Communities`, `ComposerBar`, `PollWidget`, `Profile`, `LeadsBoard`,
+`CommunityDetail`, `LeadDetail`, `PostDetail`; the auth surface (`Login`,
+`Signup`, `ProtectedRoute`); and `AppLink`, which keeps the rollback snapshot
+working. See `docs/PHASE_0.5_VITE_EXIT.md`.
+
+### Running the legacy rollback snapshot
+
+The frozen Vite app is preserved but not maintained. It still builds and runs:
+
+```bash
+npm run dev:legacy       # vite dev server on :8080
+npm run build:legacy     # production build to dist/
+npm run preview:legacy   # serve the built snapshot on :8080
+npm run typecheck:legacy # typecheck against the legacy next/* shims
+```
+
+It needs no `next/*` compatibility work: `src/legacy-next/` provides the
+`next/navigation` and `next/link` surface the snapshot calls, wired in through
+`vite.config.ts`, `vitest.config.ts` and `tsconfig.legacy.json`. Nothing there is
+used by the Next.js build.
 
 Next.js 16 uses Turbopack by default, so the React Router compatibility alias is
 declared twice in `next.config.mjs` (`turbopack.resolveAlias` and `webpack`).

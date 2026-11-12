@@ -1,4 +1,5 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { PenTool, HelpCircle, FileText, BarChart2 } from "lucide-react";
 import { useAuth } from "@/hooks/auth-context";
@@ -23,7 +24,7 @@ const ACTIONS: { type: ComposerType; label: string; icon: typeof PenTool }[] = [
 // (home, B-Space) renders this instead of carrying its own copy.
 export function ComposerBar({ spaceSlug, placeholder = "Start a post" }: ComposerBarProps) {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const router = useRouter();
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.uid],
@@ -34,7 +35,7 @@ export function ComposerBar({ spaceSlug, placeholder = "Start a post" }: Compose
   const go = (type: ComposerType) => {
     const params = new URLSearchParams({ type });
     if (spaceSlug) params.set("space", spaceSlug);
-    navigate(`/submit?${params.toString()}`);
+    router.push(`/submit?${params.toString()}`);
   };
 
   if (!user) {

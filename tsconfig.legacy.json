@@ -1,0 +1,16 @@
+{
+  "//": "LEGACY ROLLBACK TYPECHECK (Phase 0.5).",
+  "//1": "The canonical build is Next.js: `npm run typecheck` (= tsc -p tsconfig.json).",
+  "//2": "This config exists so the frozen Vite snapshot still typechecks after app",
+  "//3": "code moved to `next/navigation`: it maps next/* to the legacy shims that",
+  "//4": "vite.config.ts also aliases. Run with `npm run typecheck:legacy`.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@/legacy-next/*": ["./src/legacy-next/*"],
+      "next/navigation": ["./src/legacy-next/next-navigation.ts"],
+      "next/link": ["./src/legacy-next/next-link.tsx"],
+      "@/*": ["./src/*"]
+    }
+  }
+}

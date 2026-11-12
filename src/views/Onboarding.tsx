@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/navigation";
+
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +19,7 @@ const DEFAULT_BIOS = ["", "New to Borynx!", "New freelancer on Borynx!", "New fr
 
 export default function Onboarding() {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { data: existingProfile, isLoading: loading, isError: profileError, refetch: refetchProfile } = useQuery({
     queryKey: ["profile", user?.uid],
@@ -74,7 +75,7 @@ export default function Onboarding() {
       if (error) throw new Error(error.message);
       queryClient.invalidateQueries({ queryKey: ["profile", user.uid] });
       toast.success("Profile saved. Welcome to Borynx!");
-      navigate("/", { replace: true });
+      router.replace("/");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not save your profile.");
     } finally {
@@ -189,7 +190,7 @@ export default function Onboarding() {
         </div>
 
         <div className="mt-5 flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate("/", { replace: true })} disabled={saving}>
+          <Button variant="ghost" onClick={() => router.replace("/")} disabled={saving}>
             <X className="mr-1 h-4 w-4" /> Skip for now
           </Button>
           <Button onClick={handleSave} disabled={saving}>

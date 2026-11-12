@@ -33,6 +33,11 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Phase 0.5: the frozen rollback snapshot has no App Router, so the
+      // legacy build supplies the `next/*` surface it needs. The Next.js build
+      // never resolves these — see src/legacy-next/next-navigation.ts.
+      "next/navigation": path.resolve(__dirname, "./src/legacy-next/next-navigation.ts"),
+      "next/link": path.resolve(__dirname, "./src/legacy-next/next-link.tsx"),
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "@tanstack/query-core"],
   },
