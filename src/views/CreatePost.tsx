@@ -447,7 +447,13 @@ const CreatePost = () => {
           setAttachedFiles((current) => current.filter((candidate) => candidate !== file));
         } else {
           failedFiles.push(file);
-          result.failed.forEach((fl) => toast.error(`${fl.file.name}: ${fl.error}`));
+          result.failed.forEach((fl) =>
+            toast({
+              title: `Document could not be uploaded: ${fl.file.name}`,
+              description: fl.error,
+              variant: "destructive",
+            })
+          );
         }
       }
 
@@ -458,8 +464,13 @@ const CreatePost = () => {
           ? `${uploadedNames.length} document${uploadedNames.length === 1 ? "" : "s"} uploaded, ${remaining} still need attention.`
           : "Post and documents are ready to view.",
       });
-      navigate(selectedSpace.kind === "space" && selectedSpace.communitySlug
-        ? `/b/${selectedSpace.communitySlug}/p/${postId}` : `/p/${postId}`);
+      // The post is live either way. If some documents failed, stay on the
+      // "your post is live" screen so the user can retry the uploads without
+      // silently losing them by navigating away.
+      if (remaining === 0) {
+        navigate(selectedSpace.kind === "space" && selectedSpace.communitySlug
+          ? `/b/${selectedSpace.communitySlug}/p/${postId}` : `/p/${postId}`);
+      }
     } catch (error: unknown) {
       const description = error instanceof Error ? error.message : "Failed to create post.";
       toast({ title: postId ? "Post is live; documents need attention" : "Post not published", description, variant: "destructive" });

@@ -10,11 +10,10 @@ const getEnv = (viteKey: string, nextKey: string): string => {
     return process.env[viteKey] as string;
   }
   try {
-    // @ts-ignore
-    if (typeof import.meta !== "undefined" && import.meta.env && import.meta.env[viteKey]) {
-      // @ts-ignore
-      return import.meta.env[viteKey] as string;
-    }
+    // `import.meta.env` only exists in the Vite build; in the Next build the
+    // `process.env` lookups above win (NEXT_PUBLIC_* is inlined at build time).
+    const viteEnv = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env;
+    if (viteEnv && viteEnv[viteKey]) return viteEnv[viteKey] as string;
   } catch {
     // ignore
   }

@@ -6,7 +6,15 @@ import {
   useRouter as useNextRouter,
   usePathname as useNextPathname,
   useSearchParams as useNextSearchParams,
+  useParams as nextUseParams,
 } from "next/navigation";
+
+/** Mirrors the shapes React Router's `setSearchParams` accepts. */
+export type URLSearchParamsInit =
+  | string
+  | URLSearchParams
+  | Record<string, string | number | boolean | undefined | null>
+  | ((current: URLSearchParams) => URLSearchParams);
 
 // Next.js compatible Link component that accepts react-router-dom `to` prop or standard `href`
 export interface CompatibleLinkProps
@@ -16,7 +24,7 @@ export interface CompatibleLinkProps
   replace?: boolean;
   scroll?: boolean;
   prefetch?: boolean;
-  state?: any; // accepted and ignored in Next.js
+  state?: unknown; // accepted and ignored in Next.js
 }
 
 export const Link = forwardRef<HTMLAnchorElement, CompatibleLinkProps>(
@@ -65,16 +73,13 @@ export const NavLink = forwardRef<HTMLAnchorElement, NavLinkProps>(
     const isActive = target === "/" ? pathname === "/" : pathname.startsWith(target);
     const navProps = { isActive, isPending: false };
 
+    // Per React Router's NavLink contract, a function `className` is ALWAYS a
+    // render prop and its result must never be stringified into the DOM.
     const computedClass = typeof className === "function" ? className(navProps) : className;
+    const classes = [computedClass, isActive && activeClassName].filter(Boolean).join(" ");
 
     return (
-      <Link
-        ref={ref}
-        to={to}
-        href={href}
-        className={`${computedClass || ""} ${isActive && activeClassName ? activeClassName : ""}`}
-        {...props}
-      >
+      <Link ref={ref} to={to} href={href} className={classes || undefined} {...props}>
         {children}
       </Link>
     );
@@ -88,7 +93,7 @@ export function useNavigate() {
 
   return (
     to: string | number,
-    options?: { replace?: boolean; state?: any }
+    options?: { replace?: boolean; state?: unknown }
   ) => {
     if (typeof to === "number") {
       if (to === -1) {
@@ -124,16 +129,15 @@ export function useLocation() {
 
 // Compatible useParams hook
 export function useParams<T extends Record<string, string | undefined> = Record<string, string | undefined>>(): T {
-  try {
-    const { useParams: nextUseParams } = require("next/navigation");
-    return (nextUseParams() || {}) as T;
-  } catch {
-    return {} as T;
-  }
+  // Static import (the old dynamic require() broke under Turbopack/ESM).
+  return (nextUseParams() || {}) as T;
 }
 
 // Compatible useSearchParams hook
-export function useSearchParams(): [URLSearchParams, (params: any, options?: any) => void] {
+export function useSearchParams(): [
+  URLSearchParams,
+  (params: URLSearchParamsInit, options?: { replace?: boolean }) => void,
+] {
   const nextSearchParams = useNextSearchParams();
   const router = useNextRouter();
   const pathname = useNextPathname() || "/";
@@ -141,7 +145,7 @@ export function useSearchParams(): [URLSearchParams, (params: any, options?: any
   const searchParams = new URLSearchParams(nextSearchParams?.toString() || "");
 
   const setSearchParams = (
-    nextInit: any,
+    nextInit: URLSearchParamsInit,
     navigateOptions?: { replace?: boolean }
   ) => {
     let newParams = new URLSearchParams();
@@ -177,7 +181,7 @@ export function Navigate({
 }: {
   to: string;
   replace?: boolean;
-  state?: any;
+  state?: unknown;
 }) {
   const router = useNextRouter();
 

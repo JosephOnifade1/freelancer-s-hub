@@ -67,7 +67,7 @@ describe("main post composer targets", () => {
     localStorage.clear();
     vi.clearAllMocks();
     vi.mocked(fetchAllCommunities).mockResolvedValue(spaces);
-    vi.mocked(uploadPostDocuments).mockResolvedValue([]);
+    vi.mocked(uploadPostDocuments).mockResolvedValue({ uploaded: [], failed: [] });
     vi.mocked(getUserProfile).mockResolvedValue({
       uid: "user-1", username: "alice", displayName: "Alice", initial: "A",
       bio: "", location: "", website: "", joined: "2026", status: "Available",

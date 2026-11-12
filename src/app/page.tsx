@@ -1,9 +1,14 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import nextDynamic from "next/dynamic";
 import { Loader2 } from "lucide-react";
 
-const IndexPage = dynamic(() => import("@/views/Index"), {
+// These routes are client-rendered shells only: every view reads the Supabase
+// session, localStorage drafts or window measurements at render time, so it is
+// mounted with `ssr: false`. The prerendered HTML is just the spinner below, so
+// server and client markup match and there is no hydration mismatch.
+
+const View = nextDynamic(() => import("@/views/Index"), {
   ssr: false,
   loading: () => (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -13,5 +18,5 @@ const IndexPage = dynamic(() => import("@/views/Index"), {
 });
 
 export default function Home() {
-  return <IndexPage />;
+  return <View />;
 }
