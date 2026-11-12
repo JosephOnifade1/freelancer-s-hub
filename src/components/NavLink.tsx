@@ -17,13 +17,17 @@ export const NavLink = forwardRef<HTMLAnchorElement, NavLinkCompatProps>(
       <RouterNavLink
         ref={ref}
         {...props}
+        // Hand NavLink a plain STRING. A className render prop cannot survive
+        // Radix <Slot>, which merges `className={fn}` from the parent
+        // (SidebarMenuButton asChild) with the child's props and stringifies
+        // the function into the class attribute.
         className={(navProps) => {
           const baseClass = typeof className === "function" ? className(navProps) : className;
           return cn(
             baseClass,
             navProps.isActive && activeClassName,
             navProps.isPending && pendingClassName
-          );
+          ) ?? "";
         }}
       />
     );

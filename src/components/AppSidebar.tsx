@@ -65,9 +65,14 @@ export function AppSidebar() {
     nav("Settings", "/settings", Settings),
   ] : [nav("Sign in", "/login", LogIn)];
 
+  // NOTE: SidebarMenuButton must NOT be `asChild` here. Radix <Slot> merges its
+  // own className into the child's props, which stringifies NavLink's className
+  // render prop straight into the DOM (`class="... ({ isActive }) => ..."`),
+  // so the active state never applied. Rendering the element directly keeps the
+  // link's own class resolution intact.
   const renderItems = (items: typeof browse) => items.map((item) => (
     <SidebarMenuItem key={item.url} className="px-2">
-      <SidebarMenuButton asChild isActive={location.pathname === item.url} variant="ghost" className="h-9 overflow-hidden p-0 hover:bg-transparent">
+      <SidebarMenuButton isActive={location.pathname === item.url} variant="ghost" className="h-9 overflow-hidden p-0 hover:bg-transparent">
         <NavLink to={item.url} end className={({ isActive }: { isActive: boolean }) => cn(
           "flex min-h-9 w-full items-center gap-2 rounded-lg px-2 py-1 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           isActive ? "bg-brand/10 text-brand border-brand/20" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"

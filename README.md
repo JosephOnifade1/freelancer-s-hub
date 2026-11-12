@@ -113,6 +113,14 @@ migration track.
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint (flat config; `next lint` no longer exists in Next 16) |
 | `npm test` | Vitest suite |
+| `node scripts/server-smoke.mjs` | Route/asset/style smoke checks against a running Next server |
+
+### Route parity
+
+Both front ends must serve the same URLs. `src/lib/route-parity.ts` is the
+inventory, and `src/test/phase02-interaction.test.tsx` fails if `src/app` gains or
+loses a page without updating it. Redirect-only aliases (`/b`, `/p`, `/f`, `/u`,
+`/following`) exist on both sides.
 
 Next.js 16 uses Turbopack by default, so the React Router compatibility alias is
 declared twice in `next.config.mjs` (`turbopack.resolveAlias` and `webpack`).
