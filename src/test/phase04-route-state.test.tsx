@@ -128,20 +128,30 @@ describe("route-state source guards", () => {
     }
   });
 
-  it("leaves the auth surface on the compatibility layer", () => {
-    for (const file of ["components/ProtectedRoute.tsx", "views/Login.tsx", "views/Signup.tsx"]) {
+  it("leaves the legacy protected-route on the compatibility layer", () => {
+    const src = readFileSync(join(SRC, "components/ProtectedRoute.tsx"), "utf8");
+    expect(src).toContain('from "react-router-dom"');
+  });
+
+  it("moved the auth views to native navigation (Phase 1)", () => {
+    for (const file of ["views/Login.tsx", "views/Signup.tsx"]) {
       const src = readFileSync(join(SRC, file), "utf8");
-      expect(src, file).toContain('from "react-router-dom"');
+      expect(src, file).not.toContain('from "react-router-dom"');
+      expect(src, file).toContain('from "next/navigation"');
     }
   });
 
-  it("keeps React Router location STATE on the adapter (no forced migration)", () => {
-    // These pass `state={{ from: location }}` into /login — the history.state
-    // bridge. There is no native equivalent yet, so they must not be migrated.
-    for (const file of ["views/Profile.tsx", "views/LeadsBoard.tsx", "components/PollWidget.tsx"]) {
-      const src = readFileSync(join(SRC, file), "utf8");
-      expect(src, file).toContain("useLocation");
-      expect(src, file).toContain('from "react-router-dom"');
-    }
+  it("replaced the React Router `state={{ from }}` bridge with `?from=`", () => {
+    // Phase 1: these used to forward the login destination through history.state.
+    // They now build an href with the validated return path, so no production
+    // file may pass auth location STATE into /login any more.
+    const offenders = ["views/Profile.tsx", "views/LeadsBoard.tsx", "components/PollWidget.tsx",
+      "views/LeadDetail.tsx", "views/CommunityDetail.tsx", "views/Communities.tsx",
+      "components/ComposerBar.tsx", "views/PostDetail.tsx"]
+      .filter((file) => {
+        const src = readFileSync(join(SRC, file), "utf8");
+        return /state=\{\{ *from/.test(src) || /from: (location|pageLocation)/.test(src);
+      });
+    expect(offenders).toEqual([]);
   });
 });

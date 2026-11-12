@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { AppLink as Link } from "@/components/AppLink";
+import { loginPath } from "@/lib/return-path";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { PenTool, HelpCircle, FileText, BarChart2 } from "lucide-react";
@@ -45,8 +46,7 @@ export function ComposerBar({ spaceSlug, placeholder = "Start a post" }: Compose
       <div className="rounded-xl border border-border bg-card p-3 text-sm text-muted-foreground">
         <span className="min-w-0 flex-1">Want to join the conversation?</span>
         <Link
-          to="/login"
-          state={{ from: { pathname: "/submit", search: `?${params}` } }}
+          href={loginPath(`/submit?${params}`)}
           className="inline-flex min-h-9 items-center rounded-lg bg-brand px-3 font-semibold text-brand-foreground"
         >
           Sign in to post

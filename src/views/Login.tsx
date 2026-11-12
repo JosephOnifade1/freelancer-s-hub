@@ -1,8 +1,10 @@
-import { useState } from "react";
-import { useNavigate, Link, Navigate, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { AppLink as Link } from "@/components/AppLink";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase, isDemoMode } from "../lib/supabase";
 import { ensureUserProfile } from "../lib/users";
 import { postAuthRedirect, resendConfirmationEmail, authErrorMessage } from "../lib/auth";
+import { readReturnPath } from "../lib/return-path";
 import { useAuth } from "../hooks/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,10 +19,12 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
-  const redirectTo = postAuthRedirect(location.state);
+  // Phase 1: the return destination travels in the URL (?from=…) and is
+  // validated — it is user-editable, so it can never be trusted directly.
+  const redirectTo = postAuthRedirect(readReturnPath(searchParams?.get("from")));
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +51,7 @@ export default function Login() {
       }
 
       toast.success("Logged in successfully!");
-      navigate(redirectTo, { replace: true });
+      router.replace(redirectTo);
     } catch (error) {
       const message = authErrorMessage(error, "Failed to log in.");
       if (message.includes("Failed to fetch")) {
@@ -108,7 +112,7 @@ export default function Login() {
       }
 
       toast.success("Logged in as Demo Freelancer!");
-      navigate(redirectTo, { replace: true });
+      router.replace(redirectTo);
     } catch (error) {
       toast.error(authErrorMessage(error, "Demo login failed."));
     } finally {
@@ -130,16 +134,24 @@ export default function Login() {
   };
 
   // Already signed in? Don't show a login form — go where they were headed.
-  if (!authLoading && user) {
-    return <Navigate to={redirectTo} replace />;
-  }
+  // Phase 1: the navigation runs in an effect, not during render. Calling
+  // `router.replace` while rendering mutates the router mid-render (the old
+  // `<Navigate>` did that on purpose); an effect is the React-safe equivalent
+  // and keeps the "no form flash" behaviour via the `null` below.
+  const alreadySignedIn = !authLoading && !!user;
+  useEffect(() => {
+    if (alreadySignedIn) router.replace(redirectTo);
+  }, [alreadySignedIn, redirectTo, router]);
+  if (alreadySignedIn) return null;
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: window.location.origin + "/" },
+        // Return to the validated destination after the OAuth round trip, so a
+    // deep-link sign-in lands where it started (was hardcoded to "/").
+    options: { redirectTo: window.location.origin + redirectTo },
       });
       if (error) throw error;
     } catch (error) {
@@ -153,7 +165,7 @@ export default function Login() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex items-center gap-2 mb-2">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="h-8 w-8">
+            <Button variant="ghost" size="icon" onClick={() => router.push("/")} className="h-8 w-8">
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <CardTitle className="text-2xl font-bold tracking-tight">Welcome back</CardTitle>
@@ -205,7 +217,7 @@ export default function Login() {
               {isLoading ? "Logging in..." : "Log in"}
             </Button>
             <div className="w-full text-right">
-              <Link to="/forgot-password" className="text-sm text-muted-foreground hover:text-brand hover:underline">
+              <Link href="/forgot-password" className="text-sm text-muted-foreground hover:text-brand hover:underline">
                 Forgot your password?
               </Link>
             </div>
@@ -252,7 +264,7 @@ export default function Login() {
 
             <div className="text-sm text-center text-muted-foreground pt-2">
               Don't have an account?{" "}
-              <Link to="/signup" className="text-brand hover:underline font-medium">
+              <Link href="/signup" className="text-brand hover:underline font-medium">
                 Sign up
               </Link>
             </div>

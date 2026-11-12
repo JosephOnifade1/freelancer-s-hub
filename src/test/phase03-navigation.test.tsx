@@ -241,10 +241,14 @@ const SEAM = "hooks/useCurrentPathname.ts";
 /**
  * Production files still importing `react-router-dom` after Phase 0.4.
  *
- * These are intentionally left for later phases: navigation writers, view-level
- * `useLocation`/`useParams` consumers, and the auth/protected-route surface.
- * `views/Communities.tsx` additionally passes React Router `state` (the
- * `history.state` bridge), which has no native equivalent yet.
+ * These are intentionally left for later phases: navigation writers and
+ * view-level `useLocation`/`useParams` consumers.
+ *
+ * Phase 1 shrank this list by six: the auth surface (`views/Login.tsx`,
+ * `views/Signup.tsx`) and the four components that passed `state={{ from }}`
+ * into /login (`ComposerBar`, `PollWidget`, `Communities`' auth CTA) now use the
+ * `?from=<path>` query contract, so they no longer need the `history.state`
+ * bridge. The list may only ever shrink.
  * `src/lib/navigation.tsx` (the adapter itself) is excluded — it must resolve the
  * real package in the Vite build. `src/legacy-next/*` are included: they are the
  * rollback snapshot's `next/*` shims, which legitimately import React Router.
@@ -253,9 +257,7 @@ const REMAINING_ADAPTER_CONSUMERS = [
   "App.tsx",
   "components/AppLayout.tsx",
   "components/AppLink.tsx",
-  "components/ComposerBar.tsx",
   "components/NotificationBell.tsx",
-  "components/PollWidget.tsx",
   "components/ProtectedRoute.tsx",
   "hooks/useCurrentParams.ts",
   "hooks/useCurrentPathname.ts",
@@ -269,17 +271,24 @@ const REMAINING_ADAPTER_CONSUMERS = [
   "views/Index.tsx",
   "views/LeadDetail.tsx",
   "views/LeadsBoard.tsx",
-  "views/Login.tsx",
   "views/MyReports.tsx",
   "views/NotFound.tsx",
   "views/PostDetail.tsx",
   "views/Profile.tsx",
   "views/ResetPassword.tsx",
-  "views/Signup.tsx",
 ].sort();
 
-/** Authentication / protected-route files Phase 0.3 must not touch. */
-const PROTECTED = ["components/ProtectedRoute.tsx", "views/Login.tsx", "views/Signup.tsx"];
+/**
+ * Authentication / protected-route files.
+ *
+ * Phase 1 migrated the two auth *views* to native navigation; only the legacy
+ * `ProtectedRoute` (zero App Router consumers, Vite-only) still imports the real
+ * package, because `src/App.tsx` still renders it.
+ */
+const PROTECTED = ["components/ProtectedRoute.tsx"];
+
+/** Phase 1: the auth views must be native, not adapter-backed. */
+const NATIVE_AUTH_VIEWS = ["views/Login.tsx", "views/Signup.tsx"];
 
 describe("adapter boundaries", () => {
   it("migrated files no longer import react-router-dom", () => {
@@ -313,9 +322,18 @@ describe("adapter boundaries", () => {
     expect(bridgers).toEqual(REMAINING_ADAPTER_CONSUMERS);
   });
 
-  it("leaves the auth and protected-route files untouched", () => {
+  it("leaves the legacy protected-route file untouched", () => {
     for (const rel of PROTECTED) {
       expect(readFileSync(join(SRC, rel), "utf8")).toContain("react-router-dom");
+    }
+  });
+
+  it("migrated the auth views off the adapter (Phase 1)", () => {
+    for (const rel of NATIVE_AUTH_VIEWS) {
+      const src = readFileSync(join(SRC, rel), "utf8");
+      expect(src, rel).not.toContain('from "react-router-dom"');
+      expect(src, rel).toContain('from "next/navigation"');
+      expect(src, rel).toContain("readReturnPath");
     }
   });
 

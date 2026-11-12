@@ -3,7 +3,9 @@ import { fetchPollByPostId, votePollOption } from "@/lib/polls";
 import { useAuth } from "@/hooks/auth-context";
 import { toast } from "sonner";
 import { Check } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { usePathname } from "next/navigation";
+import { AppLink as Link } from "@/components/AppLink";
+import { loginPath } from "@/lib/return-path";
 
 interface PollWidgetProps {
   postId: string;
@@ -11,7 +13,7 @@ interface PollWidgetProps {
 
 export function PollWidget({ postId }: PollWidgetProps) {
   const { user } = useAuth();
-  const location = useLocation();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
 
   const { data: poll, isLoading, isError, refetch } = useQuery({
@@ -81,7 +83,7 @@ export function PollWidget({ postId }: PollWidgetProps) {
       <p className="pt-1 font-body text-[10px] text-muted-foreground">
         {poll.totalVotes} {poll.totalVotes === 1 ? "vote" : "votes"}
         {!hasVoted && !!user?.uid && " · tap to vote"}
-        {!user && <> · <Link to="/login" state={{ from: location }} className="font-semibold text-brand hover:underline">Sign in to vote</Link></>}
+        {!user && <> · <Link href={loginPath(pathname)} className="font-semibold text-brand hover:underline">Sign in to vote</Link></>}
       </p>
     </div>
   );
