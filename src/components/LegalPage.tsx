@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { AppLink as Link } from "@/components/AppLink";
 
 export interface LegalSection {
   heading: string;
@@ -19,13 +19,13 @@ export function LegalPage({ title, updated, intro, sections }: LegalPageProps) {
     <div className="landing-theme min-h-screen w-full bg-background font-body text-foreground">
       <nav className="border-b border-border/60">
         <div className="mx-auto flex h-16 max-w-3xl items-center justify-between px-6">
-          <Link to="/" className="flex items-center gap-2.5">
+          <Link href="/" className="flex items-center gap-2.5">
             <img src="/logo-transparent.png" alt="" className="h-7 w-7 rounded-md object-cover" />
             <span className="font-display text-[17px] font-semibold tracking-tight">Borynx</span>
           </Link>
           <div className="flex gap-6 text-sm text-muted-foreground">
-            <Link to="/privacy" className="transition-colors hover:text-foreground">Privacy</Link>
-            <Link to="/terms" className="transition-colors hover:text-foreground">Terms</Link>
+            <Link href="/privacy" className="transition-colors hover:text-foreground">Privacy</Link>
+            <Link href="/terms" className="transition-colors hover:text-foreground">Terms</Link>
           </div>
         </div>
       </nav>
@@ -63,8 +63,8 @@ export function LegalPage({ title, updated, intro, sections }: LegalPageProps) {
         <div className="mt-14 border-t border-border/60 pt-6">
           <p className="text-sm text-muted-foreground">
             Questions about this document? Reach the team through the platform, or
-            see our <Link to="/terms" className="text-brand hover:underline">Terms of Service</Link> and{" "}
-            <Link to="/privacy" className="text-brand hover:underline">Privacy Policy</Link>.
+            see our <Link href="/terms" className="text-brand hover:underline">Terms of Service</Link> and{" "}
+            <Link href="/privacy" className="text-brand hover:underline">Privacy Policy</Link>.
           </p>
           <p className="mt-4 font-mono text-[11px] text-muted-foreground/70">
             © {new Date().getFullYear()} Borynx. All rights reserved.

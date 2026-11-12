@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { AppLink as Link } from "@/components/AppLink";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Briefcase, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -83,7 +83,7 @@ export default function Pipeline() {
           : isLoading ? <p role="status" className="py-12 text-center text-sm text-muted-foreground">Loading your pipeline…</p>
           : visible.length === 0 ? <EmptyState icon={Briefcase} title={items.length ? "No items at this stage" : "Your pipeline is empty"}
               description={items.length ? "Select another stage to see your projects." : "Add a prospect manually, or save a real opportunity to track it here."}
-              action={<div className="flex flex-wrap justify-center gap-2"><Button onClick={() => setAdding(true)}>Add prospect</Button><Button variant="outline" asChild><Link to="/l">Browse opportunities</Link></Button></div>} />
+              action={<div className="flex flex-wrap justify-center gap-2"><Button onClick={() => setAdding(true)}>Add prospect</Button><Button variant="outline" asChild><Link href="/l">Browse opportunities</Link></Button></div>} />
           : <div className="grid gap-3 md:grid-cols-2">
               {visible.map((item) => (
                 <article key={item.id} className="rounded-2xl border border-border bg-card p-4">
@@ -107,7 +107,7 @@ export default function Pipeline() {
                         {PIPELINE_STAGES.map(({ id, label }) => <option key={id} value={id}>{label}</option>)}
                       </select>
                     </label>
-                    {item.leadId && <Link to={`/l/${item.leadId}`} className="text-sm font-semibold text-brand hover:underline">View opportunity →</Link>}
+                    {item.leadId && <Link href={`/l/${item.leadId}`} className="text-sm font-semibold text-brand hover:underline">View opportunity →</Link>}
                   </div>
                 </article>
               ))}

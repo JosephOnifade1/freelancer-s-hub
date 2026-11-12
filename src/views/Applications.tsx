@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { AppLink as Link } from "@/components/AppLink";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
@@ -118,7 +118,7 @@ const Applications = () => {
                 title="No applications yet"
                 description="When freelancers apply to opportunities you post, their proposals will show up here for review."
                 action={
-                  <Link to="/l/post" className="rounded-radius-md bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
+                  <Link href="/l/post" className="rounded-radius-md bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
                     Post an opportunity
                   </Link>
                 }
@@ -129,7 +129,7 @@ const Applications = () => {
                 title="You haven't applied to anything"
                 description="Browse opportunities and send your first proposal — it'll be tracked here."
                 action={
-                  <Link to="/l" className="rounded-radius-md bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
+                  <Link href="/l" className="rounded-radius-md bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
                     Browse opportunities
                   </Link>
                 }
@@ -169,7 +169,7 @@ function ApplicationCard({
     <article className="rounded-2xl border border-border bg-card p-5">
       <div className="flex flex-wrap items-start gap-3">
         {mode === "received" && applicant ? (
-          <Link to={`/f/${applicant.username || applicant.uid}`} className="flex min-w-0 items-center gap-3">
+          <Link href={`/f/${applicant.username || applicant.uid}`} className="flex min-w-0 items-center gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted font-heading text-sm font-bold text-foreground">
               {applicant.avatarUrl ? (
                 <img src={applicant.avatarUrl} alt="" className="h-full w-full object-cover" />
@@ -204,7 +204,7 @@ function ApplicationCard({
       {app.lead && (
         <p className="mt-3 font-body text-sm text-muted-foreground">
           for{" "}
-          <Link to={`/l/${app.lead.id}`} className="font-semibold text-foreground hover:text-brand">
+          <Link href={`/l/${app.lead.id}`} className="font-semibold text-foreground hover:text-brand">
             {app.lead.title}
           </Link>{" "}
           <span className="font-mono text-xs text-success">

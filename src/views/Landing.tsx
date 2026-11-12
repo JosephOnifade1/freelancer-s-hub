@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { AppLink as Link } from "@/components/AppLink";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowBigDown,
@@ -322,7 +322,7 @@ function TabPanel({ tab, spaces, spacesLive }: { tab: TabId; spaces: CommunityDa
           <LeadRow key={lead.title} lead={lead} last={i === EXAMPLE_LEADS.length - 1} />
         ))}
         <p className="border-t border-border/60 px-4 py-3 font-body text-xs text-muted-foreground sm:px-5">
-          Illustrative examples — these are not live jobs. <Link to="/l" className="font-semibold text-brand hover:underline">Browse real opportunities →</Link>
+          Illustrative examples — these are not live jobs. <Link href="/l" className="font-semibold text-brand hover:underline">Browse real opportunities →</Link>
         </p>
       </div>
     );
@@ -405,10 +405,10 @@ const Landing = () => {
             <a href="#faq" className="transition-colors hover:text-foreground">FAQ</a>
           </div>
           <div className="flex items-center gap-2.5">
-            <Link to="/login" className="rounded-lg px-3.5 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted">
+            <Link href="/login" className="rounded-lg px-3.5 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted">
               Log in
             </Link>
-            <Link to="/signup" className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90">
+            <Link href="/signup" className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90">
               Join free
             </Link>
           </div>
@@ -440,7 +440,7 @@ const Landing = () => {
                 <GoogleMark /> {googlePending ? "Connecting…" : "Continue with Google"}
               </button>
               <Link
-                to="/signup"
+                href="/signup"
                 className="inline-flex h-12 w-full items-center justify-center rounded-lg border border-border px-6 text-[15px] font-semibold text-foreground transition-colors hover:bg-muted sm:w-auto"
               >
                 Join with email
@@ -468,7 +468,7 @@ const Landing = () => {
                   {i < spaces.length - 1 && <span className="ml-3 text-muted-foreground/40">/</span>}
                 </span>
               ))}
-            </> : <Link to="/communities" className="font-semibold text-brand hover:underline">Browse current spaces →</Link>}
+            </> : <Link href="/communities" className="font-semibold text-brand hover:underline">Browse current spaces →</Link>}
           </motion.p>
         </div>
       </header>
@@ -536,7 +536,7 @@ const Landing = () => {
                     </li>
                   ))}
                 </ul>
-                <Link to="/signup" className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline">
+                <Link href="/signup" className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline">
                   Join Borynx free <ArrowRight className="h-4 w-4" />
                 </Link>
               </motion.div>
@@ -590,14 +590,14 @@ const Landing = () => {
 
           {spacesError ? <div className="mt-10"><QueryErrorState title="Couldn't load spaces" onRetry={() => refetchSpaces()} /></div>
             : spacesLoading ? <p role="status" className="mt-10 text-sm text-muted-foreground">Loading current spaces…</p>
-            : !spaces.length ? <p className="mt-10 text-sm text-muted-foreground">No spaces in the directory yet. <Link to="/communities" className="font-semibold text-brand hover:underline">Check the directory</Link> later.</p>
+            : !spaces.length ? <p className="mt-10 text-sm text-muted-foreground">No spaces in the directory yet. <Link href="/communities" className="font-semibold text-brand hover:underline">Check the directory</Link> later.</p>
             : <div className="mt-10 grid gap-px overflow-hidden rounded-xl border border-border bg-border/60 sm:grid-cols-2 lg:grid-cols-3">
               {spaces.map((space) => {
               const Icon = SPACE_ICONS[space.slug] ?? Users;
               return (
                 <Link
                   key={space.slug}
-                  to={`/b/${space.slug}`}
+                  href={`/b/${space.slug}`}
                   className="group bg-card p-6 transition-colors hover:bg-muted/40"
                 >
                   <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-foreground">
@@ -682,7 +682,7 @@ const Landing = () => {
               <GoogleMark /> {googlePending ? "Connecting…" : "Continue with Google"}
             </button>
             <Link
-              to="/signup"
+              href="/signup"
               className="inline-flex h-12 w-full items-center justify-center gap-1.5 rounded-lg border border-border px-6 text-[15px] font-semibold text-foreground transition-colors hover:bg-muted sm:w-auto"
             >
               Join Borynx free <ArrowRight className="h-4 w-4" />
@@ -719,10 +719,10 @@ const Landing = () => {
             <div>
               <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/70">Account</p>
               <ul className="mt-3.5 space-y-2.5 text-muted-foreground">
-                <li><Link to="/signup" className="transition-colors hover:text-foreground">Join free</Link></li>
-                <li><Link to="/login" className="transition-colors hover:text-foreground">Log in</Link></li>
-                <li><Link to="/privacy" className="transition-colors hover:text-foreground">Privacy</Link></li>
-                <li><Link to="/terms" className="transition-colors hover:text-foreground">Terms</Link></li>
+                <li><Link href="/signup" className="transition-colors hover:text-foreground">Join free</Link></li>
+                <li><Link href="/login" className="transition-colors hover:text-foreground">Log in</Link></li>
+                <li><Link href="/privacy" className="transition-colors hover:text-foreground">Privacy</Link></li>
+                <li><Link href="/terms" className="transition-colors hover:text-foreground">Terms</Link></li>
               </ul>
             </div>
           </nav>

@@ -1,6 +1,6 @@
 import { Home, Compass, Bookmark, Settings, Trophy, Plus, Bell, Briefcase, ShieldCheck, Inbox, TrendingUp, Zap, Users, LogIn, KanbanSquare, AlertTriangle } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
+import { useCurrentPathname } from "@/hooks/useCurrentPathname";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/auth-context";
 import { getUserProfile } from "@/lib/users";
@@ -24,7 +24,12 @@ const nav = (
 ): NavItem => ({ title, url, icon, badge });
 
 export function AppSidebar() {
-  const location = useLocation();
+  const pathname = useCurrentPathname();
+  // Same rule as NavLink: "/" only ever matches exactly (it prefixes everything),
+  // every other target needs a segment boundary so `/new` cannot claim
+  // `/newsletter`.
+  const isActivePath = (url: string) =>
+    pathname === url || (url !== "/" && pathname.startsWith(`${url}/`));
   const { user } = useAuth();
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.uid],
@@ -72,7 +77,7 @@ export function AppSidebar() {
   // link's own class resolution intact.
   const renderItems = (items: typeof browse) => items.map((item) => (
     <SidebarMenuItem key={item.url} className="px-2">
-      <SidebarMenuButton isActive={location.pathname === item.url} variant="ghost" className="h-9 overflow-hidden p-0 hover:bg-transparent">
+      <SidebarMenuButton isActive={isActivePath(item.url)} variant="ghost" className="h-9 overflow-hidden p-0 hover:bg-transparent">
         <NavLink to={item.url} end className={({ isActive }: { isActive: boolean }) => cn(
           "flex min-h-9 w-full items-center gap-2 rounded-lg px-2 py-1 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           isActive ? "bg-brand/10 text-brand border-brand/20" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"

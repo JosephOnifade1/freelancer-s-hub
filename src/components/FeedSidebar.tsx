@@ -1,7 +1,7 @@
 import { useMemo, type ReactNode } from "react";
 import { Flame, Award, Users, Compass, TrendingUp } from "lucide-react";
 import { PostData } from "@/components/PostCard";
-import { Link } from "react-router-dom";
+import { AppLink as Link } from "@/components/AppLink";
 import { LiveReputation } from "@/components/LiveReputation";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useQuery } from "@tanstack/react-query";
@@ -116,7 +116,7 @@ export function FeedSidebar({ posts = [], currentUserUid, feedState = "ready" }:
             {topTags.map((tag) => (
               <Link
                 key={tag.name}
-                to={`/tag/${tag.name}`}
+                href={`/tag/${tag.name}`}
                 className="rounded-md bg-background border border-border px-2 py-0.5 font-body text-[10px] font-medium text-muted-foreground transition-all hover:text-foreground"
               >
                 #{tag.name}
@@ -140,7 +140,7 @@ export function FeedSidebar({ posts = [], currentUserUid, feedState = "ready" }:
               {topContributors.map((user, i) => (
                 <Link
                   key={user.uid || user.username}
-                  to={user.uid ? `/f/${user.username || user.uid}` : "#"}
+                  href={user.uid ? `/f/${user.username || user.uid}` : "#"}
                   className="flex items-center gap-1.5 group hover:opacity-80 transition-opacity"
                 >
                   <span className="font-heading text-xs font-bold text-muted-foreground w-3">{i + 1}</span>
@@ -178,7 +178,7 @@ export function FeedSidebar({ posts = [], currentUserUid, feedState = "ready" }:
               {activeSpaces.slice(0, 5).map((space) => (
                 <Link
                   key={space.slug}
-                  to={`/b/${space.slug}`}
+                  href={`/b/${space.slug}`}
                   className="flex items-center justify-between group hover:opacity-90 transition-opacity"
                 >
                   <div className="flex items-center gap-2 min-w-0">
@@ -220,7 +220,7 @@ export function FeedSidebar({ posts = [], currentUserUid, feedState = "ready" }:
               {mostActive.map((c, i) => (
                 <Link
                   key={c.uid}
-                  to={`/f/${c.username || c.uid}`}
+                  href={`/f/${c.username || c.uid}`}
                   className="flex items-center justify-between p-1 rounded-xl hover:bg-muted/50 transition-colors"
                 >
                   <div className="flex items-center gap-2">

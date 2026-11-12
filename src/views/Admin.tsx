@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { AppLink as Link } from "@/components/AppLink";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
@@ -324,14 +324,14 @@ function ReportsQueue({
                 <p className="mt-0.5 font-body text-sm text-foreground">
                   Reported by{" "}
                   {report.reporter ? (
-                    <Link to={`/f/${report.reporter.username || report.reporter.uid}`} className="font-semibold hover:text-brand">
+                    <Link href={`/f/${report.reporter.username || report.reporter.uid}`} className="font-semibold hover:text-brand">
                       {report.reporter.name}
                     </Link>
                   ) : (
                     "a member"
                   )}
                   ·{" "}
-                  <Link to={ENTITY_LINKS[report.entityType](report.entityId)} className="font-semibold text-brand hover:underline">
+                  <Link href={ENTITY_LINKS[report.entityType](report.entityId)} className="font-semibold text-brand hover:underline">
                     View {ENTITY_LABELS[report.entityType]}
                   </Link>
                 </p>
@@ -530,7 +530,7 @@ function UserRows({
             </span>
             <div className="min-w-0 flex-1">
               <p className="flex items-center gap-1.5 font-body text-sm font-semibold text-foreground">
-                <Link to={`/f/${u.username || u.uid}`} className="truncate hover:text-brand">
+                <Link href={`/f/${u.username || u.uid}`} className="truncate hover:text-brand">
                   {u.name}
                 </Link>
                 <VerifiedBadge isVerified={u.isVerifiedPro} size={13} showTooltip={false} />
