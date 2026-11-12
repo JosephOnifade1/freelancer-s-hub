@@ -122,6 +122,19 @@ inventory, and `src/test/phase02-interaction.test.tsx` fails if `src/app` gains 
 loses a page without updating it. Redirect-only aliases (`/b`, `/p`, `/f`, `/u`,
 `/following`) exist on both sides.
 
+### Navigation in migrated components
+
+Phase 0.3 moved leaf components and read-only views off the React Router adapter.
+Because **the Next app and the Vite app share one source tree**, migrated files
+must not import `next/link` directly: outside the App Router it bails out of
+client-side navigation and every click becomes a full page reload. Use
+`AppLink` (`@/components/AppLink`) instead — it renders `next/link` in the Next
+build and React Router's `Link` under Vite. For the current path (active states,
+breadcrumbs) use `useCurrentPathname()` from `@/hooks/useCurrentPathname`.
+
+When the Vite build is retired, delete the React Router branches in `AppLink`
+and `useCurrentPathname` and import `next/link` / `usePathname` directly.
+
 Next.js 16 uses Turbopack by default, so the React Router compatibility alias is
 declared twice in `next.config.mjs` (`turbopack.resolveAlias` and `webpack`).
 `src/lib/navigation.tsx` keeps every existing `react-router-dom` import working

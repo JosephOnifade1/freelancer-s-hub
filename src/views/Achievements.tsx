@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from "react";
-import { Link } from "react-router-dom";
+import { AppLink as Link } from "@/components/AppLink";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNowStrict } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
@@ -487,7 +487,7 @@ export default function Achievements() {
                 {filteredActivity.slice(0, 20).map((a) => (
                   <Link
                     key={a.key}
-                    to={a.href}
+                    href={a.href}
                     className="flex items-baseline gap-3 p-4 transition-colors hover:bg-muted/50"
                   >
                     <span className="w-20 shrink-0 text-xs font-medium text-muted-foreground">

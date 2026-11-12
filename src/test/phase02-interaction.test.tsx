@@ -34,6 +34,15 @@ vi.mock("@/lib/supabase", () => ({
 // The compatibility adapter talks to next/navigation + next/link; jsdom has no
 // App Router, so provide the minimal contract Next gives it.
 const routerCalls: { type: string; url: string }[] = [];
+
+// Phase 0.3: migrated components read the active route from `usePathname()`
+// directly instead of from React Router's NavLink, so this mock must reflect the
+// route a test actually renders. Tests that mount a `<MemoryRouter>` set this to
+// the same entry; the default keeps pathless assertions stable.
+let mockPathname = "/current";
+const setMockPathname = (value: string) => {
+  mockPathname = value;
+};
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: (url: string) => routerCalls.push({ type: "push", url }),
@@ -41,7 +50,7 @@ vi.mock("next/navigation", () => ({
     back: () => routerCalls.push({ type: "back", url: "" }),
     forward: () => routerCalls.push({ type: "forward", url: "" }),
   }),
-  usePathname: () => "/current",
+  usePathname: () => mockPathname,
   useSearchParams: () => new URLSearchParams("a=1"),
   useParams: () => ({ id: "42" }),
 }));
@@ -56,6 +65,8 @@ vi.mock("next/link", () => ({
 const consoleSpy = { errors: [] as string[], warns: [] as string[] };
 
 beforeEach(() => {
+  mockPathname = "/current";
+  routerCalls.length = 0;
   consoleSpy.errors = [];
   consoleSpy.warns = [];
   vi.spyOn(console, "error").mockImplementation((...args) => {
@@ -113,6 +124,7 @@ describe("navigation integrity", () => {
   });
 
   it("marks the current route active in the sidebar", async () => {
+    setMockPathname("/l");
     const { AppSidebar } = await import("@/components/AppSidebar");
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const { container } = render(

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { AppLink as Link } from "@/components/AppLink";
 import { Trophy, Flame, Users, TrendingUp, Clock } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
@@ -86,7 +86,7 @@ export default function Leaderboard() {
             title="No contributors yet"
             description="Be the first to post and climb the leaderboard."
             action={
-              <Link to="/submit" className="rounded-radius-md bg-primary px-4 py-2 font-body text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
+              <Link href="/submit" className="rounded-radius-md bg-primary px-4 py-2 font-body text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
                 Create a post
               </Link>
             }
@@ -147,7 +147,7 @@ export default function Leaderboard() {
                       {isTop3 ? medal : <span className="text-muted-foreground">{medal}</span>}
                     </td>
                     <td className="p-4">
-                      <Link to={`/f/${u.username}`} className="flex items-center gap-2">
+                      <Link href={`/f/${u.username}`} className="flex items-center gap-2">
                         {u.avatarUrl ? (
                           <img
                             src={u.avatarUrl}

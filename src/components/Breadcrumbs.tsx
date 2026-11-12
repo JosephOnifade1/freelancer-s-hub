@@ -1,4 +1,5 @@
-import { Link, useLocation } from "react-router-dom";
+import { AppLink as Link } from "@/components/AppLink";
+import { useCurrentPathname } from "@/hooks/useCurrentPathname";
 import { ChevronRight, Home } from "lucide-react";
 import {
   Breadcrumb,
@@ -53,13 +54,14 @@ const NON_NAVIGABLE_PREFIXES = new Set(["f", "u", "b", "p"]);
 const HIDDEN_PATHS = new Set(["/", "/login", "/signup"]);
 
 export function Breadcrumbs() {
-  const location = useLocation();
+  // Only the pathname is needed, so the dual-runtime hook covers this.
+  const pathname = useCurrentPathname();
 
-  if (HIDDEN_PATHS.has(location.pathname)) {
+  if (HIDDEN_PATHS.has(pathname)) {
     return null;
   }
 
-  const segments = location.pathname.split("/").filter(Boolean);
+  const segments = pathname.split("/").filter(Boolean);
 
   // Build breadcrumb items: each item knows its display label, its target
   // href, and whether it's actually navigable.
@@ -95,7 +97,7 @@ export function Breadcrumbs() {
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
               <Link
-                to="/"
+                href="/"
                 className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
               >
                 <Home className="h-3.5 w-3.5" />
@@ -123,7 +125,7 @@ export function Breadcrumbs() {
                     // Navigable intermediate segment gets a real link
                     <BreadcrumbLink asChild>
                       <Link
-                        to={href}
+                        href={href}
                         className="text-[12px] font-medium font-body text-muted-foreground hover:text-foreground transition-colors"
                       >
                         {label}

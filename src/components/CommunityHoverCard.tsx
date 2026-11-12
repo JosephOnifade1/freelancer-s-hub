@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { AppLink as Link } from "@/components/AppLink";
 import { useQuery } from "@tanstack/react-query";
 import { fetchCommunity, getCommunityStyle } from "@/lib/communities";
 import {
@@ -34,7 +34,7 @@ export function CommunityHoverCard({ slug, children, asChild = false }: Communit
           children
         ) : (
           <Link
-            to={`/b/${slug}`}
+            href={`/b/${slug}`}
             className="text-primary hover:underline font-semibold decoration-primary/30 underline-offset-2"
           >
             {children}
@@ -109,7 +109,7 @@ export function CommunityHoverCard({ slug, children, asChild = false }: Communit
 
               <div className="mt-4 pt-4 border-t border-border/40 flex items-center justify-between">
                 <Link
-                  to={`/b/${slug}`}
+                  href={`/b/${slug}`}
                   className="w-full flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-semibold text-primary hover:bg-primary/10 hover:text-primary transition-all border border-primary/20"
                 >
                   Visit Community

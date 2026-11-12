@@ -1,5 +1,5 @@
 import { MessageSquare, Share2, Bookmark, MoreHorizontal, Edit2, Trash2, Eye, ExternalLink, Pin, Lock, Users, Flag } from "lucide-react";
-import { Link } from "react-router-dom";
+import { AppLink as Link } from "@/components/AppLink";
 import { VoteControls } from "@/components/VoteControls";
 import { PostTypeBadge } from "@/components/PostTypeBadge";
 import { LiveReputation } from "@/components/LiveReputation";
@@ -162,7 +162,7 @@ export function PostCard({ post, index }: PostCardProps) {
             )}
           </div>
 
-          <Link to={postUrl} className="block">
+          <Link href={postUrl} className="block">
             <h3 className="font-display text-base font-semibold text-muted-foreground leading-snug mb-1 transition-colors cursor-pointer line-through opacity-80">
               {post.title}
             </h3>
@@ -182,7 +182,7 @@ export function PostCard({ post, index }: PostCardProps) {
             </div>
 
             <div className="flex items-center gap-1">
-              <Link to={postUrl} className="flex items-center gap-1 rounded-md px-2 py-1 font-body text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
+              <Link href={postUrl} className="flex items-center gap-1 rounded-md px-2 py-1 font-body text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
                 <MessageSquare className="h-3.5 w-3.5" />
                 {post.commentCount || 0}
               </Link>
@@ -221,7 +221,7 @@ export function PostCard({ post, index }: PostCardProps) {
             {post.communitySlug ? (
               <>
                 <Link
-                  to={`/b/${post.communitySlug}`}
+                  href={`/b/${post.communitySlug}`}
                   className="flex items-center gap-1 hover:opacity-80 transition-opacity"
                 >
                   <div className="flex h-5 w-5 items-center justify-center rounded-md bg-muted text-foreground font-heading text-[9px] font-bold shrink-0">
@@ -233,7 +233,7 @@ export function PostCard({ post, index }: PostCardProps) {
                 </Link>
                 <span className="text-muted-foreground text-[10px]">·</span>
                 <Link
-                  to={authorLinkTarget}
+                  href={authorLinkTarget}
                   className="flex items-center gap-1 hover:opacity-80 transition-opacity"
                 >
                   <div className="flex h-4 w-4 items-center justify-center rounded-full font-heading text-[9px] font-bold overflow-hidden bg-muted text-muted-foreground shrink-0">
@@ -252,7 +252,7 @@ export function PostCard({ post, index }: PostCardProps) {
             ) : (
               <>
                 <Link
-                  to={authorLinkTarget}
+                  href={authorLinkTarget}
                   className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
                 >
                   <div className="flex h-5 w-5 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-muted text-foreground shrink-0">
@@ -299,7 +299,7 @@ export function PostCard({ post, index }: PostCardProps) {
           </div>
 
           {/* Title */}
-          <Link to={postUrl} className="block group">
+          <Link href={postUrl} className="block group">
             <h3 className="font-display text-base font-semibold text-foreground leading-tight group-hover:text-brand transition-colors">
               {post.title}
             </h3>
@@ -340,7 +340,7 @@ export function PostCard({ post, index }: PostCardProps) {
             </div>
           ) : (
             !postImages[0] && previewText && (
-              <Link to={postUrl} className="block mt-0.5">
+              <Link href={postUrl} className="block mt-0.5">
                 <p className="font-body text-sm text-muted-foreground leading-relaxed line-clamp-2">
                   {previewText}
                 </p>
@@ -355,7 +355,7 @@ export function PostCard({ post, index }: PostCardProps) {
               {post.tags.map((tag) => (
                 <Link
                   key={tag}
-                  to={`/tag/${tag}`}
+                  href={`/tag/${tag}`}
                   className="rounded-md border border-border bg-muted/50 px-2.5 py-0.5 font-body text-[10px] font-medium text-muted-foreground hover:border-brand hover:text-brand transition-colors"
                 >
                   #{tag}
@@ -366,7 +366,7 @@ export function PostCard({ post, index }: PostCardProps) {
 
           {/* Action footer - Reddit style: comment count | Repost | Award | Share | ... */}
           <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/40">
-            <Link to={postUrl} className="flex items-center gap-1 rounded-md px-2 py-1 font-body text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-info">
+            <Link href={postUrl} className="flex items-center gap-1 rounded-md px-2 py-1 font-body text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-info">
               <MessageSquare className="h-3.5 w-3.5" />
               {post.commentCount || 0}
             </Link>

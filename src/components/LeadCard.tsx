@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { AppLink as Link } from "@/components/AppLink";
 import { DollarSign, MapPin, Users, ArrowRight, BadgeCheck } from "lucide-react";
 import { Lead } from "@/lib/leads";
 import { formatTimeAgo } from "@/lib/utils";
@@ -36,7 +36,7 @@ export function LeadCard({ lead }: LeadCardProps) {
                 Posted {formatTimeAgo(lead.postedAt)}
               </span>
             </div>
-            <Link to={`/l/${lead.id}`}>
+            <Link href={`/l/${lead.id}`}>
               <h3 className="font-heading text-lg font-bold text-foreground leading-tight group-hover:text-brand transition-colors line-clamp-1">
                 {lead.title}
               </h3>
@@ -60,7 +60,7 @@ export function LeadCard({ lead }: LeadCardProps) {
             {lead.applicantsCount || 0} applicants
           </div>
           <div className="flex items-center gap-1.5 ml-auto">
-            <Link to={`/f/${lead.postedBy.username || lead.postedBy.uid}`} className="flex items-center gap-1.5 hover:text-foreground transition-colors">
+            <Link href={`/f/${lead.postedBy.username || lead.postedBy.uid}`} className="flex items-center gap-1.5 hover:text-foreground transition-colors">
               <div className="h-4 w-4 rounded-full overflow-hidden bg-muted">
                 {lead.postedBy.avatar ? (
                   <img src={lead.postedBy.avatar} alt={lead.postedBy.name} className="h-full w-full object-cover" />
@@ -94,7 +94,7 @@ export function LeadCard({ lead }: LeadCardProps) {
             )}
           </div>
           <Link 
-            to={`/l/${lead.id}`} 
+            href={`/l/${lead.id}`} 
             className="inline-flex items-center gap-1.5 text-xs font-bold text-brand hover:gap-2 transition-all"
           >
             Details <ArrowRight className="h-3.5 w-3.5" />

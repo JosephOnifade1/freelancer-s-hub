@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { AppLink as Link } from "@/components/AppLink";
 import { useQuery } from "@tanstack/react-query";
 import { getUserProfile, getUidByUsername, UserProfile, isVeteran } from "@/lib/users";
 import {
@@ -32,7 +32,7 @@ export function UserHoverCard({ handle, children }: UserHoverCardProps) {
     <HoverCard openDelay={300}>
       <HoverCardTrigger asChild>
         <Link 
-          to={profile?.uid ? `/f/${profile.uid}` : `/f/${handle}`} 
+          href={profile?.uid ? `/f/${profile.uid}` : `/f/${handle}`} 
           className="text-brand hover:underline font-medium decoration-brand/30 underline-offset-2"
         >
           {children}

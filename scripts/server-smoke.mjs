@@ -61,7 +61,15 @@ for (const route of routes) {
 {
   const res = await fetch(baseUrl + "/");
   const html = await res.text();
-  const css = html.match(/\/_next\/static\/chunks\/[^"']+\.css/)[0];
+  // Turbopack and webpack emit the stylesheet at different paths
+  // (`/static/chunks/...css` vs `/static/css/...css`), so resolve whichever the
+  // document actually references instead of hard-coding one layout.
+  const cssMatch = html.match(/\/_next\/static\/(?:chunks|css)\/[^"']+\.css/);
+  if (!cssMatch) {
+    bad("document does not reference a stylesheet");
+    process.exit(1);
+  }
+  const css = cssMatch[0];
   const text = await (await fetch(baseUrl + css)).text();
   const requiredTokens = ["--background:", "--foreground:", "--brand:", "--radius-md:", "--shadow-md:", "--sidebar-background:"];
   const missing = requiredTokens.filter((t) => !text.includes(t));
