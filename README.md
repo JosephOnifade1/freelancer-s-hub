@@ -97,3 +97,29 @@ Build for production:
 ```bash
 npm run build
 ```
+
+### Next.js 16 App Router (migration track)
+
+Two front ends live side by side on this branch: the original **Vite + React
+Router** app (default scripts, full rollback) and the **Next.js 16 App Router**
+migration track.
+
+| Script | What it does |
+| --- | --- |
+| `npm run dev` / `npm run build` / `npm run preview` | Vite app (port 8080) — the fallback |
+| `npm run dev:next` | `next dev --turbopack -H 0.0.0.0 -p 3000` |
+| `npm run build:next` / `npm run start:next` | Next 16 production build (Turbopack) |
+| `npm run build:next:webpack` / `npm run dev:next:webpack` | Webpack escape hatch for the Next build |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run lint` | ESLint (flat config; `next lint` no longer exists in Next 16) |
+| `npm test` | Vitest suite |
+
+Next.js 16 uses Turbopack by default, so the React Router compatibility alias is
+declared twice in `next.config.mjs` (`turbopack.resolveAlias` and `webpack`).
+`src/lib/navigation.tsx` keeps every existing `react-router-dom` import working
+under Next — components are unchanged. Under Next, set `NEXT_PUBLIC_SUPABASE_URL`
+/ `NEXT_PUBLIC_SUPABASE_ANON_KEY` / `NEXT_PUBLIC_DEMO_MODE`; the Supabase client
+reads both the `VITE_*` and `NEXT_PUBLIC_*` names.
+
+See `docs/PHASE_0.1_NEXT16_COMPATIBILITY_AUDIT.md` and
+`docs/PHASE_0.1_COMPLETION_REPORT.md` for the upgrade record.
