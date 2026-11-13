@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/auth-context";
-import { getUserProfile, UserProfile, checkUsernameAvailability, claimUsername } from "@/lib/users";
+import { getUserProfile, UserProfile, checkUsernameAvailability } from "@/lib/users";
+import { claimUsernameOnServer } from "@/lib/profile-provisioning";
 import { supabase, isDemoMode } from "@/lib/supabase";
 import { requestPasswordReset, resendConfirmationEmail } from "@/lib/auth";
 import { getErrorMessage } from "@/lib/utils";
@@ -104,8 +105,25 @@ const Settings = () => {
     setIsSaving(true);
     try {
       if (username !== originalUsername) {
-        await claimUsername(user.uid, username, originalUsername);
-        setOriginalUsername(username);
+        // Phase 2B.3: the claim is atomic and server-side. The uid is no longer
+        // passed from the browser — the server uses the verified session, so this
+        // call cannot be pointed at another account. A binding failure means the
+        // handle was taken between the availability check and now.
+        const claim = await claimUsernameOnServer(username);
+        if (claim.status !== "claimed" && claim.status !== "same") {
+          toast({
+            title: "Error",
+            description:
+              claim.status === "taken"
+                ? "That username was just taken. Please choose another."
+                : "Could not save that username. Please try again.",
+            variant: "destructive",
+          });
+          setIsSaving(false);
+          return;
+        }
+        setOriginalUsername(claim.username);
+        setUsername(claim.username);
       }
 
       const updates: Partial<UserProfile> = {

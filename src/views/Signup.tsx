@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { AppLink as Link } from "@/components/AppLink";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase, isDemoMode } from "../lib/supabase";
-import { ensureUserProfile, checkUsernameAvailability } from "../lib/users";
+import { checkUsernameAvailability } from "../lib/users";
+import { provisionProfileOnServer } from "../lib/profile-provisioning";
 import { postAuthRedirect, resendConfirmationEmail, authErrorMessage, normalizeUsername, isValidUsername } from "../lib/auth";
 import { readReturnPath } from "../lib/return-path";
 import { oauthCallbackUrl } from "../lib/oauth";
@@ -80,11 +81,11 @@ export default function Signup() {
 
       if (error) throw error;
 
-      if (data?.user) {
-        await ensureUserProfile({
-          ...data.user,
-          user_metadata: { ...(data.user.user_metadata || {}), display_name: name, username },
-        });
+      // Only after the session exists. With email confirmation enabled there is
+      // a user but no session, so there is nothing to authorise a profile
+      // write yet — provisioning runs when they first sign in.
+      if (data?.user && data?.session) {
+        await provisionProfileOnServer();
       }
 
       if (data?.user && !data?.session) {
@@ -147,10 +148,7 @@ export default function Signup() {
       }
 
       if (data?.user) {
-        await ensureUserProfile({
-          ...data.user,
-          user_metadata: { display_name: "Demo Freelancer" },
-        });
+        await provisionProfileOnServer();
       }
 
       toast.success("Logged in as Demo Freelancer!");

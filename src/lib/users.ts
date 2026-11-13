@@ -32,6 +32,15 @@ interface AuthUserMetadata {
   avatar_url?: string;
 }
 
+/**
+ * @deprecated Phase 2B.3 — superseded by `provisionProfileOnServer()` in
+ * `@/lib/profile-provisioning`, which calls the server-side, idempotent Neon
+ * provisioning route. This version performed check-then-write from the browser
+ * with a uid supplied by the caller, which cannot be made concurrency-safe.
+ *
+ * Kept only until the remaining read paths move to Neon; it has **no callers**
+ * in the application. Do not add new ones.
+ */
 export const ensureUserProfile = async (user: { id?: string; uid?: string; email?: string | null; user_metadata?: AuthUserMetadata }) => {
   const uid = user.id || user.uid;
   if (!uid) return null;
@@ -203,6 +212,16 @@ export const checkUsernameAvailability = async (username: string) => {
   return !profile;
 };
 
+/**
+ * @deprecated Phase 2B.3 — superseded by `claimUsernameOnServer()` in
+ * `@/lib/profile-provisioning`, which posts to `/api/profile/username` and lets
+ * the server claim atomically with `insert … on conflict do nothing returning`
+ * inside a transaction.
+ *
+ * This version was a four-round-trip check-then-write that released the caller's
+ * existing handle *before* winning the new one, so a lost race could leave a user
+ * with no username at all. It has **no callers** in the application.
+ */
 export const claimUsername = async (uid: string, desiredUsername: string, currentUsername?: string) => {
   const lowercaseUsername = desiredUsername.toLowerCase();
   const isValidFormat = /^[a-zA-Z0-9_]{3,15}$/.test(lowercaseUsername);
