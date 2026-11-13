@@ -10,7 +10,12 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 
-const raw = readFileSync("src/lib/supabase.ts", "utf8");
+// Phase 1.1 moved credential resolution out of the browser client so the proxy
+// and server utilities can import it without touching browser globals. The
+// contract is unchanged; only the module holding it moved — assert on that module
+// and keep proving the browser client does not read env itself.
+const ENV_MODULE = "src/lib/supabase-env.ts";
+const raw = readFileSync(ENV_MODULE, "utf8");
 // Comments explain the pitfalls and mention the very patterns we forbid, so
 // they are stripped before matching.
 const source = raw.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
@@ -40,6 +45,14 @@ describe("environment variable handling", () => {
       expect(source).toContain(name);
     }
     expect(source).toContain("import.meta");
+  });
+
+  it("keeps the browser client free of env reads (single source)", () => {
+    const client = readFileSync("src/lib/supabase.ts", "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^\s*\/\/.*$/gm, "");
+    expect(client).not.toMatch(/process\.env/);
+    expect(client).not.toContain("import.meta");
   });
 
   it("documents both variable conventions in .env.example", () => {

@@ -6,18 +6,26 @@ import { useAuth } from "@/hooks/auth-context";
 import { loginPath } from "@/lib/return-path";
 
 /**
- * Route protection for the App Router.
+ * Client-side route protection — the second of two layers (Phase 1.1).
  *
- * Phase 1 finding: before this component, **no Next.js page was protected**.
- * `ProtectedRoute` was only wired into the frozen Vite `App.tsx` route table, so
- * on the canonical runtime every route rendered openly — a real regression
- * introduced when the App Router pages were first created, not a design choice.
+ * Phase 1 added this because no Next.js page was protected at all: `ProtectedRoute`
+ * was wired only into the frozen Vite table, and with a browser-storage session a
+ * server-side check would have seen no session and bounced signed-in users.
  *
- * Chosen over middleware deliberately: this app keeps its session in browser
- * storage via the Supabase JS client (there is no `@supabase/ssr` cookie client),
- * so a `proxy.ts`/middleware check would see no session and bounce every signed-in
- * user to `/login`. Middleware becomes the right answer once sessions move to
- * cookies in a later phase.
+ * Phase 1.1 moved the session into cookies readable by the server, and
+ * `src/proxy.ts` now redirects anonymous requests for every protected path
+ * *before* any HTML is produced. This component was **kept, not removed**, because
+ * the proxy alone is not sufficient:
+ *
+ *  1. **Client-side transitions.** The proxy only runs on a real request. An
+ *     already-loaded page navigating via `next/link` would render the private
+ *     subtree first, then redirect. This component returns `null` instead, so
+ *     private content never paints.
+ *  2. **Demo mode.** `NEXT_PUBLIC_DEMO_MODE=true` runs the browser-local mock
+ *     backend, which has no cookie session for the proxy to read. This guard is
+ *     the only protection in that mode.
+ *  3. **No duplicate work.** It reads the same `AuthProvider` state the rest of
+ *     the UI uses — it does not fetch the session again.
  *
  * Behaviour
  *  - While the session is resolving, render nothing for protected content (no
