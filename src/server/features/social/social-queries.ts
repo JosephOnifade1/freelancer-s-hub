@@ -1,3 +1,4 @@
+import { notifyFollow } from "../trust/notification-events";
 import { sql } from "drizzle-orm";
 import type { ContentDatabase, ContentTransactionDatabase } from "../content/content-queries";
 
@@ -104,6 +105,7 @@ export async function setFollow(db: ContentTransactionDatabase, uid: string | nu
       const delta = desired ? 1 : -1;
       await tx.execute(sql`update profiles set following=following+${delta}, "updatedAt"=now() where uid=${uid}`);
       await tx.execute(sql`update profiles set followers=followers+${delta}, "updatedAt"=now() where uid=${target}`);
+      if (desired) await notifyFollow(tx, uid, target);
     }
     return { following: desired };
   });

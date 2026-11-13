@@ -1,3 +1,4 @@
+import { notifyComment, notifyUpvote } from "../trust/notification-events";
 /**
  * Content domain queries (Phase 2D).
  *
@@ -51,17 +52,10 @@ export interface ContentTransactionDatabase extends ContentDatabase {
  * user content.
  */
 function writeFailure(operation: string, error: unknown): void {
-  // Drizzle wraps a driver failure in `DrizzleQueryError`, whose own `message` is just
-  // "Failed query: …" — the actual PostgreSQL message is on `cause`. Logging only the
-  // outer message produces a blank diagnostic, which is exactly how the broken
-  // `returning` clause above stayed hidden.
-  const cause = (error as { cause?: unknown })?.cause;
-  const detail =
-    cause instanceof Error ? cause.message : cause ? String(cause) : "";
-  const message = error instanceof Error ? error.message : String(error);
-  console.error(
-    `[content] ${operation} failed: ${message}${detail ? ` (${detail})` : ""}`,
-  );
+  // Driver messages may embed SQL parameters (including notification titles).
+  // Log only a SQLSTATE; never user content or a wrapped Drizzle message.
+  const failure=error as {code?:string;cause?:{code?:string}};
+  console.error(`[content] ${operation} failed`, {code:failure?.cause?.code??failure?.code??"unknown"});
 }
 
 function rowsOf<T>(result: unknown): T[] {
@@ -752,6 +746,7 @@ export async function createComment(
         where id = ${postId}
       `);
 
+      await notifyComment(tx, String(inserted[0].id));
       return { status: "created", comment: toCommentRecord(inserted[0]) };
     });
 
@@ -991,6 +986,7 @@ export async function castVote(
         `);
       }
 
+      if (voteValue === 1) await notifyUpvote(tx, voterUid, entityType, entityId, postId!, entityAuthor);
       return {
         status: "applied",
         voteValue,
