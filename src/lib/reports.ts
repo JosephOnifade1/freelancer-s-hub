@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { fetchPublicProfiles, fetchModerationProfiles, isProfileError } from "./profile-client";
 
 /**
  * Content reports + the moderation queue.
@@ -205,27 +206,25 @@ export const fetchReports = async (status?: ReportStatus): Promise<Report[]> => 
 
   const reports = (data as ReportRow[]).map(rowToReport);
 
-  // Enrich reporter names with plain profile lookups (public-read).
+  // Enrich reporter names with public profile data.
+  //
+  // Phase 2C: one batched Neon read replaces a loop that issued one Supabase query per
+  // distinct reporter. A failed lookup degrades to unnamed reporters rather than
+  // failing the moderation queue — the reports themselves are the payload.
   const uids = [...new Set(reports.map((r) => r.reporterUid))];
-  await Promise.all(
-    uids.map(async (uid) => {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("uid, username, displayName")
-        .eq("uid", uid)
-        .maybeSingle();
+  const reporterResult = await fetchPublicProfiles(uids);
+  if (!isProfileError(reporterResult)) {
+    const byUid = new Map(reporterResult.data.map((profile) => [profile.uid, profile]));
+    reports.forEach((report) => {
+      const profile = byUid.get(report.reporterUid);
       if (!profile) return;
-      reports.forEach((r) => {
-        if (r.reporterUid === uid) {
-          r.reporter = {
-            uid: profile.uid,
-            username: profile.username,
-            name: profile.displayName || profile.username || "Unknown",
-          };
-        }
-      });
-    })
-  );
+      report.reporter = {
+        uid: profile.uid,
+        username: profile.username,
+        name: profile.displayName || profile.username || "Unknown",
+      };
+    });
+  }
 
   return reports;
 };
@@ -333,19 +332,18 @@ export const fetchReportContentPreviews = async (
     }
   }
 
-  // Profiles
+  // Profiles — Phase 2C reads Neon. This is the reported *subject's* profile, so the
+  // public projection is the right shape: moderation needs the name and bio, not the
+  // account's role.
   if (profileIds.length > 0) {
-    const { data } = await supabase
-      .from("profiles")
-      .select("uid, displayName, username, bio")
-      .in("uid", profileIds);
-    if (data) {
-      (data as PreviewRow[]).forEach((row) => {
-        previews.set(row.uid, {
-          entityId: row.uid,
-          body: row.bio,
-          authorName: row.displayName || row.username,
-          authorUid: row.uid,
+    const profileResult = await fetchPublicProfiles(profileIds);
+    if (!isProfileError(profileResult)) {
+      profileResult.data.forEach((profile) => {
+        previews.set(profile.uid, {
+          entityId: profile.uid,
+          body: profile.bio,
+          authorName: profile.displayName || profile.username,
+          authorUid: profile.uid,
         });
       });
     }
@@ -385,23 +383,12 @@ export interface ModerationUser {
 export const VERIFIED_PRO_ELIGIBLE_REPUTATION = 1000;
 
 export const fetchModerationUsers = async (limit = 50): Promise<ModerationUser[]> => {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("uid, username, displayName, avatarUrl, reputation, isVerifiedPro, role")
-    .order("reputation", { ascending: false })
-    .limit(limit);
-
-  if (error) throw new Error(error.message);
-
-  return (data || []).map((row: Record<string, unknown>) => ({
-    uid: String(row.uid),
-    username: (row.username as string) || undefined,
-    name: (row.displayName as string) || (row.username as string) || "Unknown",
-    avatarUrl: (row.avatarUrl as string) || undefined,
-    reputation: Number(row.reputation || 0),
-    isVerifiedPro: !!row.isVerifiedPro,
-    role: ((row.role as string) || "member") as UserRole,
-  }));
+  // Phase 2C: this is the one profile list that needs `role`, so it goes through a
+  // dedicated admin path rather than the public projection. The route gates on the
+  // caller's own role server-side — see `docs/PHASE_2C_PROFILE_DOMAIN_MIGRATION.md` §7.
+  const result = await fetchModerationProfiles(limit);
+  if (isProfileError(result)) throw new Error("Could not load moderation users.");
+  return result.data.map((row) => ({ ...row, role: row.role as UserRole }));
 };
 
 export const setUserVerifiedPro = async (targetUid: string, verified: boolean): Promise<void> => {

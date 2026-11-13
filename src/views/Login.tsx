@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { AppLink as Link } from "@/components/AppLink";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase, isDemoMode } from "../lib/supabase";
-import { provisionProfileOnServer } from "../lib/profile-provisioning";
 import { postAuthRedirect, resendConfirmationEmail, authErrorMessage } from "../lib/auth";
 import { readReturnPath } from "../lib/return-path";
 import { oauthCallbackUrl } from "../lib/oauth";
@@ -47,10 +46,10 @@ export default function Login() {
         throw error;
       }
 
-      if (data?.user) {
-        await provisionProfileOnServer();
-      }
-
+      // Phase 2C: no provisioning call here. `AuthProvider.acceptSession` starts one
+      // the moment the SIGNED_IN event fires, and it de-duplicates and retries. Calling
+      // it here too issued a second request for the same user on every password login,
+      // which the provider had no way to coalesce with its own.
       toast.success("Logged in successfully!");
       router.replace(redirectTo);
     } catch (error) {
@@ -105,9 +104,8 @@ export default function Login() {
         data = signUpRes.data;
       }
 
-      if (data?.user) {
-        await provisionProfileOnServer();
-      }
+      // Phase 2C: no provisioning call here — `AuthProvider` owns it (see above). The
+      // demo login creates a real Supabase session, so the same auth event provisions it.
 
       toast.success("Logged in as Demo Freelancer!");
       router.replace(redirectTo);

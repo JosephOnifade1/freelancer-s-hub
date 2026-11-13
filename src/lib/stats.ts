@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { fetchPublicProfiles, isProfileError } from "./profile-client";
 
 interface AuthoredRow {
   authorUid?: string;
@@ -59,16 +60,15 @@ export const getMostActiveThisWeek = async (limit = 5): Promise<ActiveContributo
 
   if (topUids.length === 0) return [];
 
-  const { data: profiles, error: profilesError } = await supabase
-    .from("profiles")
-    .select("uid, username, displayName, avatarUrl, isVerifiedPro")
-    .in("uid", topUids);
-
-  if (profilesError || !profiles) throw new Error(profilesError?.message || "Could not load active contributors.");
+  // Phase 2C: one batch read against Neon instead of a Supabase `.in()` filter that
+  // only this module and two others used.
+  const profilesResult = await fetchPublicProfiles(topUids);
+  if (isProfileError(profilesResult)) throw new Error("Could not load active contributors.");
+  const profiles = profilesResult.data;
 
   return topUids
     .map((uid) => {
-      const profile = (profiles as ProfileContributionRow[]).find((p) => p.uid === uid);
+      const profile = (profiles as unknown as ProfileContributionRow[]).find((p) => p.uid === uid);
       if (!profile) return null;
       return { ...profile, contributions: counts[uid] } as ActiveContributor;
     })

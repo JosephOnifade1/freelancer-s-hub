@@ -15,6 +15,7 @@ import { VerifiedBadge } from "./VerifiedBadge";
 import { LiveReputation } from "./LiveReputation";
 import { useTheme, ThemeMode } from "@/hooks/useTheme";
 import { supabase, isDemoMode } from "@/lib/supabase";
+import { saveOwnProfile, isProfileError } from "@/lib/profile-client";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -61,12 +62,10 @@ export function AppLayout({ children }: AppLayoutProps) {
     const nextAvailable = !isAvailable;
     setAvailabilityPending(true);
     try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .update({ status: nextAvailable ? "Available" : "Busy" })
-        .eq("uid", user.uid).select("uid");
-      if (error) throw new Error(error.message);
-      if (!data?.length) throw new Error("Could not update your work status.");
+      // Phase 2C: written to Neon. No uid is sent — the server updates the session's
+      // own row, so the toggle cannot target another account.
+      const result = await saveOwnProfile({ status: nextAvailable ? "Available" : "Busy" });
+      if (isProfileError(result)) throw new Error("Could not update your work status.");
       queryClient.setQueryData<UserProfile | null>(["profile", user.uid], (previous) =>
         previous ? { ...previous, status: nextAvailable ? "Available" : "Busy" } : previous);
       queryClient.invalidateQueries({ queryKey: ["profile", user.uid] });
