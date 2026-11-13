@@ -1,28 +1,34 @@
+import "server-only";
+
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import {
-  databaseSslConfig,
-  isDatabaseConfigured,
-  requireDatabaseUrl,
-} from "./env";
+import { isDatabaseConfigured, requireDatabaseUrl, resolveConnectionSettings } from "./env";
+import * as schema from "./schema";
 
 /**
  * The server-only Neon/PostgreSQL connection (Phase 2B.1).
  *
- * **No application tables are defined here.** Phase 2B.1 proves the driver,
- * connection and transaction stack works inside this Next.js 16 app; the domain
- * schema arrives in Phase 2B.2. `pgSchema`/table objects are therefore absent on
- * purpose — do not add them in this module's proof scope.
+ * **No table definitions live in this file.** The connection stack is here;
+ * tables are in `./schema/*.ts` and are re-exported through `./schema/index.ts`.
+ * Phase 2B.2 added the first domain (`profiles`, `usernames`) — nothing else.
  *
  * Server-only boundary
  * --------------------
- * `next/headers` is imported for its side effect: it throws when evaluated
- * outside a request scope, which is exactly what a browser bundle is. That makes
- * any accidental `import` from a Client Component fail at build time instead of
- * silently shipping the driver — and the connection string — to the browser.
- * This mirrors the guard `src/lib/supabase-server.ts` already uses, rather than
- * introducing a second mechanism.
+ * Two layers, both explicit (Phase 2B.1.1):
+ *
+ *  1. `import "server-only"` — the framework-sanctioned marker. Next.js aliases
+ *     it to a module that throws for client compilations, so a Client Component
+ *     importing this file fails the build with a message naming the cause.
+ *     (`server-only` is a 2-line marker package with no types and no runtime
+ *     behaviour; it was added in 2B.1.1 specifically for this.)
+ *  2. `next/headers` — still imported, because the marker alone does not cover
+ *     `tsc`/Vite: outside Next, `server-only` resolves to the throwing module
+ *     but *evaluates* it, which fails at runtime rather than build time. The
+ *     `next/headers` import additionally makes the module unresolvable for a
+ *     browser target in any bundler, including the Vite rollback build.
+ *
+ * The regression test in `tests/boundary/` exercises both.
  *
  * Driver choice
  * -------------
@@ -80,9 +86,15 @@ const globalForDb = globalThis as unknown as DbGlobal;
 export function getPool(): Pool {
   if (globalForDb.__borynxPool) return globalForDb.__borynxPool;
 
+  // `resolveConnectionSettings` strips every TLS parameter from the URL before
+  // it reaches `pg`, so the URL cannot override the verification policy below.
+  // This matters: `pg` merges the parsed URL over the config, so
+  // `?sslmode=no-verify` would otherwise win over a secure `ssl` object.
+  const settings = resolveConnectionSettings(requireDatabaseUrl());
+
   const pool = new Pool({
-    connectionString: requireDatabaseUrl(),
-    ssl: databaseSslConfig(process.env.DATABASE_URL as string),
+    connectionString: settings.connectionString,
+    ssl: settings.ssl,
     max: Number(process.env.DATABASE_POOL_MAX ?? POOL_MAX_DEFAULT),
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 10_000,
@@ -102,13 +114,22 @@ export function getPool(): Pool {
   return pool;
 }
 
-/** The Drizzle client bound to the shared pool. */
+/**
+ * The Drizzle client bound to the shared pool.
+ *
+ * The schema is passed so `db.query.profiles` and typed `.select()` results are
+ * inferred from `schema/identity.ts` — without it, every query would come back
+ * as `unknown` and each caller would cast.
+ */
 export function getDatabase() {
   if (globalForDb.__borynxDb) return globalForDb.__borynxDb;
-  const db = drizzle(getPool());
+  const db = drizzle(getPool(), { schema });
   globalForDb.__borynxDb = db;
   return db;
 }
+
+/** The database client type, for feature modules that accept it as a parameter. */
+export type Database = ReturnType<typeof getDatabase>;
 
 /**
  * Round-trip probe used by the compatibility route and the runtime test.
