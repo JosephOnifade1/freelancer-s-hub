@@ -1,75 +1,36 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 import { MockSupabaseClient, seedMockData } from "./mockSupabase";
+import {
+  isDemoMode as envIsDemoMode,
+  getSupabaseCredentials,
+  isSupabaseConfigured,
+} from "./supabase-env";
 
 /**
- * Environment resolution.
+ * The browser Supabase client.
  *
- * The two build systems inline environment variables differently, and both
- * require *literal* access expressions:
+ * Phase 1.1 moved credential resolution into `./supabase-env` (server-safe, no
+ * browser globals) so `proxy.ts` and server utilities can read config without
+ * importing this module. Everything that touches `window` lives here.
  *
- *  - Vite replaces `import.meta.env.VITE_*` at build time.
- *  - Next/Turbopack replaces `process.env.NEXT_PUBLIC_*` at build time.
+ * Session storage
+ * ---------------
+ * `createBrowserClient` from `@supabase/ssr` — not `createClient` — stores the
+ * session in **cookies** instead of `localStorage`, which is what makes the
+ * session readable by the Next.js server. The migration is confined to this
+ * module so no view, hook or data-layer file changed.
  *
- * A dynamic read such as `process.env[key]` is NOT inlined by Next, so it
- * silently yields `undefined` in the browser bundle. Every lookup below is
- * therefore spelled out literally; nothing is read through a computed key.
+ * Outside a browser (Next prerendering, Vitest) `@supabase/ssr`'s cookie
+ * storage cannot set cookies and throws. `createClient` is therefore still used
+ * when there is no `window`: prerendering then produces the signed-out shell it
+ * always produced, and the client re-hydrates with cookies on the browser.
  *
- * Only `NEXT_PUBLIC_*` / `VITE_*` values are referenced, so nothing here can
- * pull a server-only secret into a client bundle.
+ * Demo mode (browser-local mock) is unchanged: it owns its own localStorage
+ * session and never installs a cookie session.
  */
-const nextPublicSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const nextPublicSupabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const nextPublicDemoMode = readNextPublicEnv("NEXT_PUBLIC_DEMO_MODE");
 
-const viteSupabaseUrl = readViteEnv("VITE_SUPABASE_URL");
-const viteSupabaseAnonKey = readViteEnv("VITE_SUPABASE_ANON_KEY");
-const viteDemoMode = readViteEnv("VITE_DEMO_MODE");
-
-/**
- * `import.meta.env` only exists in the Vite build. Reading it once at module
- * scope is fine: Vite replaces it statically, and Next/Webpack leave a plain
- * property access on an object that is simply `undefined` there.
- */
-const viteEnv = (
-  import.meta as ImportMeta & { env?: Record<string, string | undefined> }
-).env;
-
-function readViteEnv(key: string): string | undefined {
-  try {
-    return viteEnv?.[key];
-  } catch {
-    return undefined;
-  }
-}
-
-/**
- * Reads a single `NEXT_PUBLIC_*` value.
- *
- * The identifier must appear literally in the source for Next's compiler to
- * inline it — `process.env.someKey` in a variable (including a plain
- * `const x = process.env.FOO` moved into a helper) resolves to nothing. Each
- * supported variable is listed explicitly; anything else is not public config.
- */
-function readNextPublicEnv(key: "NEXT_PUBLIC_DEMO_MODE"): string | undefined {
-  switch (key) {
-    case "NEXT_PUBLIC_DEMO_MODE":
-      return process.env.NEXT_PUBLIC_DEMO_MODE;
-    default:
-      return undefined;
-  }
-}
-
-const supabaseUrl = nextPublicSupabaseUrl || viteSupabaseUrl || "";
-const supabaseAnonKey = nextPublicSupabaseAnonKey || viteSupabaseAnonKey || "";
-const demoModeEnv = nextPublicDemoMode || viteDemoMode || "";
-
-const isPlaceholder =
-  !supabaseUrl ||
-  !supabaseAnonKey ||
-  supabaseUrl.includes("your-supabase-project") ||
-  supabaseAnonKey.includes("your-supabase-anon-key");
-
-export const isDemoMode = demoModeEnv === "true";
+export const isDemoMode = envIsDemoMode;
 
 let supabaseInstance: SupabaseClient;
 
@@ -82,7 +43,7 @@ if (isDemoMode) {
     seedMockData();
   }
   supabaseInstance = new MockSupabaseClient() as unknown as SupabaseClient;
-} else if (isPlaceholder) {
+} else if (!isSupabaseConfigured) {
   if (typeof window !== "undefined") {
     console.error(
       "[Borynx] Supabase is not configured and demo mode is off. " +
@@ -92,7 +53,17 @@ if (isDemoMode) {
   }
   supabaseInstance = createClient("https://placeholder.supabase.co", "placeholder-anon-key");
 } else {
-  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
+  const credentials = getSupabaseCredentials()!;
+  if (typeof window === "undefined") {
+    // Prerender / Vitest: no document.cookie to persist into. A plain client
+    // keeps the module importable; it holds no session because nothing wrote one.
+    supabaseInstance = createClient(credentials.url, credentials.anonKey);
+  } else {
+    // Browser: cookie-backed storage, shared with the server. `createBrowserClient`
+    // is a plain static import — it is only *called* when a `window` exists, so
+    // the prerender path above never touches its cookie storage.
+    supabaseInstance = createBrowserClient(credentials.url, credentials.anonKey);
+  }
 }
 
 export const supabase = supabaseInstance;

@@ -5,6 +5,7 @@ import { supabase, isDemoMode } from "../lib/supabase";
 import { ensureUserProfile, checkUsernameAvailability } from "../lib/users";
 import { postAuthRedirect, resendConfirmationEmail, authErrorMessage, normalizeUsername, isValidUsername } from "../lib/auth";
 import { readReturnPath } from "../lib/return-path";
+import { oauthCallbackUrl } from "../lib/oauth";
 import { useAuth } from "../hooks/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -214,8 +215,11 @@ export default function Signup() {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        // Return to the validated destination after the OAuth round trip.
-    options: { redirectTo: window.location.origin + redirectTo },
+        // Phase 1.1: land on the server-side callback, which exchanges the code
+        // and writes the cookie session, then forwards to the validated
+        // destination. Sending the provider straight to the destination would
+        // leave the code to the client (the Phase 1 behaviour).
+        options: { redirectTo: oauthCallbackUrl(window.location.origin, redirectTo) },
       });
       if (error) throw error;
     } catch (error) {
