@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { AppLink as Link } from "@/components/AppLink";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase, isDemoMode } from "../lib/supabase";
-import { ensureUserProfile } from "../lib/users";
+import { provisionProfileOnServer } from "../lib/profile-provisioning";
 import { postAuthRedirect, resendConfirmationEmail, authErrorMessage } from "../lib/auth";
 import { readReturnPath } from "../lib/return-path";
 import { oauthCallbackUrl } from "../lib/oauth";
@@ -48,7 +48,7 @@ export default function Login() {
       }
 
       if (data?.user) {
-        await ensureUserProfile(data.user);
+        await provisionProfileOnServer();
       }
 
       toast.success("Logged in successfully!");
@@ -106,10 +106,7 @@ export default function Login() {
       }
 
       if (data?.user) {
-        await ensureUserProfile({
-          ...data.user,
-          user_metadata: { display_name: "Demo Freelancer" },
-        });
+        await provisionProfileOnServer();
       }
 
       toast.success("Logged in as Demo Freelancer!");
