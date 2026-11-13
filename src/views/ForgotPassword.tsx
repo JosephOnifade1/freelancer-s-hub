@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
-import { isDemoMode } from "../lib/supabase";
 import { requestPasswordReset, authErrorMessage } from "../lib/auth";
 import { useAuth } from "../hooks/auth-context";
 import { Button } from "@/components/ui/button";
@@ -65,15 +64,6 @@ export default function ForgotPassword() {
                   new one here.
                 </p>
               </div>
-              {isDemoMode && (
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  Demo mode doesn't send email.{" "}
-                  <Link to="/reset-password" className="font-medium text-brand hover:underline">
-                    Continue to the reset page
-                  </Link>{" "}
-                  to simulate opening the link.
-                </p>
-              )}
             </CardContent>
             <CardFooter className="flex flex-col gap-3">
               <Button variant="outline" className="w-full" onClick={() => setSent(false)}>

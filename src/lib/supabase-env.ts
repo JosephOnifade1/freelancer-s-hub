@@ -17,8 +17,7 @@
  * therefore spelled out literally; nothing is read through a computed key.
  *
  * Only `NEXT_PUBLIC_*` / `VITE_*` values are referenced, so nothing here can
- * pull a server-only secret into a client bundle. The service-role key is never
- * read anywhere in this codebase.
+ * pull a server-only secret into a client bundle. Privileged Storage credentials are isolated in a server-only module, never here.
  */
 
 const nextPublicSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -73,14 +72,16 @@ const isPlaceholderConfig =
   supabaseUrl.includes("your-supabase-project") ||
   supabaseAnonKey.includes("your-supabase-anon-key");
 
-/** `NEXT_PUBLIC_DEMO_MODE=true` / `VITE_DEMO_MODE=true` — the local mock backend. */
-export const isDemoMode = demoModeEnv === "true";
+/** Legacy demo flags no longer enable a mock identity/database backend. */
+// Deprecated flags are recognized only to warn: local identities cannot authorize Neon.
+if (demoModeEnv === "true") console.warn("[Borynx] Database demo mode was retired; configure Supabase Auth and Neon.");
+
 
 /**
  * True when a real Supabase project is configured.
  *
  * Phase 1.1 uses this to decide whether cookie sessions are possible at all.
- * Demo mode always uses the browser-local mock and installs no cookie session.
+ * All supported runtimes use Supabase cookie sessions.
  */
 export const isSupabaseConfigured = !isPlaceholderConfig;
 

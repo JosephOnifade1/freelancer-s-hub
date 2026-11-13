@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { AppLink as Link } from "@/components/AppLink";
 import { useRouter, useSearchParams } from "next/navigation";
-import { supabase, isDemoMode } from "../lib/supabase";
+import { supabase } from "../lib/supabase";
 import { checkUsernameAvailability } from "../lib/users";
 import { postAuthRedirect, resendConfirmationEmail, authErrorMessage, normalizeUsername, isValidUsername } from "../lib/auth";
 import { readReturnPath } from "../lib/return-path";
@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowLeft, UserCheck, CheckCircle2, Loader2, MailCheck, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2, MailCheck, XCircle } from "lucide-react";
 
 export default function Signup() {
   const [name, setName] = useState("");
@@ -107,57 +107,7 @@ export default function Signup() {
     }
   };
 
-  const handleDemoLogin = async () => {
-    // Demo account exists only in demo mode (local mock DB). Against a real
-    // backend this would create a shared, publicly-known account.
-    if (!isDemoMode) {
-      toast.error("Demo sign-in is only available in demo mode.");
-      return;
-    }
-    setIsLoading(true);
-    const demoEmail = "demo@borynx.com";
-    const demoPassword = "DemoPassword123!";
 
-    try {
-      const signInRes = await supabase.auth.signInWithPassword({
-        email: demoEmail,
-        password: demoPassword,
-      });
-      let data = signInRes.data;
-
-      if (signInRes.error) {
-        const signUpRes = await supabase.auth.signUp({
-          email: demoEmail,
-          password: demoPassword,
-          options: {
-            data: { display_name: "Demo Freelancer" },
-          },
-        });
-
-        if (signUpRes.error) {
-          throw signUpRes.error;
-        }
-
-        if (signUpRes.data?.user && !signUpRes.data?.session) {
-          toast.info("Demo user created. If email confirmation is required in your Supabase project, please confirm or check settings.");
-          return;
-        }
-
-        data = signUpRes.data;
-      }
-
-      // Phase 2C: no provisioning call here. `AuthProvider.acceptSession` starts one
-      // the moment the SIGNED_IN event fires, and it de-duplicates and retries. Calling
-      // it here too issued a second request for the same user on every password login,
-      // which the provider had no way to coalesce with its own.
-      toast.success("Logged in as Demo Freelancer!");
-      router.replace(redirectTo);
-    } catch (error) {
-      toast.error(authErrorMessage(error, "Demo login failed."));
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleResendConfirmation = async () => {
     if (!confirmationSentTo) return;
@@ -309,19 +259,6 @@ export default function Signup() {
               and{" "}
               <Link href="/privacy" className="text-brand hover:underline">Privacy Policy</Link>.
             </p>
-
-            {isDemoMode && (
-              <Button
-                type="button"
-                variant="secondary"
-                className="w-full gap-2"
-                onClick={handleDemoLogin}
-                disabled={isLoading}
-              >
-                <UserCheck className="h-4 w-4" />
-                Quick Demo Sign In
-              </Button>
-            )}
 
             <div className="relative w-full my-1">
               <div className="absolute inset-0 flex items-center">

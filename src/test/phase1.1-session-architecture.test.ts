@@ -154,7 +154,6 @@ describe("single session source (Step 8)", () => {
       // `clientFactories` assertion below is what actually enforces that.
       "src/hooks/useAuth.tsx",
       "src/lib/attachments.ts",
-      "src/lib/content-demo.ts",
       "src/lib/posts.ts",
       "src/lib/uploads.ts",
       "src/lib/users.ts",
@@ -171,6 +170,7 @@ describe("single session source (Step 8)", () => {
       "src/lib/supabase-server.ts", // server (cookie read/write)
       "src/lib/supabase.ts", // browser singleton
       "src/proxy.ts", // per-request refresh
+      "src/server/storage/documents.ts", // isolated server-only Storage capability, no session identity
     ]);
   });
 

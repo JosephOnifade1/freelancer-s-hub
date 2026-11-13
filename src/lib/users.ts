@@ -5,12 +5,10 @@ import {
   fetchTopProfiles,
   checkHandleAvailable,
   saveOwnAvatar,
-  saveReputation,
   isProfileError,
 } from "./profile-client";
 import {
   fetchAuthorResourceCount,
-  fetchAuthorScores,
   fetchSavedPostIds,
   isContentError,
   toggleSavedPost,
@@ -197,34 +195,6 @@ export const updateUserAvatar = async (uid: string, imageUrl: string) => {
 
 export const toggleFollow = async (_currentUid: string, targetUid: string) =>
   (await setFollowing(targetUid, "toggle")).following;
-
-/**
- * Recomputes a user's reputation from their content.
- *
- * Phase 2D resolves the asymmetry 2C documented: the derivation used to read Supabase
- * while the write went to Neon. Posts and comments are now both in Neon, so the sum
- * and the write are in the same database and the earlier caveat ("moving the
- * derivation now would sum empty tables and zero everyone") no longer applies.
- *
- * The write still goes through the profile service with the session uid, so a caller
- * cannot recompute someone else's reputation.
- */
-export const calculateReputation = async (uid: string) => {
-  const scores = await fetchAuthorScores(uid);
-  // A failed aggregate must not be turned into "0" and written over a real reputation.
-  if (isContentError(scores)) throw new Error("Could not recalculate reputation.");
-  const totalScore = scores.data;
-
-  // Phase 2C: the *derivation* still reads Supabase (posts and comments have not
-  // migrated), but the *write* goes to Neon where the profile now lives. Sending the
-  // total to the server keeps the write bound to the session uid — the server ignores
-  // any uid we might pass and writes the caller's own row.
-  const saved = await saveReputation(totalScore);
-  if (isProfileError(saved) && saved.error !== "not_provisioned") {
-    throw new Error("Could not save reputation.");
-  }
-  return totalScore;
-};
 
 /** Top profiles by reputation — Phase 2C reads Neon. */
 export const getTopContributors = async (count = 5): Promise<UserProfile[]> => {

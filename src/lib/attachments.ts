@@ -114,7 +114,13 @@ export async function uploadPostDocuments(postId: string, files: File[]): Promis
       });
       if (isContentError(registered)) {
         // An upload without readable metadata must not appear attached.
-        await supabase.storage.from(BUCKET).remove([path]);
+        // A lost success response can mean the pointer committed. Do not delete
+        // bytes on an ambiguous network/503 failure; reload reconciles metadata.
+        if (["error","unavailable"].includes(registered.error)) {
+          throw new Error(`Could not confirm document details. Reload documents before retrying. Recovery path: ${path}`);
+        }
+        const {error:cleanupError}=await supabase.storage.from(BUCKET).remove([path]);
+        if(cleanupError)throw new Error(`Document registration failed and file cleanup failed. Contact support with recovery path: ${path}`);
         throw new Error(
           registered.error === "conflict"
             ? `A post can have at most ${MAX_DOCUMENTS_PER_POST} documents.`
@@ -132,11 +138,10 @@ export async function uploadPostDocuments(postId: string, files: File[]): Promis
 
 /** Private bucket: URLs are short-lived, never stored in a public post. */
 export async function getDocumentDownloadUrl(attachment: PostAttachment): Promise<string> {
-  const { data, error } = await supabase.storage.from(BUCKET)
-    .createSignedUrl(attachment.storagePath, 60, { download: attachment.fileName });
-  if (error) throw new Error(error.message);
-  if (!data?.signedUrl) throw new Error("Could not prepare this download.");
-  return data.signedUrl;
+  // Never authorize with stale Supabase application tables or a browser path claim.
+  const response=await fetch(`/api/content/attachments/${encodeURIComponent(attachment.id)}/download`,{cache:"no-store",credentials:"same-origin"});
+  if(!response.ok)throw new Error(response.status===404?"Document not visible or no longer available.":"Could not prepare this download.");
+  const result=await response.json();if(!result.url)throw new Error("Could not prepare this download.");return result.url as string;
 }
 
 /** Remove metadata first so a cleanup failure cannot leave a broken download link. */

@@ -23,9 +23,7 @@ import {
   isUsernameAvailable,
   searchProfiles,
   setOwnAvatar,
-  setReputation,
   updateOwnProfile,
-  adjustProfileCounter,
 } from "@/server/features/profile/profile-queries";
 
 const url = process.env.DATABASE_URL;
@@ -255,34 +253,10 @@ describe("writes against real PostgreSQL", { skip: !ready }, () => {
     await cleanup();
   });
 
-  it("writes reputation and respects the non-negative CHECK", async () => {
-    await cleanup();
-    await seed(UID_A, "ada");
-
-    expect((await setReputation(db, UID_A, 42)).status).toBe("updated");
-    expect((await findOwnProfile(db, UID_A))?.reputation).toBe(42);
-
-    // Rejected before reaching SQL, because the column has `reputation >= 0`.
-    expect((await setReputation(db, UID_A, -1)).status).toBe("invalid");
-    expect((await findOwnProfile(db, UID_A))?.reputation).toBe(42);
-
-    await cleanup();
-  });
-
-  it("clamps a follower counter at zero instead of violating the CHECK", async () => {
-    await cleanup();
-    await seed(UID_A, "ada");
-
-    await adjustProfileCounter(db, UID_A, "followers", -1); // no-op at 0
-    expect((await findOwnProfile(db, UID_A))?.followers).toBe(0);
-
-    await adjustProfileCounter(db, UID_A, "followers", 1);
-    expect((await findOwnProfile(db, UID_A))?.followers).toBe(1);
-
-    await adjustProfileCounter(db, UID_A, "followers", -1);
-    expect((await findOwnProfile(db, UID_A))?.followers).toBe(0);
-
-    await cleanup();
+  it.each(["reputation","followers"])("profile patch cannot forge %s",async field=>{
+    await cleanup();await seed(UID_A,"ada");
+    expect((await updateOwnProfile(db,UID_A,{[field]:999} as never)).status).toBe("invalid");
+    expect((await findOwnProfile(db,UID_A))?.[field]).toBe(0);await cleanup();
   });
 
   it("survives concurrent partial updates without losing fields", async () => {
@@ -303,15 +277,8 @@ describe("writes against real PostgreSQL", { skip: !ready }, () => {
     await cleanup();
   });
 
-  it("counts concurrent counter increments without loss", async () => {
-    await cleanup();
-    await seed(UID_A, "ada");
+  it("schema rejects negative counters",async()=>{await cleanup();await seed(UID_A,"ada");await expect(pool.query(`update profiles set followers=-1 where uid=$1`,[UID_A])).rejects.toThrow();expect((await findOwnProfile(db,UID_A))?.followers).toBe(0);await cleanup();});
 
-    await Promise.all(Array.from({ length: 10 }, () => adjustProfileCounter(db, UID_A, "followers", 1)));
-    expect((await findOwnProfile(db, UID_A))?.followers).toBe(10);
-
-    await cleanup();
-  });
 });
 
 describe("moderation projection", { skip: !ready }, () => {

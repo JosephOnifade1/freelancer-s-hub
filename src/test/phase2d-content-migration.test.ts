@@ -42,7 +42,7 @@ const code = (path: string) =>
  */
 const nonMock = files.filter(
   (f) =>
-    !f.includes("mockSupabase") &&
+    !f.includes("mockSupabase") && !f.startsWith("src/test/") &&
     f !== "src/lib/content-demo.ts" &&
     !f.endsWith(".test.ts") &&
     !f.endsWith(".test.tsx"),
@@ -73,19 +73,10 @@ describe("no Supabase content access remains", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("only the demo backend still touches those tables, and only through the mock", () => {
-    // `content-demo.ts` legitimately queries the mock client in demo mode, where that
-    // client *is* the database. Production never loads it: `isDemoMode` is false.
-    const demo = code("src/lib/content-demo.ts");
-    expect(demo).toContain('from("posts")');
-    expect(read("src/lib/content-client.ts")).toContain(
-      'import * as demo from "./content-demo"',
-    );
-    // ...and every demo call is behind the flag.
-    const client = code("src/lib/content-client.ts");
-    const demoCalls = client.match(/return demo\./g) ?? [];
-    const guards = client.match(/if \(isDemoMode\) return demo\./g) ?? [];
-    expect(demoCalls.length).toBe(guards.length);
+  it("Phase 2H removes the alternate mock backend entirely", () => {
+    const client=code("src/lib/content-client.ts");
+    expect(client).not.toMatch(/content-demo|isDemoMode|demo\./);
+    expect(read("src/lib/supabase.ts")).not.toMatch(/MockSupabaseClient|seedMockData/);
   });
 
   it("no content RPC survives", () => {
@@ -106,12 +97,9 @@ describe("no Supabase content access remains", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("the demo delegate keeps the mock's vote and view RPCs, which have no server equivalent", () => {
-    // The mock's `cast_vote` is its RLS mirror. Demo mode has no Neon, so it must call
-    // the mock's own implementation rather than the removed Supabase RPC path.
-    const demo = code("src/lib/content-demo.ts");
-    expect(demo).toContain('rpc("cast_vote"');
-    expect(demo).toContain('rpc("increment_post_views"');
+  it("runtime client has no vote/view RPC delegate",()=>{
+    expect(code("src/lib/content-client.ts")).not.toMatch(/\.rpc\(|content-demo/);
+    expect(read("src/lib/supabase.ts")).not.toContain("mockSupabase");
   });
 });
 

@@ -10,10 +10,12 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
     allowedHosts: [".e2b.app"],
+    proxy: { "/api": { target: process.env.BORYNX_API_PROXY_TARGET || "http://127.0.0.1:3000", changeOrigin: false } },
     hmr: {
       overlay: false,
     },
   },
+  preview: { host: "0.0.0.0", allowedHosts: [".e2b.app"], proxy: { "/api": { target: process.env.BORYNX_API_PROXY_TARGET || "http://127.0.0.1:3000", changeOrigin: false } } },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   build: {
     rollupOptions: {

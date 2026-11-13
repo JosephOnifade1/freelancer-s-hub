@@ -1,8 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { createBrowserClient } from "@supabase/ssr";
-import { MockSupabaseClient, seedMockData } from "./mockSupabase";
 import {
-  isDemoMode as envIsDemoMode,
   getSupabaseCredentials,
   isSupabaseConfigured,
 } from "./supabase-env";
@@ -26,29 +24,18 @@ import {
  * when there is no `window`: prerendering then produces the signed-out shell it
  * always produced, and the client re-hydrates with cookies on the browser.
  *
- * Demo mode (browser-local mock) is unchanged: it owns its own localStorage
- * session and never installs a cookie session.
+ * Browser-local database mocks are test fixtures only; Auth always uses Supabase.
  */
 
-export const isDemoMode = envIsDemoMode;
 
 let supabaseInstance: SupabaseClient;
 
-if (isDemoMode) {
-  if (typeof window !== "undefined") {
-    console.info(
-      "[Borynx] DEMO MODE (DEMO_MODE=true): using the local mock database. " +
-        "Data is stored only in this browser and is not shared with other users."
-    );
-    seedMockData();
-  }
-  supabaseInstance = new MockSupabaseClient() as unknown as SupabaseClient;
-} else if (!isSupabaseConfigured) {
+if (!isSupabaseConfigured) {
   if (typeof window !== "undefined") {
     console.error(
       "[Borynx] Supabase is not configured and demo mode is off. " +
         "Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY for a real backend, " +
-        "or set NEXT_PUBLIC_DEMO_MODE=true for the local mock database."
+        "Application records require the Neon API."
     );
   }
   supabaseInstance = createClient("https://placeholder.supabase.co", "placeholder-anon-key");

@@ -19,10 +19,7 @@ import { failure } from "@/server/features/content/http";
  *   `health=1`           → community health aggregates
  *   `scores=<uid>`       → summed post+comment score for one author
  *
- * These are **counts and timestamps only**. No post or comment body is returned, so
- * the aggregates cannot leak content the caller is not authorized to read: a count of
- * "posts this week" is true for every viewer and reveals nothing about a specific
- * post, while listing the posts would.
+ * Counts, dates and IDs obey the same viewer visibility rules as content reads.
  */
 export const dynamic = "force-dynamic";
 

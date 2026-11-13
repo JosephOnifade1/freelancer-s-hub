@@ -194,13 +194,15 @@ export async function listReports(
   uid: string | null,
   own = false,
   status?: string,
+  beforeId?: string,
 ) {
   requireIdentity(uid);
+  if (beforeId) validId(beforeId);
   if (status) allowed(status, states);
   if (!own) await requireStaff(db, uid);
   return rows(
     await db.execute(
-      sql`select r.*,${reporter} as reporter from reports r left join profiles p on p.uid=r."reporterUid" where ${own ? sql`r."reporterUid"=${uid}` : sql`true`} ${status ? sql`and r.status=${status}` : sql``} order by r."createdAt" desc,r.id desc`,
+      sql`select r.*,${reporter} as reporter from reports r left join profiles p on p.uid=r."reporterUid" where ${own ? sql`r."reporterUid"=${uid}` : sql`true`} ${status ? sql`and r.status=${status}` : sql``} ${beforeId ? sql`and (r."createdAt",r.id)<(select cursor."createdAt",cursor.id from reports cursor where cursor.id=${beforeId} and ${own ? sql`cursor."reporterUid"=${uid}` : sql`true`})` : sql``} order by r."createdAt" desc,r.id desc limit 100`,
     ),
   ).map(report);
 }

@@ -1,88 +1,53 @@
-# Borynx - Freelancer Community Platform
+# Borynx — Freelancer Community Platform
 
-Borynx is a modern community platform built with React, TypeScript, Tailwind CSS, and powered by **Supabase** for database, real-time features, and authentication.
+## Current ownership (Phase 2H)
 
----
+**Neon PostgreSQL + Drizzle** owns all application records and relationships:
+profiles/handles, content/comments/votes/polls/bookmarks/document metadata,
+communities/memberships/follows, leads/applications/private pipeline,
+notifications/reports/moderation and badges/earned badges.
+**Supabase Auth** owns accounts, OAuth, email/password flows, tokens and sessions.
+**Supabase Storage** owns uploaded bytes, not application visibility or relationships.
 
-## 🚀 Setting Up Supabase Backend
+## Setup / deployment
 
-### 1. Create a Supabase Project
-1. Head over to [Supabase](https://supabase.com) and create a new project.
-2. Go to **Project Settings > API** and copy your **Project URL** and **anon / public key**.
+1. Configure Supabase Auth URL/anon key and OAuth/email redirect URLs. Use the
+   NEXT_PUBLIC_* pair for Next, VITE_* for the retained browser build; see `.env.example`.
+2. Configure server-only DATABASE_URL for Neon. Apply the ordered Drizzle migrations
+   0000–0006 (`npm run db:migrate` on a development database; use verified TLS and
+   an operator-reviewed deployment runner in production). Never rewrite applied migrations.
+3. For private documents, configure server-only SUPABASE_SERVICE_ROLE_KEY on the
+   Next backend. It is isolated in `src/server/storage/documents.ts` for object
+   verification/signing **after Neon authorization**. Never put it in public variables.
+4. Operator-review/apply `ops/supabase_storage_neon_cutover.sql` to Supabase Storage.
+   It removes legacy policies consulting Supabase application tables, keeps the
+   bucket private, permits own-folder upload/read/delete for cleanup, and leaves
+   other-viewer download decisions to the Neon-authorized server signer. Inspect
+   ALL other bucket policies (RLS policies OR together). This has NOT been applied
+   or verified against a real Supabase project in this phase.
+5. Retain existing avatar/post-image buckets and own-folder byte policies. Preserve
+   the operator-controlled Neon admin bootstrap; no automatic admin/seed account.
 
-### 2. Configure Environment Variables
-Create a `.env.local` or `.env` file in the root directory:
+**Do not run the historical root `supabase_*migration.sql`/`supabase_schema.sql`
+as the application setup.** They remain provenance/export mappings, not runtime
+prerequisites; some install obsolete Auth->public.profiles triggers. Existing
+projects must operator-review legacy Auth trigger retirement at cutover; the
+application provisions Neon idempotently from verified Auth identity, never dual-writes.
+Do not drop legacy tables/data without separate authorization and backup.
 
-```env
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
-```
+No browser mock database/auth or shared demo account remains in the runtime.
+Deprecated demo flags only warn. Historical mocks live exclusively under test fixtures.
+Badge catalog rows are migrated, not users or earned awards. Progress is computed
+from existing UI inputs; there is no public award endpoint or new award automation.
 
-### 3. Apply Database Schema
-1. In your Supabase Dashboard, open the **SQL Editor**.
-2. Copy the entire contents of `supabase_schema.sql` from the root of this project.
-3. Paste it into the SQL Editor and click **Run**.
+The retained Vite frontend requires the Next API backend. Dev/preview proxies
+same-origin `/api` to `BORYNX_API_PROXY_TARGET` (default server-side port 3000).
+For static deployments, route `/api` to that backend at the reverse proxy; do not
+send database credentials or browser requests to localhost. Vite is a UI rollback,
+not a rollback to Supabase Database.
 
-This script automatically sets up:
-- **Tables**: `profiles`, `usernames`, `communities`, `posts`, `comments`, `leads`, `community_members`, `saved_posts`, `follows`, and `votes`.
-- **Foreign Keys**: Named relationships for PostgREST joins (`posts_authorUid_fkey`, `comments_authorUid_fkey`, `leads_postedByUid_fkey`).
-- **Row Level Security (RLS)**: Owner-scoped policies. Post/comment counters and reputation are maintained by server-owned RPCs and triggers — there is deliberately no general-purpose counter-update policy on `posts`/`comments`.
-- **Triggers**: Automatic profile creation on auth signup via `handle_new_user()`, plus transactional active-comment counts on insert/delete/restore.
-- **RPC Functions**: `cast_vote` (atomic, hardened voting: the server derives the author, checks visibility/deleted/self-vote rules, locks concurrent votes, and computes score/reputation deltas), view counts, and follow/member counters. Comment counts are maintained by the `trg_post_comment_count` trigger.
-- **Initial Seed Data**: Pre-populated communities for instant operation.
-
-> **Upgrading an existing database** created with an older schema? Run the
-> migrations once, in this order, in the SQL Editor:
-> 1. `supabase_architecture_hardening.sql` — drops the old permissive counter
->    policies, installs `cast_vote`, removes the obsolete
->    `apply_vote_aggregate` helper (which trusted caller-supplied score deltas).
-> 2. `supabase_lead_applications_migration.sql` — real lead applications.
-> 3. `supabase_notifications_migration.sql` — trigger-generated notifications.
-> 4. `supabase_reports_and_moderation_migration.sql` — reports, roles, Verified Pro.
-> 5. `supabase_auth_completion_migration.sql` — signup usernames honored by
->    `handle_new_user()`; also lists the Auth dashboard settings (confirm
->    email, site URL, redirect allow list incl. `/reset-password`) to set.
-> 6. `supabase_post_settings_and_storage_migration.sql` — enforces post
->    visibility / allowComments / pinning via RLS (`can_view_post`) and
->    creates the `avatars` + `post-images` Storage buckets.
-> 7. `supabase_post_interaction_hardening_migration.sql` — hardens
->    `cast_vote` (visibility/deleted/self-vote checks, concurrency lock),
->    moves `posts.commentCount` maintenance into a database trigger, and
->    blocks comments on deleted posts / cross-post reply parents.
-> 8. `supabase_ux_marketplace_pipeline_documents_migration.sql` — adds the
->    account-private pipeline table, the `post_documents` table, the
->    `post-documents` Storage bucket with RLS, and a security-definer trigger
->    that enforces object existence and the three-document upload limit.
-> 9. `supabase_achievements_badges_migration.sql` — adds the `badges` catalog
->    table, the `user_badges` earned-badges table with RLS, and seeds the
->    default badge catalog (First Post, Rising Voice, Helper, Trusted Voice,
->    Consistent, Generous, Veteran, Conversation Starter).
->
-> Apply migration 7 **before** deploying the updated frontend. Its backfill
-> reconciles all existing comment counts and briefly locks post/comment writes
-> while installing the trigger. Older browser tabs may log an error from the
-> retired `increment_comment_count` RPC; comment inserts still succeed and
-> the trigger maintains the count. This repository does not automatically
-> execute migrations against an existing hosted project.
->
-> **`supabase_ux_marketplace_pipeline_documents_migration.sql` (step 8) is unapplied.** The `/pipeline` page, private document upload/signed download, and account-scoped post drafts require its tables and Storage bucket. Do not deploy frontend code that depends on those tables until this migration has been applied and approved separately.
-
----
-
-## 🛠️ Features
-
-- **Post Settings, Enforced**: Post visibility (`public` / `members` / `admins`), comment on/off, and space pinning are enforced by database RLS (`can_view_post`) — not just hidden in the UI — and mirrored in the feed, search, and demo mode. Images (avatars, post images) upload to Supabase Storage buckets (`avatars`, `post-images`, own-folder write policies) instead of being stored as base64 in the database.
-- **Authentication**: Email/Password and Google OAuth sign-in via Supabase Auth — with chosen @usernames at signup (live availability check), email confirmation + resend, forgot/reset-password flow (`/forgot-password` → email link → `/reset-password`), return-to-page after login, and a first-run profile setup at `/onboarding` (plus a "complete your profile" prompt on the feed until your bio and skills are filled in).
-- **Feed & Discussions**: Post creation, voting, rich text markdown editing, and commenting threads.
-- **Communities**: Join/leave specialized freelancer communities (Design, Dev, Marketing, Writing, etc.).
-- **Job Board (Leads)**: Post and discover freelance bounties, project leads, and retainer gigs. Applications are real: proposals are stored in `lead_applications`, lead owners review them in the **Applications** inbox (`/applications`), and applicant counts are maintained by database trigger. (Existing databases: run `supabase_lead_applications_migration.sql` once.)
-- **Account-Private Pipeline & Documents**: Save opportunities to a private pipeline (`/pipeline`, backend-persisted per account), upload private post documents to a dedicated Storage bucket with signed download and per-author removal, and restore account-scoped post drafts in the composer. Requires `supabase_ux_marketplace_pipeline_documents_migration.sql` (step 8), which is **unapplied**.
-- **Profiles & Reputation**: Custom handles, bios, skills, avatar uploads, and reputation tracking.
-- **Notifications**: In-app notifications (bell + `/notifications`) for comments, replies, upvotes, follows, and lead-application events. Rows are generated by database triggers — run `supabase_notifications_migration.sql` once on existing databases.
-- **Trust & Moderation**: Real [Privacy Policy](/privacy) and [Terms of Service](/terms); persisted content reports (posts, leads) reviewed by moderators at `/admin`, who can remove content, grant/revoke Verified Pro (eligible at 1,000 reputation + admin review), and — admins only — assign roles. Existing databases: run `supabase_reports_and_moderation_migration.sql` once, then promote your first admin with `update public.profiles set "role" = 'admin' where "username" = 'your_handle';`
-- **Badges & Achievements**: Earnable badges (First Post, Rising Voice, Helper, Trusted Voice, Consistent, Generous, Veteran, Conversation Starter) tracked at `/achievements` with reputation breakdown, streak tracking, celebration toasts on unlock, and badge display on public profiles. Run `supabase_achievements_badges_migration.sql` to persist badges server-side; without it, progress is computed client-side.
-- **Leaderboard**: `/leaderboard` ranks top contributors by reputation, posts, or streak.
-- **Demo Mode**: Set `VITE_DEMO_MODE=true` to run on a seeded mock database stored in the browser's localStorage (data is not shared between users or devices). Without credentials and without demo mode, the app fails visibly instead of silently pretending demo data is real.
+Read `docs/PHASE_2H_AUDIT.md` and the Phase 2H completion report for consistency,
+historical transfer assessment, checks and Phase 2I deployment requirements.
 
 ---
 
@@ -162,7 +127,7 @@ Next.js 16 uses Turbopack by default, so the React Router compatibility alias is
 declared twice in `next.config.mjs` (`turbopack.resolveAlias` and `webpack`).
 `src/lib/navigation.tsx` keeps every existing `react-router-dom` import working
 under Next — components are unchanged. Under Next, set `NEXT_PUBLIC_SUPABASE_URL`
-/ `NEXT_PUBLIC_SUPABASE_ANON_KEY` / `NEXT_PUBLIC_DEMO_MODE`; the Supabase client
+/ `NEXT_PUBLIC_SUPABASE_ANON_KEY`; the Supabase client
 reads both the `VITE_*` and `NEXT_PUBLIC_*` names.
 
 See `docs/PHASE_0.1_NEXT16_COMPATIBILITY_AUDIT.md` and

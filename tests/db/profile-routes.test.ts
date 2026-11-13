@@ -334,29 +334,8 @@ describe("POST /api/profile/avatar", () => {
   });
 });
 
-describe("POST /api/profile/reputation", () => {
-  it("writes a total for the caller", async () => {
-    setCurrentReputation.mockResolvedValue({ ok: true, outcome: { status: "updated" } });
-    const { POST } = await import("@/app/api/profile/reputation/route");
-
-    const response = await POST(post("http://localhost/api/profile/reputation", { total: 42 }));
-    expect(response.status).toBe(200);
-    expect(setCurrentReputation).toHaveBeenCalledWith(42);
-  });
-
-  it("rejects a non-numeric total", async () => {
-    const { POST } = await import("@/app/api/profile/reputation/route");
-
-    expect((await POST(post("http://localhost/api/profile/reputation", { total: "42" }))).status).toBe(400);
-    expect(setCurrentReputation).not.toHaveBeenCalled();
-  });
-
-  it("maps an invalid total to 400", async () => {
-    setCurrentReputation.mockResolvedValue({ ok: true, outcome: { status: "invalid" } });
-    const { POST } = await import("@/app/api/profile/reputation/route");
-
-    expect((await POST(post("http://localhost/api/profile/reputation", { total: -5 }))).status).toBe(400);
-  });
+describe("POST /api/profile/reputation",()=>{
+ it.each([42,"42",-5])("retires caller-computed total %s without a write",async total=>{const {POST}=await import("@/app/api/profile/reputation/route");expect((await POST(post("http://localhost/api/profile/reputation",{total,uid:"forged"}))).status).toBe(410);expect(setCurrentReputation).not.toHaveBeenCalled();});
 });
 
 describe("POST /api/profile/following-counter", () => {

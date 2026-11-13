@@ -43,6 +43,7 @@ import {
   type AnyPgColumn,
   boolean,
   check,
+  foreignKey,
   index,
   integer,
   pgTable,
@@ -140,6 +141,7 @@ export const posts = pgTable(
   (table) => [
     index("posts_created_at_idx").on(table.createdAt),
     index("posts_author_idx").on(table.authorUid),
+    check("posts_vote_counters_check",sql`${table.ups} >= 0 and ${table.downs} >= 0 and ${table.score} = ${table.ups} - ${table.downs}`),
     index("posts_community_idx").on(table.communityId),
     /** Supports the visibility-restricted feed scan. */
     index("posts_visibility_created_idx").on(table.visibility, table.createdAt),
@@ -208,6 +210,7 @@ export const comments = pgTable(
   },
   (table) => [
     index("comments_post_idx").on(table.postId),
+    check("comments_vote_counters_check",sql`${table.ups} >= 0 and ${table.downs} >= 0 and ${table.score} = ${table.ups} - ${table.downs}`),
     index("comments_author_idx").on(table.authorUid),
     index("comments_parent_idx").on(table.parentId),
     // `score` is signed here too — same reasoning as `posts.score`.
@@ -275,6 +278,7 @@ export const pollOptions = pgTable(
   },
   (table) => [
     index("poll_options_poll_idx").on(table.pollId),
+    unique("poll_options_id_poll_unique").on(table.id,table.pollId),
     /** Stable option order, and no two options can claim the same slot. */
     unique("poll_options_position_key").on(table.pollId, table.position),
     check("poll_options_label_check", sql`length(btrim(${table.label})) > 0`),
@@ -304,6 +308,7 @@ export const pollVotes = pgTable(
     /** One vote per user per poll (`votePollOption` surfaces 23505 as a message). */
     unique("poll_votes_poll_user_key").on(table.pollId, table.userId),
     index("poll_votes_option_idx").on(table.pollOptionId),
+    foreignKey({name:"poll_votes_option_poll_fk",columns:[table.pollOptionId,table.pollId],foreignColumns:[pollOptions.id,pollOptions.pollId]}).onDelete("cascade"),
   ],
 );
 

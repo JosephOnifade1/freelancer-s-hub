@@ -12,7 +12,6 @@
 import { describe, it, expect, vi } from "vitest";
 
 import {
-  adjustProfileCounter,
   findModerationProfiles,
   findOwnProfile,
   findProfileByIdentifier,
@@ -22,7 +21,6 @@ import {
   isValidUid,
   searchProfiles,
   setOwnAvatar,
-  setReputation,
   updateOwnProfile,
 } from "@/server/features/profile/profile-queries";
 
@@ -390,47 +388,9 @@ describe("setOwnAvatar", () => {
   });
 });
 
-describe("setReputation", () => {
-  it("rejects negative and non-finite totals", async () => {
-    const { db, statements } = fakeDb([]);
-    expect((await setReputation(db, UID, -1)).status).toBe("invalid");
-    expect((await setReputation(db, UID, Number.NaN)).status).toBe("invalid");
-    expect((await setReputation(db, UID, Number.POSITIVE_INFINITY)).status).toBe("invalid");
-    expect(statements).toHaveLength(0);
-  });
-
-  it("writes a whole number", async () => {
-    const { db } = fakeDb([[{ uid: UID }]]);
-    expect((await setReputation(db, UID, 42.7)).status).toBe("updated");
-  });
-
-  it("reportsprofile_missing when there is no row", async () => {
-    const { db } = fakeDb([[]]);
-    expect((await setReputation(db, UID, 10)).status).toBe("profile_missing");
-  });
-});
-
-describe("adjustProfileCounter", () => {
-  it("clamps a decrement at zero in SQL", async () => {
-    const { db, statements } = fakeDb([[]]);
-    await adjustProfileCounter(db, UID, "followers", -1);
-    // The old RPCs never let a counter go negative; the column CHECK would reject it.
-    expect(statements[0]).toContain("case when");
-  });
-
-  it("does not clamp an increment", async () => {
-    const { db, statements } = fakeDb([[]]);
-    await adjustProfileCounter(db, UID, "following", 1);
-    expect(statements[0]).toContain("+ 1");
-    expect(statements[0]).not.toContain("case when");
-  });
-
-  it("rejects an unknown column", async () => {
-    const { db, statements } = fakeDb([]);
-    // @ts-expect-error — outside the union on purpose.
-    expect((await adjustProfileCounter(db, UID, "savedPosts", 1)).status).toBe("invalid");
-    expect(statements).toHaveLength(0);
-  });
+describe("counter ownership after Phase 2H",()=>{
+ it.each(["setReputation","adjustProfileCounter"])("does not export unsafe independent writer %s",async name=>{expect(await import("@/server/features/profile/profile-queries")).not.toHaveProperty(name);});
+ it.each(["reputation","followers","following","role"])("editable profile fields cannot mutate %s",async key=>{const {db,statements}=fakeDb([]);expect((await updateOwnProfile(db,UID,{[key]:999} as never)).status).toBe("invalid");expect(statements).toHaveLength(0);});
 });
 
 describe("findModerationProfiles", () => {

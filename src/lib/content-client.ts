@@ -18,8 +18,6 @@ import {
   isProfileError,
   type UserProfile,
 } from "./profile-client";
-import { isDemoMode } from "./supabase";
-import * as demo from "./content-demo";
 
 export interface ContentPost {
   id: string;
@@ -166,7 +164,6 @@ export interface FeedQuery {
 export async function fetchContentPosts(
   query: FeedQuery = {},
 ): Promise<ContentClientResult<ContentPost[]>> {
-  if (isDemoMode) return demo.demoFetchPosts(query);
   const params = new URLSearchParams();
   if (query.limit) params.set("limit", String(query.limit));
   if (query.before) params.set("before", query.before);
@@ -187,7 +184,6 @@ export async function fetchContentPosts(
 export async function fetchContentPost(
   postId: string,
 ): Promise<ContentClientResult<ContentPost | null>> {
-  if (isDemoMode) return demo.demoFetchPost(postId);
   const result = await request(`/api/content/posts/${encodeURIComponent(postId)}`);
   if (result.ok === false) {
     // "Not visible" and "does not exist" are both 404 by design.
@@ -214,7 +210,6 @@ export interface CreatePostBody {
 export async function createContentPost(
   input: CreatePostBody,
 ): Promise<ContentClientResult<ContentPost>> {
-  if (isDemoMode) return demo.demoCreatePost(input as unknown as Record<string, unknown>);
   const result = await request("/api/content/posts", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -230,7 +225,6 @@ export async function updateContentPost(
   postId: string,
   body: string,
 ): Promise<ContentClientResult<null>> {
-  if (isDemoMode) return demo.demoUpdatePost(postId, body);
   const result = await request(`/api/content/posts/${encodeURIComponent(postId)}`, {
     method: "PATCH",
     headers: { "content-type": "application/json" },
@@ -243,7 +237,6 @@ export async function updateContentPost(
 export async function deleteContentPost(
   postId: string,
 ): Promise<ContentClientResult<null>> {
-  if (isDemoMode) return demo.demoDeletePost(postId);
   const result = await request(`/api/content/posts/${encodeURIComponent(postId)}`, {
     method: "DELETE",
   });
@@ -256,7 +249,6 @@ export async function deleteContentPost(
  * which is the behaviour `incrementPostViews` already had (it logged a warning).
  */
 export async function recordContentView(postId: string): Promise<void> {
-  if (isDemoMode) return demo.demoRecordView(postId);
   try {
     await fetch(`/api/content/posts/${encodeURIComponent(postId)}`, {
       method: "POST",
@@ -273,7 +265,6 @@ export async function recordContentView(postId: string): Promise<void> {
 export async function fetchContentComments(
   postId: string,
 ): Promise<ContentClientResult<ContentComment[]>> {
-  if (isDemoMode) return demo.demoFetchComments(postId);
   const result = await request(
     `/api/content/posts/${encodeURIComponent(postId)}/comments`,
   );
@@ -286,7 +277,6 @@ export async function fetchContentComments(
 export async function fetchContentCommentsByAuthor(
   authorUid: string,
 ): Promise<ContentClientResult<ContentComment[]>> {
-  if (isDemoMode) return demo.demoFetchCommentsByAuthor(authorUid);
   const result = await request(
     `/api/content/comments?author=${encodeURIComponent(authorUid)}`,
   );
@@ -301,7 +291,6 @@ export async function createContentComment(
   body: string,
   parentId?: string | null,
 ): Promise<ContentClientResult<ContentComment>> {
-  if (isDemoMode) return demo.demoCreateComment(postId, body, parentId);
   const result = await request(
     `/api/content/posts/${encodeURIComponent(postId)}/comments`,
     {
@@ -320,7 +309,6 @@ export async function updateContentComment(
   commentId: string,
   body: string,
 ): Promise<ContentClientResult<null>> {
-  if (isDemoMode) return demo.demoUpdateComment(commentId, body);
   const result = await request(`/api/content/comments/${encodeURIComponent(commentId)}`, {
     method: "PATCH",
     headers: { "content-type": "application/json" },
@@ -333,7 +321,6 @@ export async function updateContentComment(
 export async function deleteContentComment(
   commentId: string,
 ): Promise<ContentClientResult<null>> {
-  if (isDemoMode) return demo.demoDeleteComment(commentId);
   const result = await request(`/api/content/comments/${encodeURIComponent(commentId)}`, {
     method: "DELETE",
   });
@@ -347,7 +334,6 @@ export async function fetchOwnVote(
   entityType: "post" | "comment",
   entityId: string,
 ): Promise<ContentClientResult<number>> {
-  if (isDemoMode) return demo.demoFetchOwnVote(entityType, entityId);
   const result = await request(
     `/api/content/votes?entityType=${entityType}&entityId=${encodeURIComponent(entityId)}`,
   );
@@ -366,7 +352,6 @@ export async function submitVote(
   entityId: string,
   voteValue: 1 | -1 | 0,
 ): Promise<ContentClientResult<VoteResult>> {
-  if (isDemoMode) return demo.demoSubmitVote(entityType, entityId, voteValue);
   const result = await request("/api/content/votes", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -388,7 +373,6 @@ export async function submitVote(
 export async function fetchContentPoll(
   postId: string,
 ): Promise<ContentClientResult<ContentPoll | null>> {
-  if (isDemoMode) return demo.demoFetchPoll(postId);
   const result = await request(`/api/content/polls?postId=${encodeURIComponent(postId)}`);
   if (result.ok === false) {
     if (result.error === "not_found") return { ok: true, data: null };
@@ -401,7 +385,6 @@ export async function submitPollVote(
   pollId: string,
   pollOptionId: string,
 ): Promise<ContentClientResult<{ status: string }>> {
-  if (isDemoMode) return demo.demoSubmitPollVote(pollId, pollOptionId);
   const result = await request("/api/content/polls/vote", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -416,7 +399,6 @@ export async function submitPollVote(
 export async function fetchContentAttachments(
   postId: string,
 ): Promise<ContentClientResult<ContentAttachment[]>> {
-  if (isDemoMode) return demo.demoFetchAttachments(postId);
   const result = await request(
     `/api/content/attachments?postId=${encodeURIComponent(postId)}`,
   );
@@ -434,7 +416,6 @@ export async function registerAttachment(input: {
   mimeType: string;
   fileSize: number;
 }): Promise<ContentClientResult<ContentAttachment>> {
-  if (isDemoMode) return demo.demoRegisterAttachment(input);
   const result = await request("/api/content/attachments", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -449,7 +430,6 @@ export async function registerAttachment(input: {
 export async function removeAttachmentRecord(
   attachmentId: string,
 ): Promise<ContentClientResult<null>> {
-  if (isDemoMode) return demo.demoRemoveAttachment(attachmentId);
   const result = await request(
     `/api/content/attachments/${encodeURIComponent(attachmentId)}`,
     { method: "DELETE" },
@@ -461,7 +441,6 @@ export async function removeAttachmentRecord(
 // ─── Saved posts ────────────────────────────────────────────────────────────
 
 export async function fetchSavedPostIds(): Promise<ContentClientResult<string[]>> {
-  if (isDemoMode) return demo.demoSavedPostIds();
   const result = await request("/api/content/saved");
   if (result.ok === false) return result;
   const postIds = result.body.postIds as string[] | undefined;
@@ -469,7 +448,6 @@ export async function fetchSavedPostIds(): Promise<ContentClientResult<string[]>
 }
 
 export async function toggleSavedPost(postId: string): Promise<ContentClientResult<string>> {
-  if (isDemoMode) return demo.demoToggleSavedPost(postId);
   const result = await request(`/api/content/saved/${encodeURIComponent(postId)}`, {
     method: "POST",
   });

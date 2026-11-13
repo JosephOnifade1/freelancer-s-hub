@@ -23,3 +23,5 @@ export * from "./social";
 export * from "./marketplace";
 
 export * from "./trust";
+
+export * from "./badges";

@@ -24,6 +24,8 @@ import { sql } from "drizzle-orm";
 
 import {
   canViewPost,
+  anonymousViewer,
+  authorizationFilter,
   isStaff,
   type ContentViewer,
   type PostAuthorizationFacts,
@@ -1257,7 +1259,9 @@ export async function createAttachment(
     return outcome;
   } catch (error) {
     writeFailure("createAttachment", error);
-    return { status: "invalid" };
+    // Do not mislabel an uncertain commit/connection failure as a safe refusal:
+    // Storage compensation must keep the bytes until metadata is reconciled.
+    throw error;
   }
 }
 
@@ -1459,19 +1463,18 @@ export { isStaff };
  * Counted in the database rather than by fetching every post and filtering, which is
  * what the Supabase version did with `{ count: "exact", head: true }`.
  *
- * Not visibility-filtered: this is a count of the author's own contributions,
- * rendered on their profile, and the number is the same fact for every viewer. No
- * post *content* crosses the boundary.
+ * Only counts resource posts visible to the current viewer.
  */
 export async function countResourcesByAuthor(
   db: ContentDatabase,
   authorUid: string,
+  viewer: ContentViewer = anonymousViewer(),
 ): Promise<number> {
   if (!isValidUuid(authorUid)) return 0;
   const rows = rowsOf<Record<string, unknown>>(
     await db.execute(sql`
-      select count(*)::int as n from posts
-      where "authorUid" = ${authorUid} and type = 'resource' and "isDeleted" is not true
+      select count(*)::int as n from posts p
+      where p."authorUid" = ${authorUid} and p.type = 'resource' and p."isDeleted" is not true and ${authorizationFilter(viewer)}
     `),
   );
   return num(rows[0]?.n);
@@ -1481,15 +1484,16 @@ export async function countResourcesByAuthor(
 export async function sumScoresForAuthor(
   db: ContentDatabase,
   authorUid: string,
+  viewer: ContentViewer = anonymousViewer(),
 ): Promise<number> {
   if (!isValidUuid(authorUid)) return 0;
   const rows = rowsOf<Record<string, unknown>>(
     await db.execute(sql`
       select (
-        coalesce((select sum(score) from posts
-                  where "authorUid" = ${authorUid} and "isDeleted" is not true), 0)
-        + coalesce((select sum(score) from comments
-                  where "authorUid" = ${authorUid} and "isDeleted" is not true), 0)
+        coalesce((select sum(score) from posts p
+                  where p."authorUid" = ${authorUid} and p."isDeleted" is not true and ${authorizationFilter(viewer)}), 0)
+        + coalesce((select sum(c.score) from comments c join posts p on p.id=c."postId"
+                  where c."authorUid" = ${authorUid} and c."isDeleted" is not true and p."isDeleted" is not true and ${authorizationFilter(viewer)}), 0)
       )::int as total
     `),
   );
@@ -1501,16 +1505,17 @@ export async function findRecentContributors(
   db: ContentDatabase,
   since: Date,
   limit = 50,
+  viewer: ContentViewer = anonymousViewer(),
 ): Promise<{ uid: string; contributions: number }[]> {
   const rows = rowsOf<Record<string, unknown>>(
     await db.execute(sql`
       select "authorUid" as uid, count(*)::int as contributions
       from (
-        select "authorUid" from posts
-        where "isDeleted" is not true and "createdAt" >= ${since.toISOString()}::timestamptz
+        select p."authorUid" from posts p
+        where p."isDeleted" is not true and p."createdAt" >= ${since.toISOString()}::timestamptz and ${authorizationFilter(viewer)}
         union all
-        select "authorUid" from comments
-        where "isDeleted" is not true and "createdAt" >= ${since.toISOString()}::timestamptz
+        select c."authorUid" from comments c join posts p on p.id=c."postId"
+        where c."isDeleted" is not true and p."isDeleted" is not true and c."createdAt" >= ${since.toISOString()}::timestamptz and ${authorizationFilter(viewer)}
       ) activity
       group by "authorUid"
       order by contributions desc, "authorUid" asc
@@ -1525,19 +1530,20 @@ export async function findContributionDates(
   db: ContentDatabase,
   authorUid: string,
   since: Date,
+  viewer: ContentViewer = anonymousViewer(),
 ): Promise<string[]> {
   if (!isValidUuid(authorUid)) return [];
   const rows = rowsOf<Record<string, unknown>>(
     await db.execute(sql`
       select distinct to_char("createdAt" at time zone 'utc', 'YYYY-MM-DD') as day
       from (
-        select "createdAt" from posts
-        where "authorUid" = ${authorUid} and "isDeleted" is not true
-          and "createdAt" >= ${since.toISOString()}::timestamptz
+        select p."createdAt" from posts p
+        where p."authorUid" = ${authorUid} and p."isDeleted" is not true
+          and p."createdAt" >= ${since.toISOString()}::timestamptz and ${authorizationFilter(viewer)}
         union all
-        select "createdAt" from comments
-        where "authorUid" = ${authorUid} and "isDeleted" is not true
-          and "createdAt" >= ${since.toISOString()}::timestamptz
+        select c."createdAt" from comments c join posts p on p.id=c."postId"
+        where c."authorUid" = ${authorUid} and c."isDeleted" is not true and p."isDeleted" is not true
+          and c."createdAt" >= ${since.toISOString()}::timestamptz and ${authorizationFilter(viewer)}
       ) activity
       order by day asc
     `),
@@ -1551,7 +1557,7 @@ export async function findContributionDates(
  * Returns counts only — how many posts exist, how many got a reply, and the two
  * timestamps needed to compute a median response time. No post text, no author ids.
  */
-export async function findCommunityHealthInputs(db: ContentDatabase): Promise<{
+export async function findCommunityHealthInputs(db: ContentDatabase, viewer: ContentViewer = anonymousViewer()): Promise<{
   postCount: number;
   postsWithReplies: number;
   responses: { postId: string; postedAt: string; firstCommentAt: string | null }[];
@@ -1561,7 +1567,7 @@ export async function findCommunityHealthInputs(db: ContentDatabase): Promise<{
       select
         count(*)::int as total,
         count(*) filter (where "commentCount" > 0)::int as with_replies
-      from posts where "isDeleted" is not true
+      from posts p where p."isDeleted" is not true and ${authorizationFilter(viewer)}
     `),
   );
 
@@ -1571,7 +1577,7 @@ export async function findCommunityHealthInputs(db: ContentDatabase): Promise<{
              min(c."createdAt") as "firstCommentAt"
       from posts p
       left join comments c on c."postId" = p.id and c."isDeleted" is not true
-      where p."isDeleted" is not true and p."commentCount" > 0
+      where p."isDeleted" is not true and p."commentCount" > 0 and ${authorizationFilter(viewer)}
       group by p.id, p."createdAt"
     `),
   );
@@ -1636,4 +1642,12 @@ export async function findContentPreviews(
     : [];
 
   return { posts, comments };
+}
+
+/** A stored pointer only after authoritative post visibility/deletion checks. */
+export async function findAttachmentForViewer(db:ContentDatabase,viewer:ContentViewer,id:string):Promise<AttachmentRecord|null>{
+ if(!isValidUuid(id))return null;
+ const r=rowsOf<Record<string,unknown>>(await db.execute(sql`select ${ATTACHMENT_COLUMNS} from post_attachments where id=${id}`))[0];
+ if(!r||!await findPostForViewer(db,viewer,String(r.postId)))return null;
+ return toAttachmentRecord(r);
 }
