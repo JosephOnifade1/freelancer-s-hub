@@ -7,6 +7,7 @@ import {
   proveAdvisoryLock,
   proveTransaction,
 } from "@/server/db";
+import { describeTlsPolicy } from "@/server/db/env";
 import { getServerSession, hasServerAuth } from "@/lib/server-session";
 
 /**
@@ -86,6 +87,9 @@ export async function GET() {
         acquired: lock.acquired,
         reentrant: lock.reentrant,
       },
+      // TLS policy actually in force, with no credential in it. `verifying`
+      // must be true for any remote host; see docs §2B.1.1.
+      tls: isDatabaseConfigured() ? describeTlsPolicy(process.env.DATABASE_URL as string) : null,
       identity: {
         supabaseAuthConfigured: hasServerAuth(),
         // Never the email — only whether an authenticated UUID is available.
