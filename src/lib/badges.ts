@@ -1,16 +1,9 @@
-import { supabase } from "./supabase";
+import { badgeRequest } from "./badge-client";
 
-/* ──────────────────────────────────────────────────────────────────────────
-   Badges & achievements.
+/** Badge catalog/earned reads; no public award mutator. */
 
-   Reads from the `badges` / `user_badges` tables created by
-   supabase_achievements_badges_migration.sql. Until that migration is
-   applied to a project, every function falls back to client-side
-   computation so the UI keeps working (no hard dependency on the
-   unapplied migration).
-   ──────────────────────────────────────────────────────────────────────── */
-
-export type BadgeCategory = "publishing" | "helping" | "community" | "trust" | "longevity";
+export type BadgeCategory =
+  "publishing" | "helping" | "community" | "trust" | "longevity";
 export type BadgeRarity = "common" | "uncommon" | "rare" | "legendary";
 
 export interface Badge {
@@ -37,49 +30,10 @@ export interface BadgeProgress {
   earnedAt?: string;
 }
 
-/* ─── Catalog ───────────────────────────────────────────────────────────── */
-
-export const fetchBadges = async (): Promise<Badge[]> => {
-  const { data, error } = await supabase
-    .from("badges")
-    .select("*")
-    .order("category", { ascending: true })
-    .order("target", { ascending: true });
-
-  if (error) throw new Error(error.message);
-  if (!data) return [];
-
-  return (data as Badge[]).map((b) => ({
-    ...b,
-    category: b.category as BadgeCategory,
-    rarity: b.rarity as BadgeRarity,
-  }));
-};
-
-/* ─── Earned badges ─────────────────────────────────────────────────────── */
-
-export const fetchUserBadges = async (uid: string): Promise<UserBadge[]> => {
-  if (!uid) return [];
-  const { data, error } = await supabase
-    .from("user_badges")
-    .select("*")
-    .eq("userUid", uid)
-    .order("earnedAt", { ascending: false });
-
-  if (error) throw new Error(error.message);
-  if (!data) return [];
-
-  return data as UserBadge[];
-};
-
-/* Award a badge to a user. Idempotent via the unique (userUid, badgeId) constraint. */
-export const awardBadge = async (uid: string, badgeId: string): Promise<void> => {
-  if (!uid || !badgeId) throw new Error("Cannot award badge: missing user or badge.");
-  const { error } = await supabase
-    .from("user_badges")
-    .insert({ userUid: uid, badgeId });
-  if (error) throw new Error(error.message);
-};
+/** Public catalog and public earned-badge projection, now read from Neon. */
+export const fetchBadges = (): Promise<Badge[]> => badgeRequest();
+export const fetchUserBadges = (uid: string): Promise<UserBadge[]> =>
+  uid ? badgeRequest(uid) : Promise.resolve([]);
 
 /* ─── Progress computation (server tables + client fallback) ────────────── */
 
@@ -95,30 +49,20 @@ export interface BadgeInputs {
   topPostCommentCount: number;
 }
 
-/** Default badges used when the `badges` table isn't available yet. */
-const DEFAULT_BADGES: Badge[] = [
-  { id: "first-post", name: "First Post", description: "Publish your first post.", icon: "Flame", category: "publishing", target: 1, rarity: "common" },
-  { id: "rising-voice", name: "Rising Voice", description: "Reach 100 reputation.", icon: "Zap", category: "trust", target: 100, rarity: "common" },
-  { id: "helper", name: "Helper", description: "Get 10 upvotes on your comments.", icon: "Heart", category: "helping", target: 10, rarity: "common" },
-  { id: "trusted-voice", name: "Trusted Voice", description: "Reach 1,000 reputation.", icon: "Star", category: "trust", target: 1000, rarity: "rare" },
-  { id: "consistent", name: "Consistent", description: "Post or comment 30 days in a row.", icon: "Calendar", category: "longevity", target: 30, rarity: "rare" },
-  { id: "generous", name: "Generous", description: "Share 5 resource posts.", icon: "BookOpen", category: "publishing", target: 5, rarity: "uncommon" },
-  { id: "veteran", name: "Veteran Freelancer", description: "Reach 5,000 reputation.", icon: "Trophy", category: "trust", target: 5000, rarity: "legendary" },
-  { id: "convo-starter", name: "Conversation Starter", description: "Get 50 comments on a single post.", icon: "MessageSquare", category: "helping", target: 50, rarity: "uncommon" },
-];
-
-/** Compute progress for every badge. Uses live tables when available, falls back to defaults. */
+/** Compute progress for every badge. Uses authoritative Neon catalog/earned rows; errors remain visible. */
 export const computeBadgeProgress = async (
   uid: string | undefined,
   inputs: BadgeInputs,
 ): Promise<BadgeProgress[]> => {
   const [badges, earned] = await Promise.all([
-    fetchBadges().catch(() => DEFAULT_BADGES),
-    uid ? fetchUserBadges(uid).catch((): UserBadge[] => []) : [],
+    fetchBadges(),
+    uid ? fetchUserBadges(uid) : [],
   ]);
 
   const earnedSet = new Set(earned.map((e) => e.badgeId));
-  const earnedAtByBadge = Object.fromEntries(earned.map((e) => [e.badgeId, e.earnedAt]));
+  const earnedAtByBadge = Object.fromEntries(
+    earned.map((e) => [e.badgeId, e.earnedAt]),
+  );
 
   return badges.map((badge) => {
     let current = 0;
@@ -156,7 +100,10 @@ export const computeBadgeProgress = async (
       badge,
       current: Math.min(current, badge.target),
       unlocked,
-      earnedAt: unlocked && earnedSet.has(badge.id) ? earnedAtByBadge[badge.id] : undefined,
+      earnedAt:
+        unlocked && earnedSet.has(badge.id)
+          ? earnedAtByBadge[badge.id]
+          : undefined,
     };
   });
 };
@@ -169,7 +116,9 @@ export interface ReputationSource {
 }
 
 /** Break down where reputation came from (posts, comments, resources). */
-export const computeReputationBreakdown = (inputs: BadgeInputs): ReputationSource[] => {
+export const computeReputationBreakdown = (
+  inputs: BadgeInputs,
+): ReputationSource[] => {
   const postVotes = Math.floor(inputs.postCount * 2.5);
   const commentVotes = inputs.commentUpvotesReceived;
   const resourceBonus = Math.floor(inputs.resourceCount * 10);

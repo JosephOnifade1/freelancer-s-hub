@@ -1,18 +1,16 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { supabase } from "./supabase";
-import { MockSupabaseClient, seedMockData } from "./mockSupabase";
+import { MockSupabaseClient, seedMockData } from "../test/fixtures/mockSupabase";
 import { fetchLeads, fetchLeadById } from "./leads";
 import { addPipelineItem, changePipelineStage, fetchPipeline, removePipelineItem, saveOpportunity } from "./pipeline";
 import { fetchPostAttachments, getDocumentDownloadUrl, removePostAttachment, uploadPostDocuments, validateDocument } from "./attachments";
 
-// Exercise the real feature helpers against the browser demo client. Its RLS
-// mirror must deny the same reads/writes as the accompanying SQL migration.
-vi.mock("./supabase", async () => {
-  const { MockSupabaseClient } = await import("./mockSupabase");
-  // Phase 2D: content helpers delegate to the same mock through `content-demo.ts`
-  // when `isDemoMode` is true, so this suite keeps exercising the mock's RLS mirror
-  // rather than the HTTP client.
-  return { supabase: new MockSupabaseClient(), isDemoMode: true };
+// Storage is mocked; content uses an explicit test-only API fixture, not a runtime delegate.
+vi.mock("./supabase",async()=>{const {MockSupabaseClient}=await import("../test/fixtures/mockSupabase");return {supabase:new MockSupabaseClient()};});
+vi.mock("./content-client",async original=>{
+ const actual=await original<typeof import("./content-client")>();
+ const fixture=await import("../test/fixtures/attachment-api-mock");
+ return {...actual,fetchContentAttachments:fixture.demoFetchAttachments,registerAttachment:fixture.demoRegisterAttachment,removeAttachmentRecord:fixture.demoRemoveAttachment};
 });
 
 // Phase 2F: marketplace helpers exercise a MOCKED API boundary here, not a
@@ -201,3 +199,13 @@ describe("post document privacy and persistence", () => {
     await expect(getDocumentDownloadUrl(attachment)).rejects.toThrow(/not visible/);
   });
 });
+
+// Signed URL endpoint fixture: metadata/RLS lookup precedes Storage signing.
+beforeEach(()=>{vi.stubGlobal("fetch",vi.fn(async(input:string)=>{
+ const id=decodeURIComponent(input.split("/attachments/")[1]?.split("/")[0]??"");
+ const {data,error}=await supabase.from("post_attachments").select("*").eq("id",id).single();
+ if(error||!data)return {ok:false,status:404,json:async()=>({error:"not_found"})};
+ const signed=await supabase.storage.from("post-documents").createSignedUrl(data.storagePath,60);
+ return {ok:!signed.error,status:signed.error?404:200,json:async()=>({url:signed.data?.signedUrl})};
+}));});
+afterEach(()=>vi.unstubAllGlobals());

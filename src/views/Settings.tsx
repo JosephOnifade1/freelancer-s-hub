@@ -10,7 +10,7 @@ import { useAuth } from "@/hooks/auth-context";
 import { getUserProfile, UserProfile, checkUsernameAvailability } from "@/lib/users";
 import { saveOwnProfile, isProfileError } from "@/lib/profile-client";
 import { claimUsernameOnServer } from "@/lib/profile-provisioning";
-import { supabase, isDemoMode } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { requestPasswordReset, resendConfirmationEmail } from "@/lib/auth";
 import { getErrorMessage } from "@/lib/utils";
 import { QueryErrorState } from "@/components/QueryErrorState";
@@ -195,7 +195,7 @@ const Settings = () => {
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" defaultValue={user?.email || ""} disabled className="bg-muted/50" />
-              {user?.email_confirmed_at || isDemoMode ? (
+              {user?.email_confirmed_at ? (
                 <p className="flex items-center gap-2 text-[11px] font-mono text-muted-foreground">
                   <CheckCircle2 className="h-3.5 w-3.5 text-success" /> Email verified
                 </p>

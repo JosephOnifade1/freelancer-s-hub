@@ -43,6 +43,13 @@
       "when": 1794592115376,
       "tag": "0005_notifications_reports_moderation",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794595864372,
+      "tag": "0006_remaining_badges_and_integrity",
+      "breakpoints": true
     }
   ]
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { AppLink as Link } from "@/components/AppLink";
 import { useRouter, useSearchParams } from "next/navigation";
-import { supabase, isDemoMode } from "../lib/supabase";
+import { supabase } from "../lib/supabase";
 import { postAuthRedirect, resendConfirmationEmail, authErrorMessage } from "../lib/auth";
 import { readReturnPath } from "../lib/return-path";
 import { oauthCallbackUrl } from "../lib/oauth";
@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowLeft, UserCheck } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -64,57 +64,7 @@ export default function Login() {
     }
   };
 
-  const handleDemoLogin = async () => {
-    // Demo account exists only in demo mode (local mock DB). Against a real
-    // backend this would create a shared, publicly-known account.
-    if (!isDemoMode) {
-      toast.error("Demo sign-in is only available in demo mode.");
-      return;
-    }
-    setIsLoading(true);
-    const demoEmail = "demo@borynx.com";
-    const demoPassword = "DemoPassword123!";
 
-    try {
-      const signInRes = await supabase.auth.signInWithPassword({
-        email: demoEmail,
-        password: demoPassword,
-      });
-      let data = signInRes.data;
-
-      if (signInRes.error) {
-        // Try creating demo account if it doesn't exist
-        const signUpRes = await supabase.auth.signUp({
-          email: demoEmail,
-          password: demoPassword,
-          options: {
-            data: { display_name: "Demo Freelancer" },
-          },
-        });
-
-        if (signUpRes.error) {
-          throw signUpRes.error;
-        }
-
-        if (signUpRes.data?.user && !signUpRes.data?.session) {
-          toast.info("Demo user created. If email confirmation is required in your Supabase project, please confirm or check settings.");
-          return;
-        }
-
-        data = signUpRes.data;
-      }
-
-      // Phase 2C: no provisioning call here — `AuthProvider` owns it (see above). The
-      // demo login creates a real Supabase session, so the same auth event provisions it.
-
-      toast.success("Logged in as Demo Freelancer!");
-      router.replace(redirectTo);
-    } catch (error) {
-      toast.error(authErrorMessage(error, "Demo login failed."));
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleResendConfirmation = async () => {
     if (!unconfirmedEmail) return;
@@ -219,19 +169,6 @@ export default function Login() {
                 Forgot your password?
               </Link>
             </div>
-
-            {isDemoMode && (
-              <Button
-                type="button"
-                variant="secondary"
-                className="w-full gap-2"
-                onClick={handleDemoLogin}
-                disabled={isLoading}
-              >
-                <UserCheck className="h-4 w-4" />
-                Quick Demo Sign In
-              </Button>
-            )}
 
             <div className="relative w-full my-1">
               <div className="absolute inset-0 flex items-center">

@@ -19,7 +19,6 @@ vi.mock("@/server/db", () => ({
 }));
 
 const {
-  adjustCurrentFollowing,
   checkUsernameAvailability,
   getCurrentProfile,
   getModerationProfiles,
@@ -31,7 +30,6 @@ const {
   markVeteranCelebrationSeen,
   searchPublicProfiles,
   setCurrentAvatar,
-  setCurrentReputation,
   updateCurrentProfile,
 } = await import("@/server/features/profile");
 
@@ -132,13 +130,7 @@ describe("write functions take no target", () => {
     expect(setCurrentAvatar.length).toBe(1);
   });
 
-  it("setCurrentReputation accepts exactly one argument", () => {
-    expect(setCurrentReputation.length).toBe(1);
-  });
-
-  it("adjustCurrentFollowing accepts exactly one argument", () => {
-    expect(adjustCurrentFollowing.length).toBe(1);
-  });
+  it.each(["setCurrentReputation","adjustCurrentFollowing"])("does not expose competing writer %s",async name=>{expect(await import("@/server/features/profile")).not.toHaveProperty(name);});
 
   it("markVeteranCelebrationSeen accepts none", () => {
     expect(markVeteranCelebrationSeen.length).toBe(0);

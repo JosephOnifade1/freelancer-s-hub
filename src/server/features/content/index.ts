@@ -1,4 +1,5 @@
 import "server-only";
+import {verifyUploadedDocument,signDocument} from "@/server/storage/documents";
 import { communityFacts } from "../social/social-queries";
 
 import { sql } from "drizzle-orm";
@@ -24,6 +25,7 @@ import {
   createComment,
   createPost,
   findAttachmentsForViewer,
+  findAttachmentForViewer,
   findCommentsByAuthor,
   findCommentsForViewer,
   findPollForViewer,
@@ -365,6 +367,12 @@ export async function createAttachmentForCurrentUser(postId: string, input: Atta
   const identity = await requireViewer();
   if (identity.ok === false) return identity;
   try {
+    if(!input.storagePath?.startsWith(`${identity.viewer.uid}/${postId}/`))return {ok:true as const,data:{status:"invalid"}};
+    const post=await findPostForViewer(getDatabase(),identity.viewer,postId);
+    if(!post||post.authorUid!==identity.viewer.uid)return {ok:false as const,reason:"not_found" as const};
+    // Cross-provider precondition, not a distributed transaction. Files are immutable
+    // through browser policies; a failed/lost response is reconciled by metadata reload.
+    if(!await verifyUploadedDocument(input.storagePath,input.fileSize,input.mimeType))return {ok:true as const,data:{status:"invalid"}};
     return {
       ok: true as const,
       data: await createAttachment(getDatabase(), identity.viewer, postId, input),
@@ -459,12 +467,7 @@ export type { ContentViewer };
 /**
  * Contributors ranked by activity over the last `days` days.
  *
- * Authorization note: this is a ranking of *who contributed*, computed from rows the
- * viewer may not be able to read. It exposes a count per author, not content, and the
- * leaderboard is public by design — the same information the previous Supabase query
- * produced (which, with RLS, silently counted only what the caller could see; a
- * count-only aggregate is the stricter version, since it says nothing about which
- * posts exist).
+ * Author counts are computed only from content visible to the verified viewer.
  */
 export async function getRecentContributors(days = 7) {
   if (!configured()) return { ok: false as const, reason: "database_not_configured" as const };
@@ -472,7 +475,7 @@ export async function getRecentContributors(days = 7) {
     const since = new Date(Date.now() - Math.max(1, days) * 24 * 60 * 60 * 1000);
     return {
       ok: true as const,
-      data: await findRecentContributors(getDatabase(), since),
+      data: await findRecentContributors(getDatabase(), since, 50, await resolveViewer()),
     };
   } catch {
     return { ok: false as const, reason: "not_ready" as const };
@@ -486,7 +489,7 @@ export async function getContributionDates(authorUid: string, days = 90) {
     const since = new Date(Date.now() - Math.max(1, days) * 24 * 60 * 60 * 1000);
     return {
       ok: true as const,
-      data: await findContributionDates(getDatabase(), authorUid, since),
+      data: await findContributionDates(getDatabase(), authorUid, since, await resolveViewer()),
     };
   } catch {
     return { ok: false as const, reason: "not_ready" as const };
@@ -497,7 +500,7 @@ export async function getContributionDates(authorUid: string, days = 90) {
 export async function getCommunityHealth() {
   if (!configured()) return { ok: false as const, reason: "database_not_configured" as const };
   try {
-    return { ok: true as const, data: await findCommunityHealthInputs(getDatabase()) };
+    return { ok: true as const, data: await findCommunityHealthInputs(getDatabase(), await resolveViewer()) };
   } catch {
     return { ok: false as const, reason: "not_ready" as const };
   }
@@ -507,7 +510,7 @@ export async function getCommunityHealth() {
 export async function getAuthorScores(authorUid: string) {
   if (!configured()) return { ok: false as const, reason: "database_not_configured" as const };
   try {
-    return { ok: true as const, data: await sumScoresForAuthor(getDatabase(), authorUid) };
+    return { ok: true as const, data: await sumScoresForAuthor(getDatabase(), authorUid, await resolveViewer()) };
   } catch {
     return { ok: false as const, reason: "not_ready" as const };
   }
@@ -517,7 +520,7 @@ export async function getAuthorScores(authorUid: string) {
 export async function getAuthorResourceCount(authorUid: string) {
   if (!configured()) return { ok: false as const, reason: "database_not_configured" as const };
   try {
-    return { ok: true as const, data: await countResourcesByAuthor(getDatabase(), authorUid) };
+    return { ok: true as const, data: await countResourcesByAuthor(getDatabase(), authorUid, await resolveViewer()) };
   } catch {
     return { ok: false as const, reason: "not_ready" as const };
   }
@@ -543,4 +546,14 @@ export async function getContentPreviews(postIds: string[], commentIds: string[]
   } catch {
     return { ok: false as const, reason: "not_ready" as const };
   }
+}
+
+/** Neon authorization precedes privileged Storage signing; caller supplies only ID. */
+export async function getAttachmentDownload(id:string){
+ if(!configured())return {ok:false as const,reason:"database_not_configured" as const};
+ try{
+  const row=await findAttachmentForViewer(getDatabase(),await resolveViewer(),id);
+  if(!row)return {ok:false as const,reason:"not_found" as const};
+  return {ok:true as const,data:await signDocument(row.storagePath,row.fileName)};
+ }catch{return {ok:false as const,reason:"not_ready" as const};}
 }

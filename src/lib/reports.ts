@@ -121,12 +121,31 @@ export const createReport = async (input: {
     details,
   });
 };
-export const fetchReports = async (status?: ReportStatus): Promise<Report[]> =>
-  trustRequest("reports", status ? { status } : {});
+/** Keyset pages bound individual HTTP/SQL reads while preserving the full queue/history UI. */
+async function allReports(
+  op: string,
+  params: Record<string, string> = {},
+): Promise<Report[]> {
+  const result: Report[] = [];
+  let before: string | undefined;
+  for (;;) {
+    const page = await trustRequest<Report[]>(
+      op,
+      before ? { ...params, before } : params,
+    );
+    result.push(...page);
+    if (page.length < 100) return result;
+    const cursor = page[page.length - 1].id;
+    if (cursor === before) throw new Error("Could not advance report history.");
+    before = cursor;
+  }
+}
+export const fetchReports = (status?: ReportStatus): Promise<Report[]> =>
+  allReports("reports", status ? { status } : {});
 export const fetchOpenReportsCount = async (): Promise<number> =>
   trustRequest("open-reports");
-export const fetchMyReports = async (_uid: string): Promise<Report[]> =>
-  trustRequest("my-reports");
+export const fetchMyReports = (_uid: string): Promise<Report[]> =>
+  allReports("my-reports");
 export const fetchReportContentPreviews = async (
   reports: Report[],
 ): Promise<Map<string, ReportContentPreview>> => {

@@ -11,7 +11,6 @@ import {
   isUsernameAvailable,
   searchProfiles,
   setOwnAvatar,
-  setReputation,
   updateOwnProfile,
   findModerationProfiles,
   type EditableProfileFields,
@@ -212,35 +211,13 @@ export async function markVeteranCelebrationSeen(): Promise<SimpleMutationResult
 }
 
 /**
- * Writes a reputation total **for the caller**.
- *
- * Deliberately the caller's own row: the value is derived from their posts and
- * comments, and although the read side of those still lives in Supabase the write is
- * scoped to the session uid, so a client cannot set another user's reputation. The
- * client still computes the sum — see the note in `setReputation` about moving that
- * computation with the tables that own it.
- */
-export async function setCurrentReputation(total: number): Promise<SimpleMutationResult> {
-  const identity = await requireUid();
-  if (identity.ok === false) return identity;
-  return { ok: true, outcome: await setReputation(getDatabase(), identity.uid, total) };
-}
-
-/** @deprecated Phase 2E: independently changing counters is no longer supported. */
-export async function adjustCurrentFollowing(_delta: 1 | -1): Promise<SimpleMutationResult> {
-  return { ok: false, reason: "invalid_identity" };
-}
-
-/**
  * Moderation list including `role`.
  *
  * Gated on the caller's **own** role, read from Neon. This is the one place where a
  * profile read is itself privileged, so the check lives beside the query rather than in
  * the route: a second route calling this cannot forget to authorize.
  *
- * `role` has no writer in this codebase yet (`setUserRole` still targets a Supabase
- * RPC), so every row is `member` today and this correctly refuses everyone. It starts
- * working the moment roles are written to Neon.
+ * Role and verification mutations are administered by the Neon content service.
  */
 export async function getModerationProfiles(limit = 50): Promise<ProfileResult<ModerationProfile[]>> {
   const identity = await requireUid();

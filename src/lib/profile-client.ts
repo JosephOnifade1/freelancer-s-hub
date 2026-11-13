@@ -334,32 +334,6 @@ async function saveOwnProfileStatus(
   return { ok: true, data: profile };
 }
 
-/**
- * Persists a reputation total for the signed-in user.
- *
- * The number is computed where the data lives (Supabase, for now) and written where
- * the profile lives (Neon). The server binds the write to the session uid, so this
- * cannot set another user's score.
- */
-export async function saveReputation(total: number): Promise<ProfileClientResult<true>> {
-  let response: Response;
-  try {
-    response = await fetch("/api/profile/reputation", {
-      method: "POST",
-      headers: { "content-type": "application/json", accept: "application/json" },
-      body: JSON.stringify({ total }),
-      credentials: "same-origin",
-      cache: "no-store",
-    });
-  } catch {
-    return { ok: false, error: "error" };
-  }
-
-  if (response.status === 404) return { ok: false, error: "not_provisioned" };
-  if (!response.ok) return { ok: false, error: failureFromStatus(response.status) };
-  return { ok: true, data: true };
-}
-
 /** A profile row including `role` — the moderation/admin projection. */
 export interface ModerationUserRow {
   uid: string;

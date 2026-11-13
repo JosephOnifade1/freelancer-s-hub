@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Link } from "react-router-dom";
-import { supabase, isDemoMode } from "../lib/supabase";
+import { supabase } from "../lib/supabase";
 import { updatePassword, authErrorMessage } from "../lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,14 +11,6 @@ import { toast } from "sonner";
 import { KeyRound, Loader2, ShieldAlert } from "lucide-react";
 
 type Phase = "checking" | "ready" | "invalid" | "saving" | "done";
-
-const hasMockRecovery = (): boolean => {
-  try {
-    return !!localStorage.getItem("mock_supabase_password_recovery");
-  } catch {
-    return false;
-  }
-};
 
 export default function ResetPassword() {
   const [phase, setPhase] = useState<Phase>("checking");
@@ -31,12 +23,11 @@ export default function ResetPassword() {
 
     // Supabase turns the emailed link into a recovery session and fires
     // PASSWORD_RECOVERY. Any live session on this page is also accepted:
-    // arriving here with a session can only come from that link (or from
-    // demo mode's simulated link, i.e. the stored recovery record).
+    // Supabase owns and verifies this session; no local recovery record is accepted.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string) => {
       if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN" || event === "INITIAL_SESSION") {
         supabase.auth.getSession().then(({ data }: { data: { session: unknown } }) => {
-          if (data.session || (isDemoMode && hasMockRecovery())) {
+          if (data.session) {
             settled = true;
             setPhase((p) => (p === "checking" ? "ready" : p));
           }
@@ -47,7 +38,7 @@ export default function ResetPassword() {
     const timer = setTimeout(() => {
       if (!settled) {
         supabase.auth.getSession().then(({ data }: { data: { session: unknown } }) => {
-          if (data.session || (isDemoMode && hasMockRecovery())) {
+          if (data.session) {
             setPhase((p) => (p === "checking" ? "ready" : p));
           } else {
             setPhase((p) => (p === "checking" ? "invalid" : p));
@@ -129,12 +120,6 @@ export default function ResetPassword() {
         {(phase === "ready" || phase === "saving" || phase === "done") && (
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
-              {isDemoMode && (
-                <p className="rounded-lg border border-border bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
-                  Demo mode: no email was sent — this simulates opening the reset link from your
-                  inbox.
-                </p>
-              )}
               <div className="space-y-2">
                 <Label htmlFor="password">New password</Label>
                 <Input

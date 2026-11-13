@@ -27,9 +27,20 @@ export async function trustRequest(
       case "recent-reports":
         return q.recentReportCount(db, uid);
       case "reports":
-        return q.listReports(db, uid, false, params.get("status") ?? undefined);
+        return q.listReports(
+          db,
+          uid,
+          false,
+          params.get("status") ?? undefined,
+          ...(params.has("before") ? [params.get("before")] : []),
+        );
       case "my-reports":
-        return q.listReports(db, uid, true);
+        return q.listReports(
+          db,
+          uid,
+          true,
+          ...(params.has("before") ? [undefined, params.get("before")] : []),
+        );
       case "open-reports":
         return q.openReportCount(db, uid);
     }

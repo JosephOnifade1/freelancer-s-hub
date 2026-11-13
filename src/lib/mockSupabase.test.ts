@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { MockSupabaseClient, seedMockData } from "./mockSupabase";
+import { MockSupabaseClient, seedMockData } from "../test/fixtures/mockSupabase";
 import { getErrorMessage } from "./utils";
 
 const readRows = <T,>(table: string): T[] =>

@@ -15,7 +15,7 @@ import { getSupabaseCredentials } from "./supabase-env";
  * Token refresh in Server Components is therefore best-effort — the durable
  * refresh happens in `src/proxy.ts`, which can write cookies to the response.
  *
- * No service-role key is read or used anywhere. Everything here runs with the
+ * No privileged Storage credential is read by this session client. Everything here runs with the
  * anon key plus the user's own session, so RLS still applies.
  *
  * This module imports `next/headers`, which throws outside a request scope — that

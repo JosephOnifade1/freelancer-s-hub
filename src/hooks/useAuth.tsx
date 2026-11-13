@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { useQueryClient } from "@tanstack/react-query";
 import type { User } from "@supabase/supabase-js";
 
-import { supabase, isDemoMode } from "../lib/supabase";
+import { supabase } from "../lib/supabase";
 import { provisionProfileOnServer } from "../lib/profile-provisioning";
 import {
   INITIAL_PROVISIONING,
@@ -138,13 +138,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (!nextUid) return;
 
-      // Demo mode has no server session for the provisioning route to verify, so
-      // the call would always be a 401. The mock backend owns its own profiles.
-      if (isDemoMode) {
-        commitProvisioning({ status: "ready", attempts: 0 });
-        return;
-      }
-
       if (provisioningRef.current.status === "ready") return;
 
       // An identical identity re-announcing itself (Supabase emits several
@@ -195,7 +188,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
    */
   const retryProvisioning = useCallback(() => {
     const uid = lastUid.current;
-    if (!uid || isDemoMode) return;
+    if (!uid) return;
     if (provisioningRef.current.status === "ready") return;
     if (inFlight.current) return;
     void attemptProvisioning(uid);
