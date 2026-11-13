@@ -67,7 +67,7 @@ describe("no Supabase profile access remains", () => {
     // adjusts `reputation` inside the vote transaction — both server-side, neither
     // in a client path.
     for (const file of filesWithProfileSql) {
-      expect(file).toMatch(/^src\/server\/features\/(profile|identity|content|social)\//);
+      expect(file).toMatch(/^src\/server\/features\/(profile|identity|content|social|marketplace)\//);
     }
   });
 });

@@ -1,0 +1,103 @@
+/** Actual local PostgreSQL + Drizzle. Not mocked, not actual Neon.
+ * Identities below are temporary fixtures removed after every test, not seed accounts.
+ */
+import { beforeAll, beforeEach, afterAll, describe, it, expect } from "vitest";
+import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
+import type { ContentTransactionDatabase } from "@/server/features/content/content-queries";
+import * as q from "@/server/features/marketplace/marketplace-queries";
+const url=process.env.DATABASE_URL;
+const OWNER="f0000000-0000-4000-8000-000000000001",APPLICANT="f0000000-0000-4000-8000-000000000002",OTHER="f0000000-0000-4000-8000-000000000003",STAFF="f0000000-0000-4000-8000-000000000004";
+const ids=[OWNER,APPLICANT,OTHER,STAFF];
+const input={ title:"React project",description:"Build a real dashboard",budget:"2000",currency:"USD",location:"Remote",type:"Project",skills:["React"] };
+let pool: Pool;let db: ReturnType<typeof drizzle>;
+beforeAll(() => { if(url){ pool=new Pool({connectionString:url,max:12});db=drizzle(pool); } });
+async function cleanup(){ await pool.query(`truncate leads,lead_applications,lead_pipeline restart identity cascade`);await pool.query(`delete from profiles where uid=any($1)`,[ids]); }
+beforeEach(async () => {if(!url)return;await cleanup();for(const [i,uid] of ids.entries()) await pool.query(`insert into profiles (uid,username,role,"displayName") values ($1,$2,$3,$4)`,[uid,`market_${i}`,uid===STAFF?"admin":"member",`Person ${i}`]);});
+afterAll(async () => {if(pool){await cleanup();await pool.end();}});
+const lead=()=>q.createLead(db,OWNER,input);
+const submit=async(leadId?:string)=>q.submitApplication(db,APPLICANT,leadId??await lead(),"Private proposal");
+const count=async(id:string)=>(await q.getLead(db,id))!.applicantsCount;
+
+describe.skipIf(!url)("leads: real SQL",()=>{
+ it("creates with trusted owner, defaults, public hydration, public list and detail",async()=>{const id=await lead();const l=await q.getLead(db,id);expect(l).toMatchObject({...input,id,status:"open",applicantsCount:0,postedBy:{uid:OWNER,name:"Person 0"}});expect(l!.postedBy).not.toHaveProperty("role");expect(await q.listLeads(db)).toHaveLength(1);});
+ it("missing UUID returns null, malformed ID is invalid",async()=>{expect(await q.getLead(db,OTHER)).toBeNull();await expect(q.getLead(db,"bad")).rejects.toMatchObject({status:400});});
+ it("owner edits metadata and supported lifecycle states including reopening",async()=>{const id=await lead();for(const status of ["in-progress","closed","open"]){await q.updateLead(db,OWNER,id,{status,title:"Edited"});expect(await q.getLead(db,id)).toMatchObject({status,title:"Edited"});}});
+ it("nonowner and staff cannot use owner edit route",async()=>{const id=await lead();for(const uid of [APPLICANT,STAFF])await expect(q.updateLead(db,uid,id,{title:"Hijack"})).rejects.toMatchObject({status:404});});
+ it("rejects invalid state without partial metadata update",async()=>{const id=await lead();await expect(q.updateLead(db,OWNER,id,{status:"invented",title:"Changed"})).rejects.toMatchObject({status:400});expect((await q.getLead(db,id))!.title).toBe(input.title);});
+ it("archive closes rather than deletes lead and preserves application history",async()=>{const a=await submit();await q.updateLead(db,OWNER,a.leadId,{status:"closed"});expect(await q.getLead(db,a.leadId)).toMatchObject({status:"closed"});expect(await q.listApplications(db,APPLICANT,"sent")).toHaveLength(1);await expect(pool.query(`delete from leads where id=$1`,[a.leadId])).rejects.toThrow();});
+ it("staff-only archive checks actual Neon role",async()=>{const id=await lead();await expect(q.updateLead(db,APPLICANT,id,{},true)).rejects.toMatchObject({status:403});await q.updateLead(db,STAFF,id,{},true);expect((await q.getLead(db,id))!.status).toBe("closed");});
+ it("filters by type, status, owner and search without leaking proposals",async()=>{const id=await lead();expect(await q.listLeads(db,{type:"Project",status:"open",owner:OWNER,search:"React"})).toHaveLength(1);expect(await q.listLeads(db,{search:"%"})).toEqual([]);expect(await q.listLeads(db,{ids:[id]})).toHaveLength(1);expect(await q.listLeads(db,{ids:[]})).toEqual([]);expect(await q.listLeads(db,{type:"Bounty"})).toEqual([]);});
+ it.each([null,"bad"])("rejects missing/invalid actor %s",async uid=>{await expect(q.createLead(db,uid,input)).rejects.toBeInstanceOf(q.MarketplaceError);});
+ it.each([{title:""},{description:""},{budget:""},{type:"invented"},{skills:[12]}])("validates creation %j",async patch=>{await expect(q.createLead(db,OWNER,{...input,...patch} as q.LeadInput)).rejects.toMatchObject({status:400});expect(await q.listLeads(db)).toEqual([]);});
+ it("database rejects invalid lead states and negative counters",async()=>{const id=await lead();await expect(pool.query(`update leads set status='invalid' where id=$1`,[id])).rejects.toThrow();await expect(pool.query(`update leads set "applicantsCount"=-1 where id=$1`,[id])).rejects.toThrow();});
+});
+describe.skipIf(!url)("applications: privacy and lifecycle on real SQL",()=>{
+ it("submits proposal, increments counter and hydrates both public profiles",async()=>{const a=await submit();expect(a).toMatchObject({proposal:"Private proposal",status:"pending",applicant:{uid:APPLICANT,name:"Person 1"},lead:{postedBy:{uid:OWNER}}});expect(a.applicant).not.toHaveProperty("role");expect(await count(a.leadId)).toBe(1);});
+ it("sent/received/owner/mine/detail reads are scoped in SQL",async()=>{const a=await submit();expect(await q.listApplications(db,APPLICANT,"sent")).toHaveLength(1);expect(await q.listApplications(db,OWNER,"received")).toHaveLength(1);expect(await q.listApplications(db,OWNER,"lead",a.leadId)).toHaveLength(1);expect(await q.listApplications(db,APPLICANT,"mine",a.leadId)).toHaveLength(1);expect(await q.listApplications(db,OTHER,"detail",a.id)).toEqual([]);expect(await q.listApplications(db,STAFF,"detail",a.id)).toEqual([]);await expect(q.listApplications(db,OTHER,"lead",a.leadId)).rejects.toMatchObject({status:404});});
+ it("unrelated user's inbox and pipeline reveal no private commercial data",async()=>{await submit();expect(await q.listApplications(db,OTHER,"sent")).toEqual([]);expect(await q.listApplications(db,OTHER,"received")).toEqual([]);expect(await q.listPipeline(db,OTHER)).toEqual([]);});
+ it("no unauthenticated application reads or submissions",async()=>{const id=await lead();await expect(q.listApplications(db,null,"sent")).rejects.toMatchObject({status:401});await expect(q.submitApplication(db,null,id,"Proposal")).rejects.toMatchObject({status:401});});
+ it("refuses self-application, closed and in-progress leads",async()=>{const id=await lead();await expect(q.submitApplication(db,OWNER,id,"Proposal")).rejects.toMatchObject({status:403});for(const status of ["closed","in-progress"]){await q.updateLead(db,OWNER,id,{status});await expect(q.submitApplication(db,APPLICANT,id,"Proposal")).rejects.toMatchObject({status:409});}expect(await count(id)).toBe(0);});
+ it("duplicates cannot overwrite proposal or increment count",async()=>{const a=await submit();await expect(q.submitApplication(db,APPLICANT,a.leadId,"Overwrite")).rejects.toMatchObject({status:409});expect((await q.listApplications(db,APPLICANT,"detail",a.id))[0].proposal).toBe("Private proposal");expect(await count(a.leadId)).toBe(1);});
+ it("withdraw decrements once; reapply updates same row and increments once",async()=>{const a=await submit();await q.setApplicationStatus(db,APPLICANT,a.id,"withdrawn");await q.setApplicationStatus(db,APPLICANT,a.id,"withdrawn");expect(await count(a.leadId)).toBe(0);const next=await q.submitApplication(db,APPLICANT,a.leadId,"Revised proposal");expect(next).toMatchObject({id:a.id,status:"pending",proposal:"Revised proposal"});expect(await count(a.leadId)).toBe(1);});
+ it("cannot reactivate a withdrawn application on a closed lead",async()=>{const a=await submit();await q.setApplicationStatus(db,APPLICANT,a.id,"withdrawn");await q.updateLead(db,OWNER,a.leadId,{status:"closed"});await expect(q.submitApplication(db,APPLICANT,a.leadId,"Again")).rejects.toMatchObject({status:409});await expect(q.setApplicationStatus(db,APPLICANT,a.id,"pending")).rejects.toMatchObject({status:409});expect(await count(a.leadId)).toBe(0);});
+ it("owner accepts/rejects/reconsiders active applications without count drift",async()=>{const a=await submit();for(const status of ["accepted","rejected","pending"]){await q.setApplicationStatus(db,OWNER,a.id,status);expect((await q.listApplications(db,APPLICANT,"detail",a.id))[0].status).toBe(status);expect(await count(a.leadId)).toBe(1);}});
+ it("owner cannot withdraw or resurrect applicant withdrawal",async()=>{const a=await submit();await expect(q.setApplicationStatus(db,OWNER,a.id,"withdrawn")).rejects.toMatchObject({status:403});await q.setApplicationStatus(db,APPLICANT,a.id,"withdrawn");await expect(q.setApplicationStatus(db,OWNER,a.id,"accepted")).rejects.toMatchObject({status:409});});
+ it("applicant cannot accept/reject or reset an active application to pending",async()=>{const a=await submit();for(const status of ["accepted","rejected"])await expect(q.setApplicationStatus(db,APPLICANT,a.id,status)).rejects.toMatchObject({status:403});await expect(q.setApplicationStatus(db,APPLICANT,a.id,"pending")).rejects.toMatchObject({status:409});});
+ it("other users and staff cannot change private application status",async()=>{const a=await submit();for(const uid of [OTHER,STAFF])await expect(q.setApplicationStatus(db,uid,a.id,"accepted")).rejects.toMatchObject({status:404});expect(await count(a.leadId)).toBe(1);});
+ it("received inbox hydrates multiple leads/applicants in one SQL query",async()=>{
+  const first=await lead(),second=await q.createLead(db,OWNER,{...input,title:"Second project"});
+  await q.submitApplication(db,APPLICANT,first,"A");await q.submitApplication(db,OTHER,second,"B");
+  let queries=0;const counted={execute:async(query:Parameters<typeof db.execute>[0])=>{queries++;return db.execute(query);}};
+  const result=await q.listApplications(counted,OWNER,"received");
+  expect(queries).toBe(1);expect(result).toHaveLength(2);
+  expect(new Set(result.map(a=>a.applicant!.uid))).toEqual(new Set([APPLICANT,OTHER]));
+  expect(new Set(result.map(a=>a.lead!.id))).toEqual(new Set([first,second]));
+  expect(await q.listApplications(db,APPLICANT,"sent")).toHaveLength(1);
+ });
+ it("invalid status and blank proposal leave no partial records",async()=>{const id=await lead();await expect(q.submitApplication(db,APPLICANT,id,"  ")).rejects.toMatchObject({status:400});const a=await q.submitApplication(db,APPLICANT,id,"Proposal");await expect(q.setApplicationStatus(db,OWNER,a.id,"hired")).rejects.toMatchObject({status:400});expect(await count(id)).toBe(1);});
+ it("database uniqueness prevents duplicate applications outside query layer",async()=>{const a=await submit();await expect(pool.query(`insert into lead_applications ("leadId","applicantUid",proposal) values ($1,$2,'Duplicate')`,[a.leadId,APPLICANT])).rejects.toThrow();});
+});
+describe.skipIf(!url)("transactions and concurrent application lifecycle",()=>{
+ it("10 submissions produce one winner and exactly one increment",async()=>{const id=await lead();const result=await Promise.allSettled(Array.from({length:10},()=>q.submitApplication(db,APPLICANT,id,"Proposal")));expect(result.filter(r=>r.status==="fulfilled")).toHaveLength(1);expect(await count(id)).toBe(1);expect(await q.listApplications(db,OWNER,"lead",id)).toHaveLength(1);});
+ it("multiple applicants serialize without losing increments",async()=>{const id=await lead();await Promise.all([q.submitApplication(db,APPLICANT,id,"A"),q.submitApplication(db,OTHER,id,"B")]);expect(await count(id)).toBe(2);});
+ it("concurrent review vs withdrawal never resurrects a withdrawn application",async()=>{const a=await submit();await Promise.allSettled([q.setApplicationStatus(db,OWNER,a.id,"accepted"),q.setApplicationStatus(db,APPLICANT,a.id,"withdrawn")]);expect((await q.listApplications(db,APPLICANT,"detail",a.id))[0].status).toBe("withdrawn");expect(await count(a.leadId)).toBe(0);});
+ it("concurrent repeated withdrawal decrements exactly once",async()=>{const a=await submit();await Promise.all(Array.from({length:10},()=>q.setApplicationStatus(db,APPLICANT,a.id,"withdrawn")));expect(await count(a.leadId)).toBe(0);});
+ it("concurrent reapply produces one reactivation and one increment",async()=>{const a=await submit();await q.setApplicationStatus(db,APPLICANT,a.id,"withdrawn");const result=await Promise.allSettled(Array.from({length:10},()=>q.submitApplication(db,APPLICANT,a.leadId,"Revised")));expect(result.filter(r=>r.status==="fulfilled")).toHaveLength(1);expect(await count(a.leadId)).toBe(1);});
+ it("concurrent closing vs submission cannot add an application after closure",async()=>{const id=await lead();await Promise.allSettled([q.updateLead(db,OWNER,id,{status:"closed"}),q.submitApplication(db,APPLICANT,id,"Proposal")]);expect((await q.getLead(db,id))!.status).toBe("closed");await expect(q.submitApplication(db,OTHER,id,"Late")).rejects.toMatchObject({status:409});const apps=await q.listApplications(db,OWNER,"lead",id);expect(await count(id)).toBe(apps.length);});
+ it("concurrent accept/reject review remains active with exact count",async()=>{
+  const a=await submit();await Promise.all([q.setApplicationStatus(db,OWNER,a.id,"accepted"),q.setApplicationStatus(db,OWNER,a.id,"rejected")]);
+  expect(["accepted","rejected"]).toContain((await q.listApplications(db,APPLICANT,"detail",a.id))[0].status);expect(await count(a.leadId)).toBe(1);
+ });
+ it("failed reapplication restores withdrawn status and the original proposal",async()=>{
+  const a=await submit();await q.setApplicationStatus(db,APPLICANT,a.id,"withdrawn");
+  await pool.query(`alter table leads add constraint test_market_reapply check ("applicantsCount"=0)`);
+  try{await expect(q.submitApplication(db,APPLICANT,a.leadId,"Revised proposal")).rejects.toThrow();}finally{await pool.query(`alter table leads drop constraint test_market_reapply`);}
+  expect((await q.listApplications(db,APPLICANT,"detail",a.id))[0]).toMatchObject({status:"withdrawn",proposal:"Private proposal"});expect(await count(a.leadId)).toBe(0);
+ });
+ it("failed required hydration rolls back real application and counter writes",async()=>{
+  const id=await lead();let statements=0;
+  // Failure injection only at the final required read; preceding SQL and rollback
+  // execute against real PostgreSQL, not a simulated transaction.
+  const faulted: ContentTransactionDatabase={execute:query=>db.execute(query),transaction:run=>db.transaction(async tx=>run({execute:async query=>{
+    statements++;if(statements===5)return {rows:[]};return tx.execute(query);
+  }}))};
+  await expect(q.submitApplication(faulted,APPLICANT,id,"Proposal")).rejects.toMatchObject({status:503});
+  expect(await count(id)).toBe(0);expect(await q.listApplications(db,APPLICANT,"sent")).toEqual([]);
+ });
+ it("counter failure rolls back a new submission",async()=>{const id=await lead();await pool.query(`alter table leads add constraint test_market_count check ("applicantsCount"=0)`);try{await expect(q.submitApplication(db,APPLICANT,id,"Proposal")).rejects.toThrow();}finally{await pool.query(`alter table leads drop constraint test_market_count`);}expect(await q.listApplications(db,APPLICANT,"sent")).toEqual([]);expect(await count(id)).toBe(0);});
+ it("counter failure rolls back withdrawal and preserves proposal status",async()=>{const a=await submit();await pool.query(`alter table leads add constraint test_market_withdraw check ("applicantsCount">0)`);try{await expect(q.setApplicationStatus(db,APPLICANT,a.id,"withdrawn")).rejects.toThrow();}finally{await pool.query(`alter table leads drop constraint test_market_withdraw`);}expect((await q.listApplications(db,APPLICANT,"detail",a.id))[0].status).toBe("pending");expect(await count(a.leadId)).toBe(1);});
+});
+describe.skipIf(!url)("private pipeline: real SQL",()=>{
+ it("manual initialization is independent of applications and keeps nullable leadId",async()=>{const item=await q.addPipeline(db,APPLICANT,{title:"Private prospect",clientName:"Client"});expect(item).toMatchObject({userUid:APPLICANT,stage:"new",leadId:null,source:"Manual"});expect(await q.listPipeline(db,APPLICANT)).toHaveLength(1);expect(await q.listApplications(db,APPLICANT,"sent")).toEqual([]);});
+ it("saving an opportunity keeps stable lead relationship and public metadata",async()=>{const id=await lead();const item=await q.addPipeline(db,APPLICANT,{leadId:id,title:input.title,clientName:"Person 0",budget:"2000 USD",source:"Borynx opportunity"});expect(item.leadId).toBe(id);await q.updateLead(db,OWNER,id,{status:"closed"});expect((await q.listPipeline(db,APPLICANT))[0].leadId).toBe(id);});
+ it("duplicate saved lead rejected, multiple manual prospects allowed",async()=>{const id=await lead();await q.addPipeline(db,APPLICANT,{leadId:id,title:"T",clientName:"C"});await expect(q.addPipeline(db,APPLICANT,{leadId:id,title:"T",clientName:"C"})).rejects.toMatchObject({status:409});for(let i=0;i<2;i++)await q.addPipeline(db,APPLICANT,{title:"Manual",clientName:"C"});expect(await q.listPipeline(db,APPLICANT)).toHaveLength(3);});
+ it("10 concurrent saves create one tracker row",async()=>{const id=await lead();const r=await Promise.allSettled(Array.from({length:10},()=>q.addPipeline(db,APPLICANT,{leadId:id,title:"T",clientName:"C"})));expect(r.filter(v=>v.status==="fulfilled")).toHaveLength(1);});
+ it("all existing stages can be selected or revisited, timestamps and ordering preserved",async()=>{const a=await q.addPipeline(db,APPLICANT,{title:"First",clientName:"C"});await q.addPipeline(db,APPLICANT,{title:"Second",clientName:"C"});for(const stage of ["conversation","proposal","negotiation","won","new"]){await q.setPipelineStage(db,APPLICANT,a.id,stage);expect((await q.listPipeline(db,APPLICANT))[0]).toMatchObject({id:a.id,stage});}});
+ it("other users and staff cannot read, stage-change or remove another pipeline",async()=>{const a=await q.addPipeline(db,APPLICANT,{title:"Private",clientName:"C"});for(const uid of [OWNER,STAFF]){expect(await q.listPipeline(db,uid)).toEqual([]);await expect(q.setPipelineStage(db,uid,a.id,"won")).rejects.toMatchObject({status:404});await expect(q.removePipeline(db,uid,a.id)).rejects.toMatchObject({status:404});}});
+ it("invalid stage and invalid fields fail without modifying existing rows",async()=>{const a=await q.addPipeline(db,APPLICANT,{title:"T",clientName:"C"});await expect(q.setPipelineStage(db,APPLICANT,a.id,"accepted")).rejects.toMatchObject({status:400});await expect(q.addPipeline(db,APPLICANT,{title:"",clientName:"C"})).rejects.toMatchObject({status:400});expect((await q.listPipeline(db,APPLICANT))[0].stage).toBe("new");});
+ it("concurrent stage changes stay valid without duplicates",async()=>{const a=await q.addPipeline(db,APPLICANT,{title:"T",clientName:"C"});await Promise.all([q.setPipelineStage(db,APPLICANT,a.id,"won"),q.setPipelineStage(db,APPLICANT,a.id,"proposal")]);const list=await q.listPipeline(db,APPLICANT);expect(list).toHaveLength(1);expect(["won","proposal"]).toContain(list[0].stage);});
+ it("application review and withdrawal do not rewrite a private tracking stage",async()=>{const a=await submit();const tracker=await q.addPipeline(db,APPLICANT,{leadId:a.leadId,title:"T",clientName:"C"});await q.setPipelineStage(db,APPLICANT,tracker.id,"negotiation");await q.setApplicationStatus(db,OWNER,a.id,"accepted");await q.setApplicationStatus(db,APPLICANT,a.id,"withdrawn");expect((await q.listPipeline(db,APPLICANT))[0].stage).toBe("negotiation");expect(await count(a.leadId)).toBe(0);});
+ it("removal deletes only tracker, never lead/application",async()=>{const a=await submit();const tracker=await q.addPipeline(db,APPLICANT,{leadId:a.leadId,title:"T",clientName:"C"});await q.removePipeline(db,APPLICANT,tracker.id);expect(await q.listPipeline(db,APPLICANT)).toEqual([]);expect(await q.getLead(db,a.leadId)).not.toBeNull();expect(await q.listApplications(db,APPLICANT,"sent")).toHaveLength(1);});
+ it("unauthenticated pipeline access and unknown lead references fail",async()=>{await expect(q.listPipeline(db,null)).rejects.toMatchObject({status:401});await expect(q.addPipeline(db,null,{title:"T",clientName:"C"})).rejects.toMatchObject({status:401});await expect(q.addPipeline(db,APPLICANT,{leadId:OTHER,title:"T",clientName:"C"})).rejects.toThrow();await expect(q.addPipeline(db,APPLICANT,{leadId:"",title:"T",clientName:"C"})).rejects.toMatchObject({status:400});expect(await q.listPipeline(db,APPLICANT)).toEqual([]);});
+});

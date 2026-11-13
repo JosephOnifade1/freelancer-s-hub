@@ -96,6 +96,8 @@ const LeadDetail = () => {
     queryClient.invalidateQueries({ queryKey: ['myApplication', leadId, user?.uid] });
     queryClient.invalidateQueries({ queryKey: ['lead', leadId] });
     queryClient.invalidateQueries({ queryKey: ['myApplications'] });
+    queryClient.invalidateQueries({ queryKey: ['receivedApplications'] });
+    queryClient.invalidateQueries({ queryKey: ['leads'] });
   };
 
   const handleShare = async () => {

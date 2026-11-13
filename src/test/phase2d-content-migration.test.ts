@@ -123,16 +123,15 @@ describe("embedded profile joins are gone from migrated paths", () => {
   });
 
   it("reports no longer joins profiles for its content previews", () => {
-    // The two content previews moved to Neon. The lead preview legitimately remains:
-    // leads have not migrated (Phase 2D §8).
+    // Content previews moved in 2D; the lead preview also moved in Phase 2F.
     const source = code("src/lib/reports.ts");
     expect(source).not.toContain("profiles!posts_authorUid_fkey");
     expect(source).not.toContain("profiles!comments_authorUid_fkey");
-    expect(source).toContain("profiles!leads_postedByUid_fkey");
+    expect(source).not.toContain("profiles!leads_postedByUid_fkey");
   });
 
-  it("leads keeps its join, because the leads domain has not migrated", () => {
-    expect(code("src/lib/leads.ts")).toContain("profiles!leads_postedByUid_fkey");
+  it("leads also has no embedded join after Phase 2F", () => {
+    expect(code("src/lib/leads.ts")).not.toContain("profiles!leads_postedByUid_fkey");
   });
 
   it("author hydration is batched, never per-item", () => {
@@ -264,11 +263,10 @@ describe("Supabase Auth and Storage are untouched", () => {
 });
 
 describe("unmigrated domains stay in Supabase", () => {
-  it("communities, follows, leads, notifications and reports are untouched", () => {
+  it("unmigrated notification and report persistence remains Supabase", () => {
     const stillInSupabase: Record<string, string> = {
       "src/lib/communities.ts": "communities",
       "src/lib/notifications.ts": "notifications",
-      "src/lib/leads.ts": "leads",
       "src/lib/reports.ts": "reports",
     };
     for (const [file, table] of Object.entries(stillInSupabase)) {

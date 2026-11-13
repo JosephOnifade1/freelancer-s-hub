@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { marketplaceRequest } from "./marketplace-client";
 
 export type LeadType = "Bounty" | "Project" | "Retainer" | "Full-time";
 export type LeadStatus = "open" | "in-progress" | "closed";
@@ -25,91 +25,23 @@ export interface Lead {
   applicantsCount: number;
 }
 
-interface LeadRow {
-  id: string;
-  title: string;
-  description: string;
-  budget: string;
-  currency: string;
-  location: string;
-  type: LeadType;
-  status: LeadStatus;
-  skills?: string[];
-  isVerified?: boolean;
-  postedAt: string;
-  applicantsCount: number;
-  postedByUid: string;
-  profiles?: {
-    username?: string;
-    displayName?: string;
-    avatarUrl?: string;
-    isVerifiedPro?: boolean;
-  } | null;
+export interface LeadFilters { status?: LeadStatus; type?: LeadType; search?: string; owner?: string }
+export function fetchLeads(filters: LeadFilters = {}): Promise<Lead[]> {
+  const params: Record<string,string>={};
+  if (filters.status) params.status=filters.status;
+  if (filters.type) params.type=filters.type;
+  if (filters.search) params.q=filters.search;
+  if (filters.owner) params.owner=filters.owner;
+  return marketplaceRequest("leads",params);
 }
-
-const LEAD_COLUMNS = `
-  id, title, description, budget, currency, location, type, status,
-  skills, isVerified, postedAt, applicantsCount, postedByUid,
-  profiles!leads_postedByUid_fkey (username, displayName, avatarUrl, isVerifiedPro)
-`;
-
-const mapLead = (row: LeadRow): Lead => ({
-  id: row.id,
-  title: row.title,
-  description: row.description,
-  budget: row.budget,
-  currency: row.currency || "USD",
-  location: row.location,
-  type: row.type,
-  status: row.status,
-  skills: row.skills || [],
-  isVerified: row.isVerified,
-  postedAt: new Date(row.postedAt).getTime(),
-  applicantsCount: row.applicantsCount || 0,
-  postedBy: {
-    uid: row.postedByUid,
-    username: row.profiles?.username,
-    name: row.profiles?.displayName || row.profiles?.username || "Unknown",
-    avatar: row.profiles?.avatarUrl,
-    isVerified: !!row.profiles?.isVerifiedPro,
-  },
-});
-
-/** Real, database-backed opportunities only. Never fall back to browser demo leads. */
-export async function fetchLeads(): Promise<Lead[]> {
-  const { data, error } = await supabase.from("leads")
-    .select(LEAD_COLUMNS).order("postedAt", { ascending: false });
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Could not load opportunities.");
-  return (data as LeadRow[]).map(mapLead);
+export const fetchLeadById = (id: string) => marketplaceRequest<Lead|null>("lead",{ id });
+export function createLead(data: Omit<Lead,"id"|"postedAt"|"applicantsCount"|"status">): Promise<string> {
+  return marketplaceRequest("leads",{},"POST",{ title:data.title,description:data.description,budget:data.budget,
+    currency:data.currency,location:data.location,type:data.type,skills:data.skills });
 }
+export const updateLead = (id: string, patch: Partial<Pick<Lead,"title"|"description"|"budget"|"currency"|"location"|"type"|"skills"|"status">>) =>
+  marketplaceRequest<boolean>("leads",{ id },"PATCH",patch);
+export const archiveLead = (id: string) => marketplaceRequest<boolean>("archive",{ id },"POST",{});
+export const archiveLeadAsStaff = (id: string) => marketplaceRequest<boolean>("staff-archive",{ id },"POST",{});
 
-export async function fetchLeadById(id: string): Promise<Lead | null> {
-  const { data, error } = await supabase.from("leads")
-    .select(LEAD_COLUMNS).eq("id", id).maybeSingle();
-  if (error) throw new Error(error.message);
-  return data ? mapLead(data as LeadRow) : null;
-}
-
-export async function createLead(
-  leadData: Omit<Lead, "id" | "postedAt" | "applicantsCount" | "status">
-): Promise<string> {
-  const { data, error } = await supabase.from("leads")
-    .insert({
-      title: leadData.title.trim(),
-      description: leadData.description.trim(),
-      budget: leadData.budget.trim(),
-      currency: leadData.currency,
-      location: leadData.location.trim(),
-      type: leadData.type,
-      skills: leadData.skills || [],
-      isVerified: false,
-      status: "open",
-      applicantsCount: 0,
-      postedByUid: leadData.postedBy.uid,
-    })
-    .select("id").single();
-  if (error) throw new Error(error.message);
-  if (!data?.id) throw new Error("The opportunity was not saved. Please try again.");
-  return data.id as string;
-}
+export const fetchLeadsByIds = (ids: string[]) => marketplaceRequest<Lead[]>("leads",{ ids:[...new Set(ids)].join(",") });
