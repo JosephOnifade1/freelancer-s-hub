@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { fetchOwnRole } from "./profile-client";
 import { PostData } from "@/components/PostCard";
 
 const POST_COLUMNS = `
@@ -98,21 +99,33 @@ export async function getPostViewer(): Promise<PostViewer> {
   const uid = (data?.session?.user?.id as string | undefined) ?? null;
   if (!uid) return { uid: null, role: "member", memberSlugs: [], ownedSlugs: [] };
 
-  const [profileRes, memberRes, ownedRes] = await Promise.all([
-    supabase.from("profiles").select("role").eq("uid", uid).maybeSingle(),
+  // Phase 2C: the viewer's role now comes from Neon, because profiles moved. This is
+  // the `can_view_post` staff check — an authorization input — so it must be the
+  // server's read of the caller's own row, not a client-supplied value.
+  //
+  // Membership and ownership stay in Supabase: `community_members` and `communities`
+  // are content domains that have not migrated, and reading them from two databases
+  // would be the dual-read this migration exists to remove.
+  const [roleResult, memberRes, ownedRes] = await Promise.all([
+    fetchOwnRole(),
     supabase.from("community_members").select("communitySlug").eq("userId", uid),
     supabase.from("communities").select("slug").eq("ownerId", uid),
   ]);
 
   // Missing visibility context is not a "no posts" result. In particular,
-  // a failed membership lookup must not make private posts vanish silently.
-  for (const result of [profileRes, memberRes, ownedRes]) {
+  // a failed membership lookup must not make private posts vanish silently — and a
+  // failed role lookup must not silently demote a moderator, which would hide posts
+  // they are entitled to see. Both throw.
+  if (!roleResult.ok) {
+    throw new Error("Could not load your permissions.");
+  }
+  for (const result of [memberRes, ownedRes]) {
     if (result.error) throw new Error(result.error.message);
   }
 
   return {
     uid,
-    role: (profileRes.data?.role as string | undefined) || "member",
+    role: roleResult.data,
     memberSlugs: ((memberRes.data || []) as { communitySlug: string }[]).map((r) => r.communitySlug),
     ownedSlugs: ((ownedRes.data || []) as { slug: string }[]).map((r) => r.slug),
   };

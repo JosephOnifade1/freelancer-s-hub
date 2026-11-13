@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/auth-context";
+import { saveOwnProfile, isProfileError } from "@/lib/profile-client";
 import { supabase } from "@/lib/supabase";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { QueryErrorState } from "@/components/QueryErrorState";
@@ -60,19 +61,19 @@ export default function Onboarding() {
     }
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          displayName: displayName.trim(),
-          initial: displayName.trim().charAt(0).toUpperCase(),
-          bio: bio.trim(),
-          location: location.trim(),
-          website: website.trim(),
-          skills,
-          status: available ? "Available" : "Busy",
-        })
-        .eq("uid", user.uid);
-      if (error) throw new Error(error.message);
+      // Phase 2C: the profile lives in Neon. `initial` is no longer sent — it is a
+      // single capital derived from the display name, and the old code duplicated that
+      // derivation into the database. The server keeps the column updated from
+      // `displayName` so the two cannot disagree.
+      const result = await saveOwnProfile({
+        displayName: displayName.trim(),
+        bio: bio.trim(),
+        location: location.trim(),
+        website: website.trim(),
+        skills,
+        status: available ? "Available" : "Busy",
+      });
+      if (isProfileError(result)) throw new Error("Could not save your profile.");
       queryClient.invalidateQueries({ queryKey: ["profile", user.uid] });
       toast.success("Profile saved. Welcome to Borynx!");
       router.replace("/");

@@ -1,13 +1,23 @@
 import { supabase } from "./supabase";
+import {
+  fetchPublicProfile,
+  fetchTopProfiles,
+  checkHandleAvailable,
+  saveOwnAvatar,
+  saveReputation,
+  adjustFollowingCounter,
+  isProfileError,
+} from "./profile-client";
 
 export type UserProfile = {
   uid: string;
   username: string;
-  displayName: string;
-  initial: string;
+  displayName: string | null;
+  initial: string | null;
   bio: string;
   location: string;
   website: string;
+  /** Join year, derived server-side from `createdAt` (Phase 2C). */
   joined: string;
   status: string;
   skills: string[];
@@ -17,9 +27,9 @@ export type UserProfile = {
   savedPosts?: Record<string, boolean>;
   communitiesList?: Record<string, boolean>;
   createdAt?: string;
-  avatarUrl?: string;
+  avatarUrl?: string | null;
   isVerifiedPro?: boolean;
-  role?: "admin" | "moderator" | "member";
+  role?: "admin" | "moderator" | "member" | string;
   hasSeenVeteranCelebration?: boolean;
   favoriteTopics?: string[];
 };
@@ -32,141 +42,40 @@ interface AuthUserMetadata {
   avatar_url?: string;
 }
 
-/**
- * @deprecated Phase 2B.3 — superseded by `provisionProfileOnServer()` in
- * `@/lib/profile-provisioning`, which calls the server-side, idempotent Neon
- * provisioning route. This version performed check-then-write from the browser
- * with a uid supplied by the caller, which cannot be made concurrency-safe.
- *
- * Kept only until the remaining read paths move to Neon; it has **no callers**
- * in the application. Do not add new ones.
- */
-export const ensureUserProfile = async (user: { id?: string; uid?: string; email?: string | null; user_metadata?: AuthUserMetadata }) => {
-  const uid = user.id || user.uid;
-  if (!uid) return null;
-
-  try {
-    // Try fetching existing profile
-    const { data: existing } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("uid", uid)
-      .maybeSingle();
-
-    if (existing) return existing as UserProfile;
-
-    // Profile missing - create default fallback profile
-    const rawDisplayName =
-      user.user_metadata?.display_name ||
-      user.user_metadata?.full_name ||
-      user.user_metadata?.name ||
-      user.email?.split("@")[0] ||
-      "Freelancer";
-
-    let username = (user.user_metadata?.username || rawDisplayName.toLowerCase().replace(/[^a-z0-9_]/g, "_")).slice(0, 15);
-    if (username.length < 3) {
-      username = `user_${uid.slice(0, 6)}`;
-    }
-
-    // Check username collision
-    const { data: taken } = await supabase
-      .from("usernames")
-      .select("username")
-      .eq("username", username)
-      .maybeSingle();
-
-    if (taken) {
-      username = `user_${Math.floor(100000 + Math.random() * 900000)}`;
-    }
-
-    const newProfile: UserProfile = {
-      uid,
-      username,
-      displayName: rawDisplayName,
-      initial: rawDisplayName.charAt(0).toUpperCase(),
-      bio: "New freelancer on Borynx!",
-      location: "Earth",
-      website: "",
-      joined: new Date().getFullYear().toString(),
-      status: "Available",
-      skills: [],
-      reputation: 10,
-      followers: 0,
-      following: 0,
-      avatarUrl: user.user_metadata?.avatar_url || "",
-      isVerifiedPro: false,
-      hasSeenVeteranCelebration: false,
-      createdAt: new Date().toISOString(),
-    };
-
-    const { error: profileErr } = await supabase.from("profiles").upsert(newProfile);
-    if (profileErr) {
-      console.warn("Could not save profile to backend:", profileErr.message || profileErr);
-    }
-
-    try {
-      await supabase.from("usernames").upsert({ username, uid });
-    } catch {
-      // ignore username collision / error
-    }
-
-    return newProfile;
-  } catch (err) {
-    console.warn("ensureUserProfile exception:", err);
-    return null;
-  }
-};
-
-export const createUserProfile = async (uid: string, name: string, email: string) => {
-  return ensureUserProfile({ id: uid, email, user_metadata: { display_name: name } });
-};
-
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Looks a profile up by uid or username. Returns null when nobody matches, so
-// the UI can say "not found" instead of inventing a person.
+/**
+ * Looks a profile up by uid or username.
+ *
+ * Phase 2C: reads Neon through `/api/profiles/[identifier]`. The old version read
+ * Supabase, did up to four round-trips, and — importantly — could *create* a profile
+ * via `ensureUserProfile` as a side effect of a read. That fallback is gone; creation
+ * belongs to provisioning, which is idempotent and server-owned.
+ *
+ * Returns `null` for "no such profile" **and** for a failed request, because the two
+ * dozen existing call sites treat both as "show nothing". Callers that need to tell
+ * them apart (`Profile.tsx`) use `fetchPublicProfile` and its typed error directly.
+ *
+ * `savedPosts` is attached only for the viewer's own profile and still comes from
+ * Supabase: bookmarks are a separate domain that has not migrated, and folding them
+ * into the Neon profile read would couple two migrations.
+ */
 export const getUserProfile = async (identifier: string): Promise<UserProfile | null> => {
-  if (!identifier) return null;
-  const clean = identifier.startsWith("@") ? identifier.substring(1).trim() : identifier.trim();
-  if (!clean) return null;
+  const result = await fetchPublicProfile(identifier);
+  if (!result.ok) return null;
 
-  let profile: UserProfile | null = null;
-  if (UUID_RE.test(clean)) {
-    const { data, error } = await supabase.from("profiles").select("*").eq("uid", clean).maybeSingle();
-    if (error) throw new Error(error.message);
-    if (data) profile = data as UserProfile;
-  }
+  const profile = result.data as UserProfile;
 
-  if (!profile) {
-    const escaped = clean.replace(/[\\%_]/g, "\\$&");
-    const { data, error } = await supabase.from("profiles").select("*").ilike("username", escaped).maybeSingle();
-    if (error) throw new Error(error.message);
-    if (data) profile = data as UserProfile;
-  }
-
-  if (!profile) {
-    const escaped = clean.replace(/[\\%_]/g, "\\$&");
-    const { data, error } = await supabase.from("usernames").select("uid").ilike("username", escaped).maybeSingle();
-    if (error) throw new Error(error.message);
-    if (data?.uid) {
-      const result = await supabase.from("profiles").select("*").eq("uid", data.uid).maybeSingle();
-      if (result.error) throw new Error(result.error.message);
-      if (result.data) profile = result.data as UserProfile;
-    }
-  }
-
-  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-  if (sessionError) throw new Error(sessionError.message);
+  const { data: sessionData } = await supabase.auth.getSession();
   const sessionUser = sessionData?.session?.user;
-  if (!profile && sessionUser) {
-    const sessionEmailName = sessionUser.email?.split("@")[0];
-    if (clean === "me" || clean === sessionUser.id || clean.toLowerCase() === sessionEmailName?.toLowerCase()) {
-      profile = await ensureUserProfile(sessionUser);
-    }
-  }
-  if (profile && sessionUser?.id === profile.uid) {
+  if (sessionUser && sessionUser.id === profile.uid) {
     // Private bookmarks belong to the viewer, not everyone who visits their profile.
-    profile.savedPosts = await getSavedPostIds(profile.uid);
+    try {
+      profile.savedPosts = await getSavedPostIds(profile.uid);
+    } catch {
+      // A bookmark lookup failure must not turn a profile into a 404.
+      profile.savedPosts = undefined;
+    }
   }
   return profile;
 };
@@ -186,101 +95,33 @@ export const isVeteran = (reputation: number) => {
   return (reputation || 0) >= 5000;
 };
 
+/**
+ * Is a handle free?
+ *
+ * Phase 2C: asks Neon, which checks the `usernames` registry and
+ * `profiles.username` together — the two sources the atomic claim relies on.
+ *
+ * Returns `false` on a failed request rather than throwing. The old version threw,
+ * which made the settings field show "unavailable" for a network blip; a handle is
+ * only claimed after an explicit save, which has its own authoritative check, so
+ * failing closed here costs nothing and misleads less.
+ */
 export const checkUsernameAvailability = async (username: string) => {
   if (!username) return false;
-  const clean = username.toLowerCase();
-  const isValidFormat = /^[a-z0-9_]{3,15}$/.test(clean);
-  if (!isValidFormat) return false;
-
-  // A handle is taken if it is in the registry OR already on a profile —
-  // the two can drift, and profiles.username is the unique constraint
-  // that actually fails at insert time.
-  const { data: registered, error: usernamesError } = await supabase
-    .from("usernames")
-    .select("username")
-    .eq("username", clean)
-    .maybeSingle();
-  if (usernamesError) throw new Error(usernamesError.message);
-  if (registered) return false;
-
-  const { data: profile, error: profilesError } = await supabase
-    .from("profiles")
-    .select("uid")
-    .ilike("username", clean)
-    .maybeSingle();
-  if (profilesError) throw new Error(profilesError.message);
-  return !profile;
+  const result = await checkHandleAvailable(username.toLowerCase());
+  return result.ok ? result.data : false;
 };
 
 /**
- * @deprecated Phase 2B.3 — superseded by `claimUsernameOnServer()` in
- * `@/lib/profile-provisioning`, which posts to `/api/profile/username` and lets
- * the server claim atomically with `insert … on conflict do nothing returning`
- * inside a transaction.
+ * Resolves a uid from a handle.
  *
- * This version was a four-round-trip check-then-write that released the caller's
- * existing handle *before* winning the new one, so a lost race could leave a user
- * with no username at all. It has **no callers** in the application.
+ * Phase 2C: one Neon read instead of two Supabase round-trips with a fallback.
  */
-export const claimUsername = async (uid: string, desiredUsername: string, currentUsername?: string) => {
-  const lowercaseUsername = desiredUsername.toLowerCase();
-  const isValidFormat = /^[a-zA-Z0-9_]{3,15}$/.test(lowercaseUsername);
-  if (!isValidFormat) throw new Error("Invalid username format. Use 3-15 alphanumeric characters or underscores.");
-
-  // Check if taken by someone else
-  const { data: existing, error: lookupError } = await supabase
-    .from("usernames")
-    .select("uid")
-    .eq("username", lowercaseUsername)
-    .maybeSingle();
-  if (lookupError) throw new Error(lookupError.message);
-
-  if (existing && existing.uid !== uid) {
-    throw new Error("Username is already taken.");
-  }
-
-  // Release old username if applicable
-  if (currentUsername && currentUsername !== lowercaseUsername) {
-    await supabase.from("usernames").delete().eq("username", currentUsername);
-  }
-
-  // Upsert the new username
-  const { error: usernameError } = await supabase
-    .from("usernames")
-    .upsert({ username: lowercaseUsername, uid });
-
-  if (usernameError) throw new Error(usernameError.message);
-
-  // Update profile
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .update({ username: lowercaseUsername })
-    .eq("uid", uid);
-
-  if (profileError) throw new Error(profileError.message);
-
-  return true;
-};
-
 export const getUidByUsername = async (username: string) => {
   if (!username) return null;
-  const clean = username.startsWith("@") ? username.substring(1).toLowerCase() : username.toLowerCase();
-
-  const { data } = await supabase
-    .from("usernames")
-    .select("uid")
-    .ilike("username", clean)
-    .maybeSingle();
-
-  if (data?.uid) return data.uid;
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("uid")
-    .ilike("username", clean)
-    .maybeSingle();
-
-  return profile?.uid ?? null;
+  const clean = username.startsWith("@") ? username.substring(1) : username;
+  const result = await fetchPublicProfile(clean);
+  return result.ok ? result.data.uid : null;
 };
 
 export const getSavedPostIds = async (uid: string): Promise<Record<string, boolean>> => {
@@ -316,10 +157,26 @@ export const toggleBookmark = async (uid: string, postId: string) => {
   }
 };
 
+/**
+ * Records a new avatar reference.
+ *
+ * Phase 2C: the file is still uploaded to Supabase Storage by the caller; only the URL
+ * is stored, and now in Neon. `imageUrl` is not a trust decision here — the server
+ * validates it is http(s) before storing, because it is rendered into an `<img src>`.
+ *
+ * The `uid` argument is kept for call-site compatibility but is **not sent**: the
+ * server writes the session's own row, so this cannot be pointed at another account.
+ */
 export const updateUserAvatar = async (uid: string, imageUrl: string) => {
   if (!uid) return;
-  const { error } = await supabase.from("profiles").update({ avatarUrl: imageUrl }).eq("uid", uid);
-  if (error) throw new Error(error.message);
+  const result = await saveOwnAvatar(imageUrl);
+  if (isProfileError(result)) {
+    throw new Error(
+      result.error === "unavailable"
+        ? "Could not save your photo. Please try again."
+        : "Could not save your photo.",
+    );
+  }
   return imageUrl;
 };
 
@@ -340,20 +197,34 @@ export const toggleFollow = async (currentUid: string, targetUid: string) => {
   // Counter RPCs keep profiles.followers/following in sync. Their errors are
   // surfaced (thrown) rather than swallowed — a follow that "worked" in the UI
   // while the counter write failed is how counts drifted out of sync before.
+  // Phase 2C: the caller's own `following` total now lives in Neon; the *target's*
+  // `followers` total still lives in Supabase, because that row belongs to a user whose
+  // profile this phase does migrate but whose counter is driven by the `follows` domain
+  // that has not. Until `follows` moves, one half of the pair is updated here and the
+  // other by the RPC.
+  //
+  // The asymmetry is temporary and deliberate: writing the target's counter to Neon
+  // would require reading `follows` from two places, which is the dual-read this
+  // migration exists to remove. Errors are still surfaced, not swallowed — a follow
+  // that "worked" in the UI while a counter failed is how counts drifted before.
   if (isFollowing) {
     const { error } = await supabase.from("follows").delete().eq("followerId", currentUid).eq("followingId", targetUid);
     if (error) throw new Error(error.message);
     const { error: e1 } = await supabase.rpc("decrement_followers", { target_uid: targetUid });
     if (e1) throw new Error(e1.message);
-    const { error: e2 } = await supabase.rpc("decrement_following", { target_uid: currentUid });
-    if (e2) throw new Error(e2.message);
+    const own = await adjustFollowingCounter(-1);
+    if (isProfileError(own) && own.error !== "not_provisioned") {
+      throw new Error("Could not update your following count.");
+    }
   } else {
     const { error } = await supabase.from("follows").insert({ followerId: currentUid, followingId: targetUid });
     if (error) throw new Error(error.message);
     const { error: e1 } = await supabase.rpc("increment_followers", { target_uid: targetUid });
     if (e1) throw new Error(e1.message);
-    const { error: e2 } = await supabase.rpc("increment_following", { target_uid: currentUid });
-    if (e2) throw new Error(e2.message);
+    const own = await adjustFollowingCounter(1);
+    if (isProfileError(own) && own.error !== "not_provisioned") {
+      throw new Error("Could not update your following count.");
+    }
   }
 
   return !isFollowing;
@@ -376,19 +247,22 @@ export const calculateReputation = async (uid: string) => {
     (postsData || []).reduce((sum, p) => sum + (p.score || 0), 0) +
     (commentsData || []).reduce((sum, c) => sum + (c.score || 0), 0);
 
-  await supabase.from("profiles").update({ reputation: totalScore }).eq("uid", uid);
+  // Phase 2C: the *derivation* still reads Supabase (posts and comments have not
+  // migrated), but the *write* goes to Neon where the profile now lives. Sending the
+  // total to the server keeps the write bound to the session uid — the server ignores
+  // any uid we might pass and writes the caller's own row.
+  const saved = await saveReputation(totalScore);
+  if (isProfileError(saved) && saved.error !== "not_provisioned") {
+    throw new Error("Could not save reputation.");
+  }
   return totalScore;
 };
 
-export const getTopContributors = async (count = 5) => {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .order("reputation", { ascending: false })
-    .limit(count);
-
-  if (error || !data) throw new Error(error?.message || "Could not load contributors.");
-  return data as UserProfile[];
+/** Top profiles by reputation — Phase 2C reads Neon. */
+export const getTopContributors = async (count = 5): Promise<UserProfile[]> => {
+  const result = await fetchTopProfiles(count);
+  if (!result.ok) throw new Error("Could not load contributors.");
+  return result.data as UserProfile[];
 };
 
 // Real list of user IDs this user follows, from the `follows` join table —

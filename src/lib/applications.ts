@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { fetchPublicProfile, isProfileError } from "./profile-client";
 import { fetchLeads, fetchLeadById, type Lead } from "./leads";
 
 /**
@@ -57,14 +58,14 @@ const rowToApplication = (row: ApplicationRow): LeadApplication => ({
 });
 
 const fetchApplicant = async (uid: string): Promise<ApplicationApplicant | undefined> => {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("uid, username, displayName, avatarUrl, reputation, isVerifiedPro")
-    .eq("uid", uid)
-    .maybeSingle();
-
-  if (error) throw new Error(error.message);
-  if (!data) return undefined;
+  // Phase 2C: Neon read. A missing profile is `undefined`, not an error — an applicant
+  // whose profile has not provisioned yet should not break the application list.
+  const result = await fetchPublicProfile(uid);
+  if (isProfileError(result)) {
+    if (result.error === "not_found") return undefined;
+    throw new Error("Could not load the applicant.");
+  }
+  const data = result.data;
   return {
     uid: data.uid,
     username: data.username,

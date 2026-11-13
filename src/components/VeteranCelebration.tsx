@@ -3,7 +3,7 @@ import confetti from "canvas-confetti";
 import { useAuth } from "@/hooks/auth-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getUserProfile, isVeteran } from "@/lib/users";
-import { supabase } from "@/lib/supabase";
+import { markVeteranCelebrationSeen } from "@/lib/profile-client";
 import { toast } from "sonner";
 
 export function VeteranCelebration() {
@@ -17,11 +17,10 @@ export function VeteranCelebration() {
   });
 
   const { mutate: markCelebrated } = useMutation({
-    mutationFn: async (uid: string) => {
-      await supabase
-        .from("profiles")
-        .update({ hasSeenVeteranCelebration: true })
-        .eq("uid", uid);
+    mutationFn: async () => {
+      // Phase 2C: written to Neon. The uid argument is gone — the server writes the
+      // session's own row, so this cannot mark somebody else's celebration as seen.
+      await markVeteranCelebrationSeen();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile', user?.uid] });
@@ -55,7 +54,7 @@ export function VeteranCelebration() {
         duration: 10000,
       });
 
-      markCelebrated(user!.uid);
+      markCelebrated();
       
       return () => clearInterval(interval);
     }

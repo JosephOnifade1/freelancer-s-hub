@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/auth-context";
 import { getUserProfile, UserProfile, checkUsernameAvailability } from "@/lib/users";
+import { saveOwnProfile, isProfileError } from "@/lib/profile-client";
 import { claimUsernameOnServer } from "@/lib/profile-provisioning";
 import { supabase, isDemoMode } from "@/lib/supabase";
 import { requestPasswordReset, resendConfirmationEmail } from "@/lib/auth";
@@ -54,6 +55,9 @@ const Settings = () => {
     if (user?.uid) {
       setProfileLoading(true);
       setProfileLoadError(false);
+      // Phase 2C: read the viewer's own row from Neon. `getUserProfile` still works for
+      // public reads, but this page edits the profile, so it should load exactly the row
+      // it is about to write.
       getUserProfile(user.uid).then((p) => {
         if (!active) return;
         if (!p) { setProfileLoadError(true); return; }
@@ -126,21 +130,36 @@ const Settings = () => {
         setUsername(claim.username);
       }
 
-      const updates: Partial<UserProfile> = {
+      // Phase 2C — settings save consistency.
+      //
+      // This used to be two writes in one user action: the username claim went to Neon
+      // (since 2B.3) while displayName/bio/website/status went to Supabase. A failure in
+      // the second left the form half-saved with the handle already changed and no way
+      // to tell from the UI.
+      //
+      // Both halves now target Neon, and the fields go in **one** PATCH. The claim is
+      // still a separate atomic operation — it has to be, because it is a race against
+      // other users, not a field update — but it happens first and its result is
+      // committed before the fields are sent, so a failed PATCH leaves a coherent state
+      // (new handle, old fields) that the user can simply save again.
+      const result = await saveOwnProfile({
         displayName,
         bio,
         website,
-        status: available ? "Available" : "Busy"
-      };
+        status: available ? "Available" : "Busy",
+      });
 
-      const { data, error } = await supabase
-        .from("profiles")
-        .update({ displayName, bio, website, status: updates.status })
-        .eq("uid", user.uid)
-        .select("uid");
+      if (isProfileError(result)) {
+        if (result.error === "not_provisioned") {
+          throw new Error("Your profile isn't ready yet. Please try again in a moment.");
+        }
+        if (result.error === "unauthenticated") {
+          throw new Error("Your session expired. Please sign in again.");
+        }
+        throw new Error("Could not save your profile. Please try again.");
+      }
 
-      if (error) throw new Error(error.message);
-      if (!data?.length) throw new Error("Profile not found or not editable.");
+      setProfile((previous) => (previous ? { ...previous, ...result.data } : result.data));
 
       queryClient.invalidateQueries({ queryKey: ["profile", user.uid] });
       toast({ title: "Saved", description: "Your profile has been updated." });

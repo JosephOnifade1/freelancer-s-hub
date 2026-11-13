@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { fetchPublicProfiles, isProfileError } from "./profile-client";
 
 /**
  * In-app notifications (v1).
@@ -68,24 +69,26 @@ const enrichActors = async (items: AppNotification[]): Promise<AppNotification[]
   const uids = [...new Set(items.map((n) => n.actorUid).filter(Boolean))] as string[];
   if (uids.length === 0) return items;
 
-  const profiles = await Promise.all(
-    uids.map(async (uid) => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("uid, username, displayName, avatarUrl")
-        .eq("uid", uid)
-        .maybeSingle();
-      if (!data) return null;
-      return {
-        uid: data.uid,
-        username: data.username,
-        name: data.displayName || data.username || "Unknown",
-        avatarUrl: data.avatarUrl,
-      } as NotificationActor;
-    })
+  // Phase 2C: one batched Neon read replaces an N+1 loop of Supabase queries (one
+  // per distinct actor). On a page of 30 notifications from 30 people that was 30
+  // round-trips.
+  const result = await fetchPublicProfiles(uids);
+  if (isProfileError(result)) {
+    // Actors are decoration; a failed lookup must not fail the notification list.
+    return items;
+  }
+
+  const profiles = result.data.map(
+    (profile) =>
+      ({
+        uid: profile.uid,
+        username: profile.username,
+        name: profile.displayName || profile.username || "Unknown",
+        avatarUrl: profile.avatarUrl,
+      }) as NotificationActor,
   );
 
-  const byUid = new Map(profiles.filter(Boolean).map((p) => [p!.uid, p]));
+  const byUid = new Map(profiles.map((p) => [p.uid, p]));
   return items.map((n) => ({ ...n, actor: n.actorUid ? byUid.get(n.actorUid) : undefined }));
 };
 

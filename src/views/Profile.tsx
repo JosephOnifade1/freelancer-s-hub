@@ -10,6 +10,7 @@ import { PostCard, PostData } from "@/components/PostCard";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/auth-context";
 import { getUserProfile, toggleFollow, updateUserAvatar, isVeteran } from "@/lib/users";
+import { saveOwnProfile, isProfileError } from "@/lib/profile-client";
 import { uploadImage } from "@/lib/uploads";
 import { fetchPosts } from "@/lib/posts";
 import { QueryErrorState } from "@/components/QueryErrorState";
@@ -128,11 +129,10 @@ export default function Profile() {
     if (!profileUid) return;
     setIsSavingBio(true);
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ bio: bioInput })
-        .eq("uid", profileUid);
-      if (error) throw error;
+      // Phase 2C: the bio lives in Neon. The server refuses to write anything but the
+      // caller's own row, so editing is still gated by `isOwnProfile` *and* by identity.
+      const result = await saveOwnProfile({ bio: bioInput });
+      if (isProfileError(result)) throw new Error("Could not save your bio.");
       queryClient.invalidateQueries({ queryKey: ['profile', profileUid] });
       setIsEditingBio(false);
       toast.success("Bio updated");
