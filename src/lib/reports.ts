@@ -1,5 +1,12 @@
 import { supabase } from "./supabase";
 import { fetchPublicProfiles, fetchModerationProfiles, isProfileError } from "./profile-client";
+import {
+  changeUserRole,
+  changeUserVerification,
+  fetchContentPreviews,
+  hydrateAuthors,
+  isContentError,
+} from "./content-client";
 
 /**
  * Content reports + the moderation queue.
@@ -273,38 +280,37 @@ export const fetchReportContentPreviews = async (
   const leadIds = [...new Set(leads.map((r) => r.entityId))];
   const profileIds = [...new Set(profiles.map((r) => r.entityId))];
 
-  // Posts
-  if (postIds.length > 0) {
-    const { data } = await supabase
-      .from("posts")
-      .select("id, title, body, isDeleted, authorUid, profiles!posts_authorUid_fkey(username, displayName)")
-      .in("id", postIds);
-    if (data) {
-      (data as PreviewRow[]).forEach((row) => {
+  // Posts and comments — Phase 2D reads Neon, in one batched staff-only request.
+  //
+  // The two embedded `profiles!` joins are gone: the preview payload carries
+  // `authorUid` and the names are hydrated from the public profile projection, so
+  // `role` cannot appear in a moderation preview. The batch is a single call because
+  // the report queue needs previews for a whole page at once.
+  if (postIds.length > 0 || commentIds.length > 0) {
+    const previewResult = await fetchContentPreviews(postIds, commentIds);
+    if (!isContentError(previewResult)) {
+      const authorUids = [
+        ...previewResult.data.posts.map((row) => row.authorUid),
+        ...previewResult.data.comments.map((row) => row.authorUid),
+      ];
+      const names = await hydrateAuthors(authorUids);
+
+      previewResult.data.posts.forEach((row) => {
         previews.set(row.id, {
           entityId: row.id,
           title: row.title,
           body: row.body,
-          authorName: row.profiles?.displayName || row.profiles?.username,
+          authorName: names.get(row.authorUid)?.name,
           authorUid: row.authorUid,
           isDeleted: row.isDeleted,
         });
       });
-    }
-  }
 
-  // Comments
-  if (commentIds.length > 0) {
-    const { data } = await supabase
-      .from("comments")
-      .select("id, body, isDeleted, authorUid, profiles!comments_authorUid_fkey(username, displayName)")
-      .in("id", commentIds);
-    if (data) {
-      (data as PreviewRow[]).forEach((row) => {
+      previewResult.data.comments.forEach((row) => {
         previews.set(row.id, {
           entityId: row.id,
           body: row.body,
-          authorName: row.profiles?.displayName || row.profiles?.username,
+          authorName: names.get(row.authorUid)?.name,
           authorUid: row.authorUid,
           isDeleted: row.isDeleted,
         });
@@ -391,20 +397,42 @@ export const fetchModerationUsers = async (limit = 50): Promise<ModerationUser[]
   return result.data.map((row) => ({ ...row, role: row.role as UserRole }));
 };
 
+/**
+ * Sets Verified Pro.
+ *
+ * Phase 2D §7: this used to call the Supabase RPC `set_user_verified_pro`, which was
+ * `SECURITY DEFINER` and checked `is_admin(auth.uid())`. It now goes to a server-only
+ * Neon mutation that performs the same check — the actor's own `role` is read from
+ * Neon, and the session supplies the actor, so neither can be spoofed from the body.
+ *
+ * Verification was never self-service and still is not.
+ */
 export const setUserVerifiedPro = async (targetUid: string, verified: boolean): Promise<void> => {
-  const { error } = await supabase.rpc("set_user_verified_pro", {
-    target_uid: targetUid,
-    verified,
-  });
+  const result = await changeUserVerification(targetUid, verified);
 
-  if (error) throw new Error(error.message);
+  if (isContentError(result)) {
+    if (result.error === "unauthenticated") throw new Error("Sign in to continue.");
+    if (result.error === "forbidden") throw new Error("Only admins can change Verified Pro status");
+    if (result.error === "not_found") throw new Error("User not found");
+    throw new Error("Could not update Verified Pro status. Please try again.");
+  }
 };
 
+/**
+ * Changes a user's global role.
+ *
+ * Phase 2D §7: replaces the Supabase RPC `set_user_role`. Admin only, and an admin
+ * still cannot demote themselves — that guard from the RPC is carried over because
+ * losing the last administrator is unrecoverable through the UI.
+ */
 export const setUserRole = async (targetUid: string, newRole: UserRole): Promise<void> => {
-  const { error } = await supabase.rpc("set_user_role", {
-    target_uid: targetUid,
-    new_role: newRole,
-  });
+  const result = await changeUserRole(targetUid, newRole as "admin" | "moderator" | "member");
 
-  if (error) throw new Error(error.message);
+  if (isContentError(result)) {
+    if (result.error === "unauthenticated") throw new Error("Sign in to continue.");
+    if (result.error === "forbidden") throw new Error("Only admins can change roles");
+    if (result.error === "not_found") throw new Error("User not found");
+    if (result.error === "conflict") throw new Error("Admins cannot demote themselves");
+    throw new Error("Could not change that role. Please try again.");
+  }
 };

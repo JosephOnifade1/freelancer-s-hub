@@ -298,7 +298,12 @@ describe("identity schema constraints (live database)", { skip: !configured }, (
         await client.query("insert into profiles (uid, username) values ($1,'alice')", [U1]);
         await client.query("insert into usernames (username, uid) values ('alice',$1)", [U1]);
         await client.query("delete from profiles where uid=$1", [U1]);
-        const remaining = await client.query("select count(*)::int as n from usernames");
+        // Scoped to this fixture's uid: the property under test is that *this* handle
+        // is released, and a global count would make the test depend on run order.
+        const remaining = await client.query(
+          "select count(*)::int as n from usernames where uid=$1",
+          [U1],
+        );
         expect(remaining.rows[0].n).toBe(0);
       } finally {
         await client.query("rollback");

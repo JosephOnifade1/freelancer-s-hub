@@ -9,7 +9,10 @@ import { fetchPostAttachments, getDocumentDownloadUrl, removePostAttachment, upl
 // mirror must deny the same reads/writes as the accompanying SQL migration.
 vi.mock("./supabase", async () => {
   const { MockSupabaseClient } = await import("./mockSupabase");
-  return { supabase: new MockSupabaseClient() };
+  // Phase 2D: content helpers delegate to the same mock through `content-demo.ts`
+  // when `isDemoMode` is true, so this suite keeps exercising the mock's RLS mirror
+  // rather than the HTTP client.
+  return { supabase: new MockSupabaseClient(), isDemoMode: true };
 });
 
 const client = supabase as unknown as MockSupabaseClient;

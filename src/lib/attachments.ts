@@ -1,4 +1,10 @@
 import { supabase } from "./supabase";
+import {
+  fetchContentAttachments,
+  isContentError,
+  registerAttachment,
+  removeAttachmentRecord,
+} from "./content-client";
 
 export interface PostAttachment {
   id: string;
@@ -45,12 +51,21 @@ export function validateDocument(file: File): { extension: string; mime: string 
   return { extension, mime };
 }
 
+/**
+ * Document metadata for a post.
+ *
+ * Phase 2D: metadata is a Neon read via `/api/content/attachments`, authorized
+ * against the post's visibility *and* its deleted state — a removed post's documents
+ * are no longer linked. The bytes stay in Supabase Storage; only the pointer moved.
+ */
 export async function fetchPostAttachments(postId: string): Promise<PostAttachment[]> {
-  const { data, error } = await supabase.from("post_attachments").select("*")
-    .eq("postId", postId).order("createdAt", { ascending: true });
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Could not load documents.");
-  return data as PostAttachment[];
+  const result = await fetchContentAttachments(postId);
+  if (isContentError(result)) {
+    // A post the viewer cannot see has no visible documents; that is not an error.
+    if (result.error === "not_found") return [];
+    throw new Error("Could not load documents.");
+  }
+  return result.data as PostAttachment[];
 }
 
 /**
@@ -87,16 +102,26 @@ export async function uploadPostDocuments(postId: string, files: File[]): Promis
       const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, file, { contentType: mime, upsert: false });
       if (uploadError) throw new Error(uploadError.message);
 
-      const { data, error } = await supabase.from("post_attachments").insert({
-        postId, uploaderUid: uid, storagePath: path,
-        fileName: file.name, fileSize: file.size, mimeType: mime,
-      }).select("*").single();
-      if (error || !data) {
+      // Phase 2D: the bytes went to Storage; the pointer and metadata go to Neon.
+      // The server re-derives the uploader from the session and rejects a path outside
+      // `<uid>/<postId>/`, so `uploaderUid` is not sent as a claim.
+      const registered = await registerAttachment({
+        postId,
+        storagePath: path,
+        fileName: file.name,
+        mimeType: mime,
+        fileSize: file.size,
+      });
+      if (isContentError(registered)) {
         // An upload without readable metadata must not appear attached.
         await supabase.storage.from(BUCKET).remove([path]);
-        throw new Error(error?.message || "Could not save document details.");
+        throw new Error(
+          registered.error === "conflict"
+            ? `A post can have at most ${MAX_DOCUMENTS_PER_POST} documents.`
+            : "Could not save document details.",
+        );
       }
-      uploaded.push(data as PostAttachment);
+      uploaded.push(registered.data as PostAttachment);
     } catch (error) {
       failed.push({ file, error: error instanceof Error ? error.message : "Upload failed" });
     }
@@ -120,10 +145,16 @@ export async function removePostAttachment(attachment: PostAttachment): Promise<
   if (sessionError) throw new Error(sessionError.message);
   const uid = session?.session?.user?.id;
   if (!uid || uid !== attachment.uploaderUid) throw new Error("Only the uploader can remove this document.");
-  const { data, error } = await supabase.from("post_attachments")
-    .delete().eq("id", attachment.id).eq("uploaderUid", uid).select("id");
-  if (error) throw new Error(error.message);
-  if (!data?.length) throw new Error("Document not found or not removable.");
+  // Metadata first (Neon, uploader-scoped server-side), then the object. Removing the
+  // record first means a failed cleanup cannot leave a broken download link.
+  const removed = await removeAttachmentRecord(attachment.id);
+  if (isContentError(removed)) {
+    throw new Error(
+      removed.error === "not_found"
+        ? "Document not found or not removable."
+        : "Could not remove this document. Please try again.",
+    );
+  }
   const { error: cleanupError } = await supabase.storage.from(BUCKET).remove([attachment.storagePath]);
   if (cleanupError) throw new Error("Document removed from the post, but file cleanup failed. Please contact support.");
 }
