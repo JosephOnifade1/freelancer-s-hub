@@ -26,6 +26,7 @@ import {
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { Breadcrumbs } from "./Breadcrumbs";
+import { ProfileProvisioningNotice } from "./ProfileProvisioningNotice";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -586,6 +587,8 @@ export function AppLayout({ children }: AppLayoutProps) {
         <main className="flex-1 overflow-y-auto bg-background relative flex flex-col">
           <div className="flex-1 min-w-0 p-2 sm:p-4 lg:p-6">
             {isDemoMode && <div role="note" className="mb-4 rounded-radius-md border border-warning/50 bg-warning/10 px-4 py-2 text-[11px] text-foreground">Demo mode · Content and uploads are stored in this browser only. Opportunities here are not real client jobs.</div>}
+            {/* Phase 2B.4: a provisioning failure is surfaced here, not as a logout. */}
+            <ProfileProvisioningNotice />
             <Breadcrumbs />
             {children}
           </div>
