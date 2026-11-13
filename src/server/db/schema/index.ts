@@ -12,9 +12,12 @@
  *                   post attachments, saved posts   (Phase 2D)
  *
  * Phase 2E: social — communities, community members, follows.
- * Still in Supabase: leads, lead applications, notifications, reports.
+ * Phase 2F: marketplace — leads, lead applications, private lead pipeline.
+ * Still in Supabase: notifications and reports.
  */
 export * from "./identity";
 export * from "./content";
 
 export * from "./social";
+
+export * from "./marketplace";

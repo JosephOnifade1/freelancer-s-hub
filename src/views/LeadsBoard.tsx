@@ -25,7 +25,7 @@ export default function LeadsBoard() {
   const [type, setType] = useState<(typeof TYPES)[number]>("All");
   const [sort, setSort] = useState<Sort>("newest");
   const { data: leads = [], isLoading, isError, refetch } = useQuery({
-    queryKey: ["leads"], queryFn: fetchLeads,
+    queryKey: ["leads"], queryFn: () => fetchLeads(),
   });
 
   const visible = useMemo(() => {

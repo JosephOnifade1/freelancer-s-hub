@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { marketplaceRequest } from "./marketplace-client";
 import type { Lead } from "./leads";
 
 export type PipelineStage = "new" | "conversation" | "proposal" | "negotiation" | "won";
@@ -24,38 +24,9 @@ export interface PipelineItem {
   updatedAt: string;
 }
 
-export async function fetchPipeline(uid: string): Promise<PipelineItem[]> {
-  const { data, error } = await supabase.from("lead_pipeline")
-    .select("*").eq("userUid", uid).order("updatedAt", { ascending: false });
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Could not load your pipeline.");
-  return data as PipelineItem[];
-}
-
-export async function addPipelineItem(uid: string, item: {
-  title: string;
-  clientName: string;
-  budget?: string;
-  leadId?: string | null;
-  source?: string;
-}): Promise<PipelineItem> {
-  const title = item.title.trim();
-  const clientName = item.clientName.trim();
-  if (!uid || !title || !clientName) throw new Error("Add a client and a project title.");
-  const { data, error } = await supabase.from("lead_pipeline")
-    .insert({
-      userUid: uid, leadId: item.leadId || null, title, clientName,
-      budget: item.budget?.trim() || "", source: item.source || "Manual",
-      stage: "new",
-    })
-    .select("*").single();
-  if (error) {
-    if (error.code === "23505") throw new Error("This opportunity is already in your pipeline.");
-    throw new Error(error.message);
-  }
-  if (!data) throw new Error("Could not save this pipeline item.");
-  return data as PipelineItem;
-}
+export const fetchPipeline = (_uid: string) => marketplaceRequest<PipelineItem[]>("pipeline");
+export const addPipelineItem = (_uid: string,item: { title:string;clientName:string;budget?:string;leadId?:string|null;source?:string }) =>
+  marketplaceRequest<PipelineItem>("pipeline",{},"POST",item);
 
 export function saveOpportunity(uid: string, lead: Lead) {
   return addPipelineItem(uid, {
@@ -67,17 +38,9 @@ export function saveOpportunity(uid: string, lead: Lead) {
   });
 }
 
-export async function changePipelineStage(uid: string, id: string, stage: PipelineStage): Promise<void> {
-  const { data, error } = await supabase.from("lead_pipeline")
-    .update({ stage, updatedAt: new Date().toISOString() })
-    .eq("id", id).eq("userUid", uid).select("id").maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("That item is no longer in your pipeline.");
+export async function changePipelineStage(_uid: string,id: string,stage: PipelineStage): Promise<void> {
+  await marketplaceRequest("pipeline",{ id },"PATCH",{ stage });
 }
-
-export async function removePipelineItem(uid: string, id: string): Promise<void> {
-  const { data, error } = await supabase.from("lead_pipeline")
-    .delete().eq("id", id).eq("userUid", uid).select("id").maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("That item is no longer in your pipeline.");
+export async function removePipelineItem(_uid: string,id: string): Promise<void> {
+  await marketplaceRequest("pipeline",{ id },"DELETE");
 }

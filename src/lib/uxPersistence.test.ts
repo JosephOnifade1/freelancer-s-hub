@@ -15,6 +15,44 @@ vi.mock("./supabase", async () => {
   return { supabase: new MockSupabaseClient(), isDemoMode: true };
 });
 
+// Phase 2F: marketplace helpers exercise a MOCKED API boundary here, not a
+// production fallback. Actual Neon query semantics run in marketplace-integration.
+vi.mock("./marketplace-client", () => ({
+  marketplaceRequest: async (op: string, params: Record<string,string> = {}, method = "GET", body: Record<string,unknown> = {}) => {
+    const { supabase: apiFixture } = await import("./supabase");
+    const session = JSON.parse(localStorage.getItem("mock_supabase_session") || "null");
+    const actor = session?.user?.id;
+    if (op === "leads" || op === "lead") {
+      let query = apiFixture.from("leads").select("*");
+      if (op === "lead") query = query.eq("id", params.id);
+      const { data, error } = await query;
+      if (error) throw new Error(error.message);
+      const leads = (data || []).map((row: Record<string,unknown>) => ({ ...row,
+        postedBy: { uid: row.postedByUid, name: "Unknown" }, postedAt: Date.now() }));
+      return op === "lead" ? leads[0] ?? null : leads;
+    }
+    if (!actor) throw new Error("Sign in to manage your pipeline.");
+    if (op !== "pipeline") throw new Error("Unsupported test operation");
+    if (method === "GET") {
+      const { data, error } = await apiFixture.from("lead_pipeline").select("*").eq("userUid", actor).order("updatedAt", { ascending: false });
+      if (error) throw new Error(error.message);
+      return data;
+    }
+    if (method === "POST") {
+      const { data, error } = await apiFixture.from("lead_pipeline").insert({ ...body,userUid:actor,stage:"new" }).select("*").single();
+      if (error) throw new Error(error.code === "23505" ? "This opportunity is already in your pipeline." : error.message);
+      return data;
+    }
+    const query = method === "PATCH"
+      ? apiFixture.from("lead_pipeline").update({ stage:body.stage,updatedAt:new Date().toISOString() })
+      : apiFixture.from("lead_pipeline").delete();
+    const { data,error } = await query.eq("id",params.id).eq("userUid",actor).select("id").maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error("That item is no longer in your pipeline.");
+    return true;
+  },
+}));
+
 const client = supabase as unknown as MockSupabaseClient;
 const author = "author";
 const viewer = "viewer";
@@ -58,12 +96,15 @@ describe("marketplace and account-private pipeline", () => {
 
     signInAs(viewer);
     expect(await fetchPipeline(viewer)).toEqual([]);
-    await expect(addPipelineItem(author, { clientName: "Forged", title: "Forged" })).rejects.toThrow(/owner/);
+    // Compatibility uid cannot impersonate the old account: server fixture owns identity.
+    const ownItem = await addPipelineItem(author, { clientName: "Forged", title: "Forged" });
+    expect(ownItem.userUid).toBe(viewer);
+    expect((await fetchPipeline(author)).every((row) => row.userUid === viewer)).toBe(true);
     await expect(changePipelineStage(author, item.id, "won")).rejects.toThrow(/no longer/);
     await expect(removePipelineItem(author, item.id)).rejects.toThrow(/no longer/);
 
     signOut();
-    expect(await fetchPipeline(author)).toEqual([]);
+    await expect(fetchPipeline(author)).rejects.toThrow(/Sign in/);
     signInAs(author);
     expect((await fetchPipeline(author))[0].stage).toBe("proposal");
     await removePipelineItem(author, item.id);

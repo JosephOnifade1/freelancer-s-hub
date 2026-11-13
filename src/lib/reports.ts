@@ -1,3 +1,4 @@
+import { fetchLeadsByIds, archiveLeadAsStaff } from "./leads";
 import { supabase } from "./supabase";
 import { fetchPublicProfiles, fetchModerationProfiles, isProfileError } from "./profile-client";
 import {
@@ -320,22 +321,11 @@ export const fetchReportContentPreviews = async (
 
   // Leads
   if (leadIds.length > 0) {
-    const { data } = await supabase
-      .from("leads")
-      .select("id, title, description, isDeleted, postedByUid, profiles!leads_postedByUid_fkey(username, displayName)")
-      .in("id", leadIds);
-    if (data) {
-      (data as PreviewRow[]).forEach((row) => {
-        previews.set(row.id, {
-          entityId: row.id,
-          title: row.title,
-          body: row.description,
-          authorName: row.profiles?.displayName || row.profiles?.username,
-          authorUid: row.postedByUid,
-          isDeleted: row.status === "closed", // treat closed leads as removed
-        });
-      });
-    }
+    const data = await fetchLeadsByIds(leadIds);
+    data.forEach((row) => {
+      previews.set(row.id, { entityId: row.id,title: row.title,body: row.description,
+        authorName: row.postedBy.name,authorUid: row.postedBy.uid,isDeleted: row.status === "closed" });
+    });
   }
 
   // Profiles — Phase 2C reads Neon. This is the reported *subject's* profile, so the
@@ -364,10 +354,23 @@ export const moderateReport = async (
   newStatus: ReportStatus,
   removeContent = false
 ): Promise<void> => {
+  // Only the lead-close side effect moved. Report persistence/RPC remains Supabase.
+  // Close first, then resolve: if the report write fails it remains open for retry.
+  let removeLegacyContent = removeContent;
+  if (removeContent) {
+    if (!["open", "resolved", "dismissed"].includes(newStatus)) throw new Error("Invalid report status.");
+    const { data: report, error: lookupError } = await supabase.from("reports")
+      .select("entityType, entityId").eq("id", reportId).single();
+    if (lookupError || !report) throw new Error("Could not load the report.");
+    if (report.entityType === "lead") {
+      await archiveLeadAsStaff(report.entityId);
+      removeLegacyContent = false;
+    }
+  }
   const { error } = await supabase.rpc("moderate_report", {
     report_id: reportId,
     new_status: newStatus,
-    remove_content: removeContent,
+    remove_content: removeLegacyContent,
   });
 
   if (error) throw new Error(error.message);

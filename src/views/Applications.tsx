@@ -56,6 +56,9 @@ const Applications = () => {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["receivedApplications"] });
       queryClient.invalidateQueries({ queryKey: ["myApplications"] });
+      queryClient.invalidateQueries({ queryKey: ["myApplication"] });
+      queryClient.invalidateQueries({ queryKey: ["lead"] });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
       toast.success(
         variables.status === "accepted"
           ? "Application accepted. The freelancer can see the update on the lead."
