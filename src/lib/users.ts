@@ -1,3 +1,4 @@
+import { fetchFollowing, setFollowing } from "./social-client";
 import { supabase } from "./supabase";
 import {
   fetchPublicProfile,
@@ -5,7 +6,6 @@ import {
   checkHandleAvailable,
   saveOwnAvatar,
   saveReputation,
-  adjustFollowingCounter,
   isProfileError,
 } from "./profile-client";
 import {
@@ -195,55 +195,8 @@ export const updateUserAvatar = async (uid: string, imageUrl: string) => {
   return imageUrl;
 };
 
-export const toggleFollow = async (currentUid: string, targetUid: string) => {
-  if (currentUid === targetUid) return;
-
-  const { data: existing, error: lookupError } = await supabase
-    .from("follows")
-    .select("followingId")
-    .eq("followerId", currentUid)
-    .eq("followingId", targetUid)
-    .maybeSingle();
-
-  if (lookupError) throw new Error(lookupError.message);
-
-  const isFollowing = !!existing;
-
-  // Counter RPCs keep profiles.followers/following in sync. Their errors are
-  // surfaced (thrown) rather than swallowed — a follow that "worked" in the UI
-  // while the counter write failed is how counts drifted out of sync before.
-  // Phase 2C: the caller's own `following` total now lives in Neon; the *target's*
-  // `followers` total still lives in Supabase, because that row belongs to a user whose
-  // profile this phase does migrate but whose counter is driven by the `follows` domain
-  // that has not. Until `follows` moves, one half of the pair is updated here and the
-  // other by the RPC.
-  //
-  // The asymmetry is temporary and deliberate: writing the target's counter to Neon
-  // would require reading `follows` from two places, which is the dual-read this
-  // migration exists to remove. Errors are still surfaced, not swallowed — a follow
-  // that "worked" in the UI while a counter failed is how counts drifted before.
-  if (isFollowing) {
-    const { error } = await supabase.from("follows").delete().eq("followerId", currentUid).eq("followingId", targetUid);
-    if (error) throw new Error(error.message);
-    const { error: e1 } = await supabase.rpc("decrement_followers", { target_uid: targetUid });
-    if (e1) throw new Error(e1.message);
-    const own = await adjustFollowingCounter(-1);
-    if (isProfileError(own) && own.error !== "not_provisioned") {
-      throw new Error("Could not update your following count.");
-    }
-  } else {
-    const { error } = await supabase.from("follows").insert({ followerId: currentUid, followingId: targetUid });
-    if (error) throw new Error(error.message);
-    const { error: e1 } = await supabase.rpc("increment_followers", { target_uid: targetUid });
-    if (e1) throw new Error(e1.message);
-    const own = await adjustFollowingCounter(1);
-    if (isProfileError(own) && own.error !== "not_provisioned") {
-      throw new Error("Could not update your following count.");
-    }
-  }
-
-  return !isFollowing;
-};
+export const toggleFollow = async (_currentUid: string, targetUid: string) =>
+  (await setFollowing(targetUid, "toggle")).following;
 
 /**
  * Recomputes a user's reputation from their content.
@@ -282,13 +235,5 @@ export const getTopContributors = async (count = 5): Promise<UserProfile[]> => {
 
 // Real list of user IDs this user follows, from the `follows` join table —
 // replaces the old (nonexistent) profile.followingList field.
-export const getFollowingIds = async (uid: string): Promise<string[]> => {
-  const { data, error } = await supabase
-    .from("follows")
-    .select("followingId")
-    .eq("followerId", uid);
-
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Could not load following list.");
-  return (data as { followingId: string }[]).map((row) => row.followingId);
-};
+export const getFollowingIds = async (uid: string): Promise<string[]> =>
+  (await fetchFollowing(uid)).map(profile => profile.uid);

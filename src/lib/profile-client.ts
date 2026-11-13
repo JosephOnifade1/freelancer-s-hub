@@ -360,35 +360,6 @@ export async function saveReputation(total: number): Promise<ProfileClientResult
   return { ok: true, data: true };
 }
 
-/**
- * Adjusts the signed-in user's own `following` counter.
- *
- * Phase 2C replaces `increment_following` / `decrement_following`, which took a
- * `target_uid`. There is no uid here: the server adjusts the session's own row.
- *
- * Only the caller's own half has moved. Following somebody increments *their*
- * `followers`, and the target's row plus the `follows` table are outside this phase,
- * so `followers` is still maintained by the existing RPC. That asymmetry is visible
- * in `toggleFollow` and recorded in the phase report.
- */
-export async function adjustFollowingCounter(delta: 1 | -1): Promise<ProfileClientResult<true>> {
-  let response: Response;
-  try {
-    response = await fetch("/api/profile/following-counter", {
-      method: "POST",
-      headers: { "content-type": "application/json", accept: "application/json" },
-      body: JSON.stringify({ delta }),
-      credentials: "same-origin",
-      cache: "no-store",
-    });
-  } catch {
-    return { ok: false, error: "error" };
-  }
-
-  if (!response.ok) return { ok: false, error: failureFromStatus(response.status) };
-  return { ok: true, data: true };
-}
-
 /** A profile row including `role` — the moderation/admin projection. */
 export interface ModerationUserRow {
   uid: string;

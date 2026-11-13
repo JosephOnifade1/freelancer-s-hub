@@ -5,25 +5,9 @@
  * predicate in SQL or refuses before returning rows, so "the API returned it" and
  * "the caller may see it" are the same statement.
  *
- * Why a port rather than a direct Supabase import
- * -----------------------------------------------
- * `can_view_post` needs three facts that are **not** in Neon:
- *
- *   - `community_members."communitySlug"`  (members visibility)
- *   - `communities."ownerId"`              (admins visibility)
- *   - the viewer's own `role`              (staff bypass)
- *
- * Community data stays in Supabase this phase (Phase 2D §8), so the query needs a
- * trusted server-side read of it. That read arrives as a *port* — a small
- * interface the caller supplies — for two reasons:
- *
- *  1. `content-queries.ts` stays pure and dependency-injected, like
- *     `profile-queries.ts`, so the authorization matrix can be tested against real
- *     PostgreSQL with a scripted membership source and no Supabase credentials.
- *  2. It makes the trust boundary explicit in a type. Nothing in this file accepts
- *     a membership list from a request body; the only implementation wired into the
- *     app (`index.ts`) builds it from `getServerSession()` plus a server-side
- *     Supabase client.
+ * All production authorization facts come from Neon in Phase 2E. Community IDs
+ * are stable across slug changes. Slug-only interfaces remain for the existing
+ * demo predicate and legacy DI tests, never for server-session viewer resolution.
  *
  * The rules are a **transcription of `public.can_view_post`**, not a simplification.
  * The original is `stable security definer` and returns null (falsy) when the post
@@ -34,6 +18,8 @@ import { sql } from "drizzle-orm";
 /** The viewer, already authenticated. `null` means anonymous. */
 export interface ContentViewer {
   uid: string | null;
+  memberIds?: string[];
+  ownedIds?: string[];
   /** `profiles.role` from Neon. Only `admin` / `moderator` affect visibility. */
   role: string;
   /** Community slugs the viewer belongs to (`community_members`). */
@@ -63,6 +49,7 @@ export interface PostAuthorizationFacts {
   authorUid: string;
   visibility: string;
   communitySlug: string | null;
+  communityId?: string | null;
 }
 
 /**
@@ -78,6 +65,12 @@ export function canViewPost(post: PostAuthorizationFacts, viewer: ContentViewer)
   if (!viewer.uid) return false;
   if (post.authorUid === viewer.uid) return true;
   if (isStaff(viewer)) return true;
+  if (viewer.memberIds !== undefined && viewer.ownedIds !== undefined) {
+    if (!post.communityId) return false;
+    if (post.visibility === "members") return viewer.memberIds.includes(post.communityId);
+    if (post.visibility === "admins") return viewer.ownedIds.includes(post.communityId);
+    return false;
+  }
   if (!post.communitySlug) return false;
   if (post.visibility === "members") {
     return viewer.memberSlugs.includes(post.communitySlug);
@@ -113,13 +106,22 @@ export function authorizationFilter(viewer: ContentViewer) {
     return sql`true`;
   }
 
+  // Production viewers carry stable IDs. Slug-only viewers remain for the legacy
+  // demo predicate/test adapters, never for server session resolution.
+  if (viewer.memberIds !== undefined && viewer.ownedIds !== undefined) {
+    for (const [visibility, ids] of [["members", viewer.memberIds], ["admins", viewer.ownedIds]] as const) {
+      if (ids.length) branches.push(sql`(p.visibility=${visibility} and p."communityId" in (${sql.join(ids.map(id => sql`${id}`), sql`, `)}))`);
+    }
+    return sql`(${sql.join(branches, sql` or `)})`;
+  }
+
   if (viewer.memberSlugs.length > 0) {
     const slugs = sql.join(
       viewer.memberSlugs.map((slug) => sql`${slug}`),
       sql`, `,
     );
     branches.push(
-      sql`(p.visibility = 'members' and p."communitySlug" in (${slugs}))`,
+      sql`(p.visibility = 'members' and (select slug from communities where id=p."communityId") in (${slugs}))`,
     );
   }
 
@@ -129,7 +131,7 @@ export function authorizationFilter(viewer: ContentViewer) {
       sql`, `,
     );
     branches.push(
-      sql`(p.visibility = 'admins' and p."communitySlug" in (${slugs}))`,
+      sql`(p.visibility = 'admins' and (select slug from communities where id=p."communityId") in (${slugs}))`,
     );
   }
 

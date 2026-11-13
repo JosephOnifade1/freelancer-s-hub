@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { socialRequest } from "./social-client";
 import {
   Code2,
   Palette,
@@ -92,153 +92,24 @@ const TOPIC_TO_CATEGORY: Record<string, CommunityData["category"]> = {
   workflow: "Other",
 };
 
-interface CommunityRow {
-  slug: string;
-  name: string;
-  description: string;
-  icon?: string;
-  category?: CommunityData["category"];
-  topics?: string[];
-  createdAt: string;
-  ownerId: string;
-  memberCount?: number;
-}
-
-interface CommunityMembershipRow {
-  communitySlug: string;
-}
-
-interface CommunityMemberRow {
-  profiles: CommunityMember | null;
-}
-
-const dbRowToCommunity = (row: CommunityRow): CommunityData => ({
-  id: row.slug,
-  name: row.name,
-  slug: row.slug,
-  description: row.description,
-  icon: row.icon,
-  category: row.category || "Other",
-  topics: row.topics || [],
-  createdAt: row.createdAt,
-  ownerId: row.ownerId,
-  memberCount: row.memberCount || 0,
-});
-
-export const fetchAllCommunities = async (): Promise<CommunityData[]> => {
-  const { data, error } = await supabase
-    .from("communities")
-    .select("*")
-    .order("memberCount", { ascending: false });
-
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Could not load spaces.");
-
-  return data.map(dbRowToCommunity);
-};
-
-export const fetchCommunity = async (slug: string): Promise<CommunityData | null> => {
-  const { data, error } = await supabase
-    .from("communities")
-    .select("*")
-    .eq("slug", slug)
-    .maybeSingle();
-
-  if (error) throw new Error(error.message);
-  if (!data) return null;
-  return dbRowToCommunity(data);
-};
-
-export const createCommunity = async (
-  slug: string,
-  data: { name: string; description: string; topics: string[]; ownerId: string }
-) => {
-  const category = TOPIC_TO_CATEGORY[data.topics[0]] || "Other";
-
-  const { error } = await supabase.from("communities").insert({
-    slug: slug.toLowerCase(),
-    name: data.name,
-    description: data.description,
-    category,
-    topics: data.topics,
-    ownerId: data.ownerId,
-    memberCount: 1,
+export const fetchAllCommunities = () => socialRequest<CommunityData[]>("communities");
+export const fetchCommunity = async (slug: string): Promise<CommunityData | null> =>
+  (await socialRequest<CommunityData[]>("communities", { slug }))[0] ?? null;
+export const createCommunity = async (slug: string, data: { name: string; description: string; topics: string[]; ownerId: string }) => {
+  const created = await socialRequest<CommunityData>("communities", {}, "POST", {
+    slug, name: data.name, description: data.description, topics: data.topics,
+    category: TOPIC_TO_CATEGORY[data.topics[0]] || "Other",
   });
-
-  if (error) throw new Error(error.message);
-
-  // Creator auto-joins their own community
-  await joinCommunity(data.ownerId, slug.toLowerCase());
-
-  return slug.toLowerCase();
+  return created.slug;
 };
-
-export const joinCommunity = async (uid: string, slug: string) => {
-  const { error } = await supabase
-    .from("community_members")
-    .insert({ userId: uid, communitySlug: slug });
-
-  if (error) throw new Error(error.message);
-
-  const { error: rpcError } = await supabase.rpc("increment_community_members", { community_slug: slug });
-  if (rpcError) throw new Error(rpcError.message);
-};
-
-export const leaveCommunity = async (uid: string, slug: string) => {
-  const { error } = await supabase
-    .from("community_members")
-    .delete()
-    .eq("userId", uid)
-    .eq("communitySlug", slug);
-
-  if (error) throw new Error(error.message);
-
-  await supabase.rpc("decrement_community_members", { community_slug: slug });
-};
-
-// Returns the list of community slugs the user has actually joined,
-// straight from the community_members join table.
-export const getUserCommunities = async (uid: string): Promise<string[]> => {
-  const { data, error } = await supabase
-    .from("community_members")
-    .select("communitySlug")
-    .eq("userId", uid);
-
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Could not load space memberships.");
-  return (data as CommunityMembershipRow[]).map((row) => row.communitySlug);
-};
-
-// ─── Real member list for a B-Space ────────────────────────────────────────
-// Straight from community_members joined to profiles. No placeholder people.
+export const updateCommunity = (slug: string, patch: Partial<Pick<CommunityData, "slug" | "name" | "description" | "topics" | "category" | "icon">>) =>
+  socialRequest<CommunityData>("communities", { slug }, "PATCH", patch);
+// uid retained for compatibility, never sent as the mutation actor.
+export const joinCommunity = (_uid: string, slug: string) => socialRequest("membership", { slug }, "POST", { joined: true });
+export const leaveCommunity = (_uid: string, slug: string) => socialRequest("membership", { slug }, "POST", { joined: false });
+export const getUserCommunities = (uid: string) => socialRequest<string[]>("memberships", { uid });
 export interface CommunityMember {
-  uid: string;
-  username?: string;
-  displayName?: string;
-  avatarUrl?: string;
-  reputation: number;
-  isVerifiedPro?: boolean;
+  uid: string; username?: string; displayName?: string; avatarUrl?: string;
+  reputation: number; isVerifiedPro?: boolean;
 }
-
-export const fetchCommunityMembers = async (slug: string): Promise<CommunityMember[]> => {
-  const { data, error } = await supabase
-    .from("community_members")
-    .select("userId, profiles(uid, username, displayName, avatarUrl, reputation, isVerifiedPro)")
-    .eq("communitySlug", slug);
-
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Could not load members.");
-
-  return (data as unknown as CommunityMemberRow[])
-    .map((row) => row.profiles)
-    .filter((profile): profile is CommunityMember => Boolean(profile))
-    .map((p) => ({
-      uid: p.uid,
-      username: p.username,
-      displayName: p.displayName,
-      avatarUrl: p.avatarUrl,
-      reputation: p.reputation || 0,
-      isVerifiedPro: !!p.isVerifiedPro,
-    }))
-    .sort((a: CommunityMember, b: CommunityMember) => b.reputation - a.reputation);
-};
+export const fetchCommunityMembers = (slug: string) => socialRequest<CommunityMember[]>("members", { slug });

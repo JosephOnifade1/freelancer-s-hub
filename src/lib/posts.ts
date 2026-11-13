@@ -1,3 +1,4 @@
+import { fetchSocialFacts } from "./social-client";
 import { supabase } from "./supabase";
 import { fetchOwnRole } from "./profile-client";
 import {
@@ -149,34 +150,9 @@ export async function getPostViewer(): Promise<PostViewer> {
   const uid = (data?.session?.user?.id as string | undefined) ?? null;
   if (!uid) return { uid: null, role: "member", memberSlugs: [], ownedSlugs: [] };
 
-  // Phase 2C: the viewer's role comes from Neon, because profiles moved. This is an
-  // authorization input, so it must be the server's read of the caller's own row.
-  //
-  // Membership and ownership stay in Supabase: `community_members` and `communities`
-  // have not migrated, and reading them from two databases would be the dual-read
-  // this migration exists to remove.
-  const [roleResult, memberRes, ownedRes] = await Promise.all([
-    fetchOwnRole(),
-    supabase.from("community_members").select("communitySlug").eq("userId", uid),
-    supabase.from("communities").select("slug").eq("ownerId", uid),
-  ]);
-
-  // Missing visibility context is not a "no posts" result. A failed membership lookup
-  // must not make private posts vanish silently, and a failed role lookup must not
-  // silently demote a moderator. Both throw.
-  if (!roleResult.ok) {
-    throw new Error("Could not load your permissions.");
-  }
-  for (const result of [memberRes, ownedRes]) {
-    if (result.error) throw new Error(result.error.message);
-  }
-
-  return {
-    uid,
-    role: roleResult.data,
-    memberSlugs: ((memberRes.data || []) as { communitySlug: string }[]).map((r) => r.communitySlug),
-    ownedSlugs: ((ownedRes.data || []) as { slug: string }[]).map((r) => r.slug),
-  };
+  const [roleResult, facts] = await Promise.all([fetchOwnRole(), fetchSocialFacts()]);
+  if (!roleResult.ok) throw new Error("Could not load your permissions.");
+  return { uid, role: roleResult.data, ...facts };
 }
 
 export function canViewPost(post: PostData, viewer: PostViewer): boolean {

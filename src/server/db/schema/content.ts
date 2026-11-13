@@ -27,13 +27,8 @@
  *     all `coalesce(x, 0)` in the vote RPC and the trigger. NOT NULL + default 0 is
  *     the same guarantee without the coalesce.
  *
- * No foreign key to `communities`
- * -------------------------------
- * `posts."communitySlug"` references a table that is still in Supabase. PostgreSQL
- * cannot enforce a reference across providers, so the column is plain `text` here
- * and the relationship is maintained by the server. This is the same trade-off
- * already documented for `profiles.uid`, and it is the reason `can_view_post` needs
- * the community lookup at request time rather than a join.
+ * Phase 2E: posts.communityId references communities.id with ON DELETE RESTRICT.
+ * Slugs are projected for routes, never stored as relational identity.
  *
  * `species` of deletion
  * ---------------------
@@ -59,6 +54,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { profiles } from "./identity";
+import { communities } from "./social";
 
 /** The four post kinds the UI creates (`CreatePost.tsx`). */
 export const POST_TYPES = ["discussion", "question", "resource", "poll"] as const;
@@ -132,8 +128,8 @@ export const posts = pgTable(
       .notNull()
       .references(() => profiles.uid, { onDelete: "cascade" }),
 
-    /** No FK: `communities` lives in Supabase. See the file header. */
-    communitySlug: text("communitySlug"),
+    /** Stable community identity; dependent posts prevent hard deletion. */
+    communityId: uuid("communityId").references(() => communities.id, { onDelete: "restrict" }),
 
     visibility: text("visibility").notNull().default("public"),
     allowComments: boolean("allowComments").notNull().default(true),
@@ -144,7 +140,7 @@ export const posts = pgTable(
   (table) => [
     index("posts_created_at_idx").on(table.createdAt),
     index("posts_author_idx").on(table.authorUid),
-    index("posts_community_idx").on(table.communitySlug),
+    index("posts_community_idx").on(table.communityId),
     /** Supports the visibility-restricted feed scan. */
     index("posts_visibility_created_idx").on(table.visibility, table.createdAt),
     check("posts_type_check", sql`${table.type} in ('discussion', 'question', 'resource', 'poll')`),
@@ -176,7 +172,7 @@ export const posts = pgTable(
      */
     check(
       "posts_restricted_requires_community",
-      sql`${table.visibility} = 'public' or ${table.communitySlug} is not null`,
+      sql`${table.visibility} = 'public' or ${table.communityId} is not null`,
     ),
   ],
 );

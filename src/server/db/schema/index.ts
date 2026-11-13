@@ -11,8 +11,10 @@
  *   - `content`   — posts, comments, votes, polls, poll options, poll votes,
  *                   post attachments, saved posts   (Phase 2D)
  *
- * Still in Supabase and deliberately absent: communities, community members,
- * follows, leads, lead applications, notifications, reports.
+ * Phase 2E: social — communities, community members, follows.
+ * Still in Supabase: leads, lead applications, notifications, reports.
  */
 export * from "./identity";
 export * from "./content";
+
+export * from "./social";

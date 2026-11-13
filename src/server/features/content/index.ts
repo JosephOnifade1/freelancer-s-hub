@@ -1,10 +1,10 @@
 import "server-only";
+import { communityFacts } from "../social/social-queries";
 
 import { sql } from "drizzle-orm";
 
 import { getDatabase, isDatabaseConfigured } from "@/server/db";
 import { getServerSession } from "@/lib/server-session";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 import {
   anonymousViewer,
@@ -57,13 +57,8 @@ import {
  *   1. `getServerSession()` verifies the Supabase cookie. The uid is never read from
  *      a request body or query string.
  *   2. The viewer's `role` comes from **Neon** (profiles migrated in 2C).
- *   3. Community membership and ownership come from **Supabase**, server-side, via
- *      `supabaseServer`. Communities have not migrated (Phase 2D §8), and
- *      `can_view_post` needs them. A client-supplied membership list is never used.
- *
- * Step 3 is the only cross-database read in the content path, it is deliberately
- * server-side, and it is the reason `authorization.ts` takes a viewer object rather
- * than reading ambient state: the trust boundary is one function, and this is it.
+ *   3. Membership and ownership come from Neon stable community IDs (Phase 2E).
+ *      Client-supplied community facts are never used. No cross-provider reads.
  */
 
 export type ContentFailureReason =
@@ -95,7 +90,7 @@ function configured(): boolean {
  *
  * Anonymous callers get a viewer with no uid — which `canViewPost` correctly reduces
  * to "public posts only". A signed-in caller gets their role from Neon and their
- * community facts from Supabase.
+ * community facts from Neon.
  *
  * Failure policy differs by fact, and the difference is deliberate:
  *
@@ -114,40 +109,12 @@ export async function resolveViewer(): Promise<ContentViewer> {
 
   const uid = session.uid;
 
-  const supabase = await createSupabaseServerClient();
-  // Communities have not migrated (Phase 2D §8). If the client is unavailable the
-  // viewer has no community facts, and saying so is safer than guessing: the caller
-  // (`resolveViewer`) throws rather than narrowing visibility silently.
-  if (!supabase) throw new Error("Could not load your permissions.");
-
-  const [roleResult, memberResult, ownedResult] = await Promise.all([
-    // Role from Neon. Read directly rather than through the profile service so this
-    // module does not depend on the profile feature's result vocabulary.
+  const [roleResult, facts] = await Promise.all([
     getDatabase().execute(sql`select role from profiles where uid = ${uid} limit 1`),
-    supabase.from("community_members").select("communitySlug").eq("userId", uid),
-    supabase.from("communities").select("slug").eq("ownerId", uid),
+    communityFacts(getDatabase(), uid),
   ]);
-
   const roleRows = (roleResult as { rows?: Record<string, unknown>[] })?.rows ?? [];
-  if (roleRows.length === 0) {
-    // No profile row yet: the account is mid-provisioning. Treat as a member with no
-    // communities rather than failing the whole read — a signed-out-equivalent
-    // viewer, which is exactly what a not-yet-provisioned user can see anyway.
-    return { uid, role: "member", memberSlugs: [], ownedSlugs: [] };
-  }
-
-  if (memberResult.error || ownedResult.error) {
-    throw new Error("Could not load your permissions.");
-  }
-
-  return {
-    uid,
-    role: String(roleRows[0].role ?? "member"),
-    memberSlugs: ((memberResult.data ?? []) as { communitySlug: string }[]).map(
-      (row) => row.communitySlug,
-    ),
-    ownedSlugs: ((ownedResult.data ?? []) as { slug: string }[]).map((row) => row.slug),
-  };
+  return { uid, role: String(roleRows[0]?.role ?? "member"), ...facts };
 }
 
 /** The viewer, or a failure result for endpoints that require a session. */

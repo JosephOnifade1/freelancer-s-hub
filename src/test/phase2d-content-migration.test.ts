@@ -208,8 +208,8 @@ describe("authorization shape", () => {
   it("membership is never accepted from the client", () => {
     // The viewer's community facts come from the server-only Supabase client.
     const source = read("src/server/features/content/index.ts");
-    expect(source).toContain("createSupabaseServerClient");
-    expect(source).toContain("community_members");
+    expect(source).toContain("communityFacts");
+    expect(source).not.toContain("createSupabaseServerClient");
     expect(source).not.toMatch(/body\.memberSlugs/);
   });
 });
@@ -276,11 +276,12 @@ describe("unmigrated domains stay in Supabase", () => {
     }
   });
 
-  it("the transitional follow counter is unchanged", () => {
+  it("the transitional follow counter is replaced by the atomic social boundary", () => {
     // Phase 2D §8: `toggleFollow` straddles the two databases until `follows` migrates.
     // It must not have been "cleaned up" as part of this phase.
     const source = code("src/lib/users.ts");
-    expect(source).toContain("increment_followers");
-    expect(source).toContain("decrement_followers");
+    expect(source).toContain("setFollowing");
+    expect(source).not.toContain("increment_followers");
+    expect(source).not.toContain("decrement_followers");
   });
 });
