@@ -26,6 +26,13 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // `server-only` is a React Server Components marker. Under Next it
+      // resolves to a no-op for server compilations and to a throwing module for
+      // client ones; outside Next (Vitest/Vite) it would resolve to the throwing
+      // module and break any import of `src/server/db`. Its own `empty.js` entry
+      // is the sanctioned no-op, so alias to that. The build-time boundary is
+      // still enforced by `next/headers` and by Next's own aliasing.
+      "server-only": path.resolve(__dirname, "./node_modules/server-only/empty.js"),
     },
   },
 });

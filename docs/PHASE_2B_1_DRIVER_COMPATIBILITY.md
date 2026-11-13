@@ -1,6 +1,7 @@
 # Phase 2B.1 — Neon + Drizzle Driver Compatibility Spike
 
-**Status:** complete. Infrastructure proof only — no application schema, no migrations, no data.
+**Status:** complete (2B.1), hardened in **2B.1.1** — see §2B.1.1 at the end.
+Infrastructure proof only — no application schema, no migrations, no data.
 **Branch:** `arena/5aa6a3c8-freelancer-s-hub` (base `540812b` on `migration/nextjs-app-router`)
 **Date:** 2026-11-12
 **Follows:** `docs/PHASE_2A_DATABASE_ARCHITECTURE.md`
@@ -21,7 +22,7 @@ run against a live database.
 | # | Driver | Package | Transactions | Verdict |
 |---|--------|---------|--------------|---------|
 | A | `drizzle-orm/neon-http` | `@neondatabase/serverless` | **None** | Rejected |
-| B | `drizzle-orm/neon-serverless` (WebSocket) | `@neondatabase/serverless` | Yes | Viable fallback |
+| B | `drizzle-orm/neon-serverless` (WebSocket) | `@neondatabase/serverless` (removed in 2B.1.1) | Yes | Viable fallback, not installed |
 | C | `drizzle-orm/node-postgres` | `pg` | Yes | **Selected** |
 | D | `drizzle-orm/postgres-js` | `postgres` | Yes | Rejected |
 
@@ -132,8 +133,8 @@ would have been invasive.
 5. **Documented fallback.** If the app later moves to edge runtimes, `neon-serverless`
    swaps in against the same Drizzle schema with no query changes.
 
-`@neondatabase/serverless` is installed but **not imported** by application code. It is
-present only so the fallback and the driver comparison remain reproducible.
+`@neondatabase/serverless` was installed in 2B.1 but **never imported** by application
+code, and was **removed in 2B.1.1** (see §2B.1.1.3).
 
 ---
 
@@ -145,7 +146,7 @@ Resolved and installed:
 |---|---|---|---|
 | `drizzle-orm` | 0.45.4 | `dependencies` | The ORM / query builder |
 | `pg` | 8.23.1 | `dependencies` | Postgres client for `node-postgres` driver |
-| `@neondatabase/serverless` | 1.2.0 | `dependencies` | Evaluated + documented fallback; not imported by app code |
+| ~~`@neondatabase/serverless`~~ | ~~1.2.0~~ | removed in 2B.1.1 | Was never imported; see §2B.1.1.3 |
 | `@types/pg` | 8.23.1 | `devDependencies` | Types for `pg` |
 
 `package.json` additions, beyond those four entries:
@@ -198,11 +199,9 @@ because **there is no schema yet**. In 2B.2 this should become
 - A `pool.on("error")` handler: `pg` emits idle-client errors asynchronously, and without a
   listener they would crash the process.
 
-TLS is derived, not hardcoded (`databaseSslConfig` in `src/server/db/env.ts`): loopback
-hosts connect without TLS, remote hosts use TLS with `rejectUnauthorized: false`
-(Neon's cert does not chain to a Node root CA in every environment), and an explicit
-`sslmode` in the URL wins — including `verify-full`, which sets
-`rejectUnauthorized: true`.
+> **Superseded in 2B.1.1.** This paragraph described `rejectUnauthorized: false` for
+> remote hosts, which was a security defect. Remote connections now always verify the
+> certificate chain and hostname. See **§2B.1.1.1** for the corrected policy.
 
 ---
 
@@ -260,9 +259,13 @@ nothing was created and nothing was dropped.
 
 **Mechanism:** `src/server/db/index.ts` imports `{ cookies } from "next/headers"`. That
 module only resolves in a server compilation target, so the driver — and `DATABASE_URL` —
-cannot be bundled for the browser. No new `server-only` package was added; it is not a
-dependency of this repo, and this mirrors the guard `src/lib/supabase-server.ts` already
-uses (documented there for the same reason).
+cannot be bundled for the browser. In 2B.1 no `server-only` package was added, because it
+was not a dependency of this repo; this mirrors the guard `src/lib/supabase-server.ts`
+already uses (documented there for the same reason).
+
+> **Changed in 2B.1.1:** the explicit `server-only` marker **was** added, because the
+> framework provides it and it produces a clearer failure. Both layers are now present.
+> See **§2B.1.1.2**.
 
 **Positive proof** — a Client Component importing the module breaks the build:
 
@@ -404,7 +407,9 @@ behaviour and error paths all executed against a real server.
   statements; whether PgBouncer transaction mode breaks anything in the eventual
   `cast_vote` port (it should not — the function is a single `SELECT`, but it must be
   confirmed); Neon cold-start wake-up latency after idle.
-- **TLS against Neon's certificate**, including the `rejectUnauthorized: false` choice.
+- **TLS against Neon's certificate.** *Partly addressed in 2B.1.1 via a local
+  private-CA harness (verification is proven to reject an untrusted chain); the actual
+  Neon endpoint is still unverified.*
 - **Cross-region latency** between Supabase Auth and the Neon compute.
 - Postgres **version parity**: the target Neon version was never observed. Postgres 18 was
   used locally; Neon commonly runs 16/17. Nothing in this phase's code is version-sensitive,
@@ -618,3 +623,359 @@ Two standing rules for 2B.2, carried from the audit and unchanged:
 
 **Not changed:** no application table, no migration, no query rewrite, no auth change, no UI
 change, no Supabase dependency removal, no `main` commit, no `tsconfig` change.
+
+---
+
+# Phase 2B.1.1 — Driver Security Hardening & Neon Verification
+
+**Status:** complete. Hardening pass only — still no application schema, no migrations,
+no data, no auth or UI change.
+**Scope:** three defects/loose ends from 2B.1, plus an attempt at real Neon verification.
+
+| Item | Outcome |
+|---|---|
+| Remote TLS verification | **Fixed** — `rejectUnauthorized: false` removed; verification is now unconditional for remote hosts and cannot be overridden from the URL |
+| `server-only` marker | **Adopted** — `import "server-only"` added; both Next bundlers enforce it; the `next/headers` guard is retained |
+| `@neondatabase/serverless` | **Removed** from `dependencies` (it survives only as an optional peer of `drizzle-orm`) |
+| Live Neon verification | **Not performed** — no Neon project or credentials, and no network egress to a database port from this environment. Harness prepared (§2B.1.1.4) |
+
+---
+
+## 2B.1.1.1 — TLS changes and verification
+
+### The defect
+
+Phase 2B.1 used:
+
+```ts
+return { rejectUnauthorized: false };   // remote hosts
+```
+
+The comment justified it as "Neon's cert does not chain to a Node root CA in every
+environment". **That claim was wrong**, and the setting was wrong with it. It encrypts the
+connection but never authenticates the server, so anything able to intercept traffic can
+impersonate the database and receive the credentials and the query stream.
+
+Two facts make the claim false:
+
+1. Neon serves certificates chaining to **ISRG Root X1/X2** (Let's Encrypt), which *is* in
+   Node's bundled trust store. Verified in this environment:
+   ```
+   root certs: 145
+   subject=C = US, O = Internet Security Research Group, CN = ISRG Root X1
+   subject=C = US, O = Internet Security Research Group, CN = ISRG Root X2
+   ```
+   So no CA file is needed for Neon. `DATABASE_SSL_CA` exists only for a provider using a
+   private CA.
+2. `pg`'s TLS implementation defaults to system-root behaviour unless you explicitly pass
+   `rejectUnauthorized: false`.
+
+### The second defect: connection-string SSL parameters override explicit config
+
+This is the part that makes a naive fix insufficient. In `pg` 8.23.1
+(`lib/connection-parameters.js`), a `connectionString` is parsed and then **merged over**
+the config object:
+
+```js
+config = Object.assign({}, config, parse(config.connectionString))
+```
+
+So any TLS parameter in the URL wins over the `ssl` option the application passes.
+Measured directly:
+
+| Explicit config | URL | Effective `ssl` |
+|---|---|---|
+| `{ rejectUnauthorized: true }` | *(none)* | `{ rejectUnauthorized: true }` ✅ |
+| `{ rejectUnauthorized: true }` | `?sslmode=require` | `{}` ⚠️ (URL wins) |
+| `{ rejectUnauthorized: true }` | `?sslmode=no-verify` | `{ rejectUnauthorized: false }` ❌ |
+| `{ rejectUnauthorized: true }` | `?ssl=no-verify` | `{ rejectUnauthorized: false }` ❌ |
+| `{ rejectUnauthorized: true }` | `?sslmode=disable` | `false` ❌ (TLS off entirely) |
+| `{ rejectUnauthorized: true }` | `?sslmode=verify-full&sslrootcert=…` | URL's `ca` wins |
+
+So "just set `rejectUnauthorized: true` in code" is **not** a fix — a `DATABASE_URL` copied
+from a dashboard, or trimmed by someone debugging, could silently disable verification.
+
+### The corrected policy
+
+`resolveConnectionSettings()` in `src/server/db/env.ts`:
+
+1. **Strips every TLS parameter** from the URL (`sslmode`, `ssl`, `sslrootcert`, `sslcert`,
+   `sslkey`, `sslcrl`, `sslpassword`, `uselibpqcompat`) before the URL reaches `pg`, so the
+   `Object.assign` merge has nothing to override with. Non-TLS parameters such as Neon's
+   `channel_binding` are preserved.
+2. **Decides TLS in code**, unconditionally:
+   - **loopback** (`localhost`, `127.0.0.1`, `::1`) → `ssl: false`. Local development only;
+     a local Postgres has no verifiable certificate.
+   - **everything else** → `{ rejectUnauthorized: true }`, optionally with the CA from
+     `DATABASE_SSL_CA`.
+
+There is no switch, environment variable or connection-string parameter that disables
+verification for a remote host. A missing CA file throws rather than falling back to no CA.
+
+Side benefit: because the policy lives in code, `pg`'s current alias behaviour
+(`require`/`prefer`/`verify-ca` → `verify-full`, with a SECURITY WARNING about `pg` 9
+changing them) is irrelevant. The parameters never reach the parser, so the deprecation
+cannot silently weaken this connection later.
+
+### Verification against a real TLS server
+
+A local PostgreSQL 18.6 instance was configured with TLS (`ssl = on`) using a certificate
+signed by a **private test CA that Node does not trust**. That is the only way to observe
+whether verification is actually happening — against a public CA the test passes either way.
+
+Server certificate: `CN=localhost`, SAN `DNS:localhost, IP:127.0.0.1, IP:127.0.0.2`, issued
+by a generated `CN=Borynx Spike Test CA`. Connections to `127.0.0.2` exercise the **remote**
+code path (TLS enforced) while staying on loopback.
+
+**Before/after, same server:**
+
+| Configuration | Result |
+|---|---|
+| `rejectUnauthorized: false` (Phase 2B.1 behaviour) | **CONNECTED** to a server with an untrusted certificate ❌ |
+| `rejectUnauthorized: true`, no CA (Phase 2B.1.1) | **REJECTED** — `unable to verify the first certificate` ✅ |
+| `rejectUnauthorized: true` + the correct CA | **CONNECTED**, `encrypted=true` ✅ |
+
+**Resolver behaviour, end to end:**
+
+| Scenario | Result |
+|---|---|
+| remote host, no CA | REJECTED ✅ |
+| remote host, CA supplied | CONNECTED, encrypted, verifying ✅ |
+| URL `?sslmode=no-verify` | REJECTED — parameter stripped ✅ |
+| URL `?ssl=no-verify` | REJECTED ✅ |
+| URL `?sslmode=disable` | REJECTED ✅ |
+| URL `?uselibpqcompat=true&sslmode=require` | REJECTED ✅ (and libpq compat never enabled) |
+| URL `?sslrootcert=/nonexistent/x.pem` | REJECTED — not parsed, so no `ENOENT` crash ✅ |
+| loopback `127.0.0.1` (with `?sslmode=require` forced into the URL) | CONNECTED, `encrypted=false` — local dev, TLS off by design ✅ |
+
+Through the running app, with a hostile URL
+(`DATABASE_URL=…?sslmode=no-verify&channel_binding=require`):
+
+```json
+"tls": { "isLocal": false, "verifying": true, "hostClass": "remote",
+         "downgradeAttempted": true, "customCa": true }
+```
+
+The downgrade attempt is reported honestly and ignored. Without the CA, the same app
+returns `{"status":"error","detail":"unable to verify the first certificate"}` — a refused
+connection, not a silent plaintext one.
+
+### Certificate configuration required by Neon
+
+**None.** Neon's chain to ISRG Root X1/X2 is already in Node's store, so
+`DATABASE_URL` needs no `sslrootcert` and no bundled `.pem`. `sslrootcert=system` must
+**not** be used: `pg` (unlike libpq) treats it as a filename and fails with `ENOENT`. If a
+future provider uses a private CA, set `DATABASE_SSL_CA` to a PEM path or inline PEM; this
+adds a trust anchor and never relaxes verification.
+
+---
+
+## 2B.1.1.2 — Server-only boundary changes
+
+**Adopted `import "server-only"`, kept `next/headers`.** Both are now present, deliberately.
+
+`server-only@0.0.1` is a two-line marker package: `index.js` throws, `empty.js` is empty,
+and its `exports` map selects `empty.js` under the `react-server` condition. Next.js also
+aliases the specifier (`next/dist/compiled/server-only`) for client compilations. It has
+**no type declarations**, which was checked before adopting it:
+
+- `tsc` with `moduleResolution: "bundler"` → no error (a side-effect import has no bindings
+  to type, so it is unaffected by missing `@types`).
+- Verified again with `noImplicitAny: true`, so adopting it does not plant a problem for a
+  future stricter config.
+
+Why keep `next/headers` as well: Next's own aliasing is not what `tsc` or Vite use. Outside
+a Next build, `server-only` resolves to the *throwing* module — so a Vite/rollback build
+would fail at **runtime** rather than at build time. The `next/headers` import additionally
+makes the module unresolvable for any browser target in any bundler. Two independent
+mechanisms, both cheap.
+
+**Boundary regression test — re-run for both bundlers.** Copying the intentional violation
+into the app tree:
+
+```
+$ cp tests/boundary/boundary-probe.page.tsx src/app/boundary-probe/page.tsx
+$ npx next build --turbopack
+> Build error occurred
+Error: You're importing a module that depends on "server-only". This API is only available
+       in Server Components in the App Router, but you are using it in the Pages Router.
+Error: You're importing a module that depends on "next/headers". …
+Error: 'server-only' cannot be imported from a Client Component module
+
+$ npx next build --webpack
+Failed to compile.
+  x You're importing a module that depends on "server-only". …
+  x You're importing a module that depends on "next/headers". …
+> Build failed because of webpack errors
+```
+
+Both engines fail, with `server-only` now providing the clearest message
+(`'server-only' cannot be imported from a Client Component module`). With the probe
+removed, both builds pass (§2B.1.1.5).
+
+**Test-runner note:** `server-only` also throws under Vitest, which is not a Next build.
+`vitest.db.config.ts` therefore aliases it to the package's own `empty.js`. This does not
+weaken the boundary — the boundary is a *build-time* property, still enforced — it just
+lets the database tests import the module. Recorded here because it looks like a
+workaround and is not one.
+
+---
+
+## 2B.1.1.3 — Dependency changes
+
+| Package | Before | After | Why |
+|---|---|---|---|
+| `server-only` | — | `^0.0.1` (`dependencies`) | Explicit server-only marker; framework-provided mechanism, requested in this phase |
+| `@neondatabase/serverless` | `^1.2.0` (`dependencies`) | **removed** | Never imported by application code; no current requirement |
+
+`pg` and `drizzle-orm` are unchanged.
+
+**One nuance worth recording.** After removal, `npm ls @neondatabase/serverless` still
+shows it:
+
+```
+`-- drizzle-orm@0.45.4
+  `-- @neondatabase/serverless@1.2.0
+```
+
+It is an **optional peer dependency** of `drizzle-orm`
+(`peerDependenciesMeta: { "@neondatabase/serverless": { "optional": true } }`), so npm
+installs it as an auto-installed peer. It is no longer a direct dependency, nothing in this
+repository imports it, and it is not in the app's bundle (verified: 0 matches for
+`neondatabase` in `.next/static` and `dist`). Removing it outright would mean fighting the
+package manager; the correct fix is that Borynx does not depend on it.
+
+`package-lock.json` was regenerated with a clean `npm ci` after removal.
+
+---
+
+## 2B.1.1.4 — Actual Neon tests: NOT performed
+
+**Neon compatibility is not verified. This section must not be read as evidence that it is.**
+
+What blocked it:
+
+- **No Neon project or credentials.** Creating a Neon project or account was not authorized
+  in this phase, and the available connected app is Supabase, not Neon.
+- **No direct database egress from this environment.** Outbound access is restricted to an
+  allowlist of web hosts (`github.com`, `api.github.com`, package registries). A Neon
+  Postgres endpoint would not be reachable even with credentials.
+
+The only Postgres endpoints contacted were `127.0.0.1` / `127.0.0.2` — two local
+PostgreSQL 18.6 instances started for this purpose.
+
+### What remains unverified for Neon, specifically
+
+| Item | Status |
+|---|---|
+| Direct (non-pooled) connection | **Not verified against Neon** |
+| Pooled `-pooler` connection | **Not verified against Neon** |
+| TLS certificate verification to Neon | **Not verified against Neon** — the *policy* is proven locally (§2B.1.1.1), but Neon's actual chain, SNI and handshake are untested |
+| Parameterized queries | Verified locally; driver-independent, so low risk |
+| Interactive transactions | Verified locally; driver-independent |
+| Transaction rollback | Verified locally |
+| `pg_try_advisory_xact_lock` | Verified locally |
+| Advisory-lock release at transaction end | Verified locally |
+| Drizzle 0.45.4 + `pg` 8.23.1 compatibility | Verified locally |
+| PgBouncer transaction mode vs. prepared statements | **Not verified** — needs a real pooled endpoint |
+| Neon cold-start wake-up latency | **Not verified** |
+
+### Harness left ready
+
+When a Neon development project exists, three commands cover the gap — the test files need
+no changes:
+
+```bash
+# 1. Full driver + transaction + advisory-lock proof, direct endpoint
+DATABASE_URL="postgres://…@ep-xxx.region.aws.neon.tech/borynx?sslmode=verify-full" \
+  npm run test:db
+
+# 2. Same, through the pooler
+DATABASE_URL="postgres://…@ep-xxx-pooler.region.aws.neon.tech/borynx?sslmode=verify-full" \
+  npm run test:db
+
+# 3. Confirm the app reports verifying TLS for the real endpoint
+curl -s http://localhost:3000/api/db-probe | jq .tls
+# expect: { "isLocal": false, "verifying": true, "hostClass": "remote", ... }
+```
+
+For step 3 the expected result is `verifying: true` with **no** `DATABASE_SSL_CA` set,
+because Neon's chain is publicly trusted. If it reports `verifying: false`, stop — that is
+the defect this phase fixed, reappearing.
+
+The TLS test suite (`tests/db/tls-verification.test.ts`) is pointed at a private-CA server
+by design and is not the right instrument for Neon; the probe route's `tls` block is.
+
+---
+
+## 2B.1.1.5 — Regression results
+
+All commands run in this session, after the changes above.
+
+| Check | Command | Result |
+|---|---|---|
+| Canonical TypeScript | `npx tsc --noEmit -p tsconfig.json` | **pass**, 0 errors |
+| Legacy TypeScript | `npx tsc --noEmit -p tsconfig.legacy.json` | **pass**, 0 errors |
+| ESLint | `npx eslint .` | **pass**, 0 errors, 6 pre-existing warnings |
+| Default Vitest | `npx vitest run` | **pass**, 23 files / **251 tests** |
+| DB compatibility | `npm run test:db` (local PG) | **pass**, **13/13** |
+| DB compatibility, unconfigured | without `DATABASE_URL` | **pass**, env assertions only, connection tests skipped |
+| TLS verification (live) | `npm run test:db:tls` (private-CA server) | **pass**, **3/3** |
+| Boundary — Turbopack | probe in `src/app/` | **fails as designed** (`server-only` + `next/headers`) |
+| Boundary — webpack | probe in `src/app/` | **fails as designed** (both errors) |
+| Next build (Turbopack) | `npx next build --turbopack` | **pass**, 35/35 pages, `ƒ /api/db-probe` |
+| Next build (webpack) | `npx next build --webpack` | **pass**, 35/35 pages |
+| Vite rollback build | `npx vite build` | **pass** (8.99 s) |
+| Client bundle scan | `.next/static` + `dist` | **0 matches** for all 8 markers |
+
+Client bundle markers scanned — `.next/static` (8/8 zero) and `dist` (5/5 zero):
+`DATABASE_URL`, `DATABASE_SSL_CA`, `server-only`, `pg-pool`, `drizzle-orm`,
+`postgres://`, `borynx-next`, `rejectUnauthorized`.
+
+The database test count rose from 8 to 13 because the TLS policy tests replaced the single
+old `databaseSslConfig` test: loopback-vs-remote, parameter stripping (8 hostile URLs),
+`channel_binding` preservation, credential/encoding preservation, CA handling, and
+`verify-full` classification.
+
+No application tables were created: after every run, the server reported
+**0 non-system tables**. Nothing was persisted, and no data was migrated.
+
+---
+
+## 2B.1.1.6 — Remaining limitations
+
+| # | Limitation | Note |
+|---|---|---|
+| H1 | **Neon itself is still unverified** | §2B.1.1.4. The single largest open item; needs a project and network access. |
+| H2 | Pooler/PgBouncer vs. Drizzle prepared statements | Untestable without a pooled Neon endpoint. |
+| H3 | TLS proof is against a private-CA server, not Neon | Deliberate: a public CA cannot distinguish "verifying" from "not verifying". The *policy* is proven; Neon's chain is not. |
+| H4 | `DATABASE_SSL_CA` reads the file synchronously at pool creation | Fine for one read at startup; do not call `resolveConnectionSettings` per query. |
+| H5 | Loopback is always plaintext | Intentional. A remote `DATABASE_URL` that happens to resolve to `127.0.0.1` would be treated as local — acceptable, and only reachable by a local process. |
+| H6 | `server-only` needs a test-runner alias | `vitest.db.config.ts` aliases it to `empty.js`; the build-time boundary is unaffected. |
+| H7 | `@neondatabase/serverless` still present as an optional peer | Cannot be removed without fighting npm; unused by app code and absent from bundles. |
+| H8 | Probe route remains in the app tree | Development-only and 404 in production, but still a DB-touching route; retire it once 2B.2 has real queries. |
+
+Items S1/S2 from §15 are unchanged in substance and are not resolved by this phase — H1/H2
+are the same gaps, restated with the exact verification procedure attached.
+
+---
+
+## 2B.1.1.7 — Files changed in this phase
+
+| File | Change |
+|---|---|
+| `src/server/db/env.ts` | **Rewritten TLS policy.** `databaseSslConfig` (which returned `rejectUnauthorized: false`) replaced by `resolveConnectionSettings` + `describeTlsPolicy`: strips all TLS parameters from the URL, always verifies remote hosts, optional `DATABASE_SSL_CA`, loopback-only plaintext. |
+| `src/server/db/index.ts` | Adds `import "server-only"`; pool now built from `resolveConnectionSettings()` so the URL cannot override TLS. Boundary docs updated to describe both guards. |
+| `src/app/api/db-probe/route.ts` | Reports a `tls` block (`isLocal`, `verifying`, `hostClass`, `downgradeAttempted`, `customCa`) — no credential included. |
+| `tests/db/driver-compatibility.test.ts` | Old `databaseSslConfig` test replaced by 6 TLS-policy tests (8→13 tests total). |
+| `tests/db/tls-verification.test.ts` | **New.** Live proof against a private-CA TLS server: refused when untrusted, accepted when trusted, immune to `sslmode` downgrade attempts. |
+| `vitest.db.config.ts` | Aliases `server-only` to its `empty.js` for non-Next test runs. |
+| `package.json` | Adds `server-only`; removes `@neondatabase/serverless`; adds `test:db:tls`. |
+| `package-lock.json` | Regenerated (`npm ci` from clean). |
+| `docs/PHASE_2B_1_DRIVER_COMPATIBILITY.md` | This section, plus pointers from the superseded 2B.1 text. |
+
+`tests/boundary/boundary-probe.page.tsx` is unchanged — it is reuse of the existing
+regression fixture, re-run against both bundlers.
+
+**Not changed:** no application table, no Drizzle schema, no `drizzle-kit`, no migration, no
+seed user, no data migration, no Supabase query, no authentication code, no UI, no `main`.
