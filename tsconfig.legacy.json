@@ -5,6 +5,23 @@
   "//3": "code moved to `next/navigation`: it maps next/* to the legacy shims that",
   "//4": "vite.config.ts also aliases. Run with `npm run typecheck:legacy`.",
   "extends": "./tsconfig.json",
+  "//5": "Server-only modules are excluded: this config remaps `next/navigation` to the",
+  "//6": "React Router shims for the Vite snapshot, which have no server APIs",
+  "//7": "(`redirect`, `cookies`). `src/app/**` is Next-only — the Vite entry is",
+  "//8": "src/main.tsx and nothing under src/app is reachable from it. The canonical",
+  "//9": "`tsconfig.json` typechecks all of it.",
+  "exclude": [
+    "node_modules",
+    "src/app",
+    "src/test/phase1.2-server-session.test.tsx",
+    "src/lib/server-session.ts",
+    "src/lib/supabase-server.ts",
+    "src/proxy.ts"
+  ],
+  "//10": "`.next/types` is omitted from `include`: Next generates a route validator",
+  "//11": "there that imports every src/app page, which would drag server-only code back",
+  "//12": "into this snapshot typecheck. The Vite build never reads those types.",
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
   "compilerOptions": {
     "paths": {
       "@/legacy-next/*": ["./src/legacy-next/*"],
