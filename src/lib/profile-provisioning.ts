@@ -5,9 +5,11 @@
  * because the server ignores request bodies on that route entirely and reads the
  * identity from the verified Supabase session cookie.
  *
- * Kept deliberately thin: no retries, no queueing, no fallback that writes to
- * Supabase on its own. A second mechanism competing with the server call is the
- * exact thing this phase is removing.
+ * Kept deliberately thin: no retries and no queueing — those belong to the
+ * caller (`src/hooks/useAuth.tsx`, policy in `src/lib/provisioning-state.ts`) so
+ * that one identity, not one module, owns the attempt budget. No fallback writes
+ * to Supabase on its own either: a second mechanism competing with the server
+ * call is the exact thing Phase 2B.3 removed.
  */
 
 /** Outcomes the server can report, plus the two transport-level ones. */
@@ -17,13 +19,24 @@ export type ProvisionOutcome =
   | { status: "unavailable" }
   | { status: "error" };
 
+/** Options for the provisioning call. */
+export interface ProvisionOptions {
+  /**
+   * Aborts the request. Used so a superseded attempt (a newer auth event, or
+   * logout) cannot land its result and overwrite the current state.
+   */
+  signal?: AbortSignal;
+}
+
 /**
  * Ensures the signed-in user has a profile row in Neon.
  *
  * Resolves rather than throws for every expected failure so callers can decide
  * what the UI should do; only a programming error can escape.
  */
-export async function provisionProfileOnServer(): Promise<ProvisionOutcome> {
+export async function provisionProfileOnServer(
+  options: ProvisionOptions = {},
+): Promise<ProvisionOutcome> {
   let response: Response;
   try {
     response = await fetch("/api/profile/provision", {
@@ -32,9 +45,12 @@ export async function provisionProfileOnServer(): Promise<ProvisionOutcome> {
       headers: { accept: "application/json" },
       credentials: "same-origin",
       cache: "no-store",
+      signal: options.signal,
     });
   } catch {
-    // Network failure, offline, or an aborted request.
+    // Network failure, offline, or an aborted request. An abort is reported the
+    // same way as a transient failure: the caller decides whether the result is
+    // still relevant, because it knows whether it superseded the attempt.
     return { status: "error" };
   }
 
