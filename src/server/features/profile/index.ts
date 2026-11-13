@@ -12,7 +12,6 @@ import {
   searchProfiles,
   setOwnAvatar,
   setReputation,
-  adjustProfileCounter,
   updateOwnProfile,
   findModerationProfiles,
   type EditableProfileFields,
@@ -227,19 +226,9 @@ export async function setCurrentReputation(total: number): Promise<SimpleMutatio
   return { ok: true, outcome: await setReputation(getDatabase(), identity.uid, total) };
 }
 
-/**
- * Adjusts a follower/following counter **for the caller**.
- *
- * The old RPCs took a `target_uid` and could therefore adjust anyone's counters. That
- * was safe only because RLS guarded the call. Here the uid is the session's, and the
- * counter being adjusted is always the caller's own: following somebody increments
- * *their* followers in Supabase's model, so that half stays with the `follows` table
- * until follows migrate. Only the caller's own `following` total is written here.
- */
-export async function adjustCurrentFollowing(delta: 1 | -1): Promise<SimpleMutationResult> {
-  const identity = await requireUid();
-  if (identity.ok === false) return identity;
-  return { ok: true, outcome: await adjustProfileCounter(getDatabase(), identity.uid, "following", delta) };
+/** @deprecated Phase 2E: independently changing counters is no longer supported. */
+export async function adjustCurrentFollowing(_delta: 1 | -1): Promise<SimpleMutationResult> {
+  return { ok: false, reason: "invalid_identity" };
 }
 
 /**

@@ -85,7 +85,7 @@ afterAll(async () => {
 async function cleanup() {
   await pool.query(
     `truncate table posts, comments, votes, polls, poll_options, poll_votes,
-       post_attachments, saved_posts restart identity cascade`,
+       post_attachments, saved_posts, community_members, follows, communities restart identity cascade`,
   );
   await pool.query(`delete from usernames where uid = any($1)`, [ALL_UIDS]);
   await pool.query(`delete from profiles where uid = any($1)`, [ALL_UIDS]);
@@ -110,6 +110,7 @@ beforeEach(async () => {
     );
     await pool.query(`insert into usernames (username, uid) values ($1, $2)`, [username, uid]);
   }
+  await pool.query(`insert into communities (slug,name,description) values ('writers','Writers','Test community')`);
 });
 
 /** Only seeds the profiles; used by the pure-predicate tests. */
@@ -999,7 +1000,7 @@ describe.skipIf(!ready)("schema invariants", () => {
   it("rejects a restricted post with no community", async () => {
     await expect(
       pool.query(
-        `insert into posts (title, body, "authorUid", visibility, "communitySlug") values ('t', 'b', $1, 'members', null)`,
+        `insert into posts (title, body, "authorUid", visibility, "communityId") values ('t', 'b', $1, 'members', null)`,
         [AUTHOR],
       ),
     ).rejects.toThrow(/posts_restricted_requires_community/);

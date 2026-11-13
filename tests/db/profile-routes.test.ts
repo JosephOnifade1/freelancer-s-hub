@@ -360,20 +360,9 @@ describe("POST /api/profile/reputation", () => {
 });
 
 describe("POST /api/profile/following-counter", () => {
-  it("accepts +1 and -1", async () => {
-    adjustCurrentFollowing.mockResolvedValue({ ok: true, outcome: { status: "updated" } });
+  it("cannot mutate counters independently of a follow relationship", async () => {
     const { POST } = await import("@/app/api/profile/following-counter/route");
-
-    expect((await POST(post("http://localhost/x", { delta: 1 }))).status).toBe(200);
-    expect((await POST(post("http://localhost/x", { delta: -1 }))).status).toBe(200);
-  });
-
-  it("rejects any other delta", async () => {
-    const { POST } = await import("@/app/api/profile/following-counter/route");
-
-    for (const delta of [0, 2, -2, "1", null]) {
-      expect((await POST(post("http://localhost/x", { delta }))).status).toBe(400);
-    }
+    expect((await POST()).status).toBe(410);
     expect(adjustCurrentFollowing).not.toHaveBeenCalled();
   });
 });

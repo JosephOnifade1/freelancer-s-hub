@@ -99,7 +99,7 @@ const POST_COLUMNS = sql`
   p.id, p.title, p.body, p.category, p.tags, p.type,
   p.score, p.ups, p.downs, p.views, p."commentCount",
   p."isDeleted", p."isEdited", p."createdAt",
-  p."communitySlug", p."authorUid", p.visibility,
+  (select slug from communities where id=p."communityId") as "communitySlug", p."communityId", p."authorUid", p.visibility,
   p."allowComments", p."isPinned", p."externalLink"
 `;
 
@@ -115,7 +115,7 @@ const RETURNING_POST_COLUMNS = sql`
   id, title, body, category, tags, type,
   score, ups, downs, views, "commentCount",
   "isDeleted", "isEdited", "createdAt",
-  "communitySlug", "authorUid", visibility,
+  (select slug from communities where id=posts."communityId") as "communitySlug", "communityId", "authorUid", visibility,
   "allowComments", "isPinned", "externalLink"
 `;
 
@@ -150,6 +150,7 @@ export interface PostRecord {
   isEdited: boolean;
   createdAt: string;
   communitySlug: string | null;
+  communityId: string | null;
   authorUid: string;
   visibility: string;
   allowComments: boolean;
@@ -174,6 +175,7 @@ function toPostRecord(row: Record<string, unknown>): PostRecord {
     isEdited: Boolean(row.isEdited),
     createdAt: iso(row.createdAt) ?? new Date(0).toISOString(),
     communitySlug: (row.communitySlug as string | null) ?? null,
+    communityId: (row.communityId as string | null) ?? null,
     authorUid: String(row.authorUid ?? ""),
     visibility: String(row.visibility ?? "public"),
     allowComments: row.allowComments === undefined ? true : Boolean(row.allowComments),
@@ -249,7 +251,7 @@ export async function findPosts(
 
   const conditions = [sql`p."isDeleted" is not true`, authorizationFilter(viewer)];
 
-  if (options.communitySlug) conditions.push(sql`p."communitySlug" = ${options.communitySlug}`);
+  if (options.communitySlug) conditions.push(sql`p."communityId" = (select id from communities where slug=${options.communitySlug})`);
   if (options.authorUid) conditions.push(sql`p."authorUid" = ${options.authorUid}`);
   if (options.type) conditions.push(sql`p.type = ${options.type}`);
   if (options.tag) conditions.push(sql`${options.tag} = any(p.tags)`);
@@ -313,6 +315,7 @@ function factsOf(post: PostRecord): PostAuthorizationFacts {
     authorUid: post.authorUid,
     visibility: post.visibility,
     communitySlug: post.communitySlug,
+    communityId: post.communityId,
   };
 }
 
@@ -523,15 +526,18 @@ export async function createPost(
 
   try {
     const created = await db.transaction(async (tx) => {
+      const community = communitySlug ? rowsOf<Record<string, unknown>>(await tx.execute(sql`select id from communities where slug=${communitySlug} for key share`))[0] : null;
+      if (communitySlug && !community) throw new Error("Community not found");
+      const communityId = community?.id ?? null;
       const postRows = rowsOf<Record<string, unknown>>(
         await tx.execute(sql`
           insert into posts (
-            title, body, category, tags, type, "authorUid", "communitySlug",
+            title, body, category, tags, type, "authorUid", "communityId",
             visibility, "allowComments", "externalLink"
           ) values (
             ${title}, ${body}, ${(input.category ?? null) as string | null},
             ${textArray(tags)},
-            ${type}, ${authorUid}, ${communitySlug},
+            ${type}, ${authorUid}, ${communityId},
             ${visibility}, ${input.allowComments ?? true},
             ${(input.externalLink ?? null) as string | null}
           )
@@ -701,7 +707,7 @@ export async function createComment(
       // after the lock so a visibility change cannot land between check and insert.
       const factsRows = rowsOf<Record<string, unknown>>(
         await tx.execute(sql`
-          select "authorUid", visibility, "communitySlug" from posts where id = ${postId}
+          select "authorUid", visibility, "communityId", (select slug from communities where id=posts."communityId") as "communitySlug" from posts where id = ${postId}
         `),
       );
       const facts = factsRows[0];
@@ -712,6 +718,7 @@ export async function createComment(
             authorUid: String(facts.authorUid),
             visibility: String(facts.visibility),
             communitySlug: (facts.communitySlug as string | null) ?? null,
+            communityId: (facts.communityId as string | null) ?? null,
           },
           viewer,
         )
@@ -914,7 +921,7 @@ export async function castVote(
       // `cast_vote` is SECURITY DEFINER, so it checked visibility itself.
       const factsRows = rowsOf<Record<string, unknown>>(
         await tx.execute(sql`
-          select "authorUid", visibility, "communitySlug" from posts where id = ${postId}
+          select "authorUid", visibility, "communityId", (select slug from communities where id=posts."communityId") as "communitySlug" from posts where id = ${postId}
         `),
       );
       const facts = factsRows[0];
@@ -925,6 +932,7 @@ export async function castVote(
             authorUid: String(facts.authorUid),
             visibility: String(facts.visibility),
             communitySlug: (facts.communitySlug as string | null) ?? null,
+            communityId: (facts.communityId as string | null) ?? null,
           },
           viewer,
         )

@@ -1,3 +1,4 @@
+import { fetchFollowing } from "@/lib/social-client";
 import { useState, useRef, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { usePathname } from "next/navigation";
@@ -19,7 +20,6 @@ import { fetchUserBadges } from "@/lib/badges";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Award, Clock } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 
 type Tab = "Threads" | "Resources" | "B-Spaces" | "Bookmarks";
@@ -84,14 +84,7 @@ export default function Profile() {
     queryKey: ['isFollowing', currentUser?.uid, profileUid],
     queryFn: async () => {
       if (!currentUser?.uid || !profileUid) return null;
-      const { data, error } = await supabase
-        .from("follows")
-        .select("followingId")
-        .eq("followerId", currentUser.uid)
-        .eq("followingId", profileUid)
-        .maybeSingle();
-      if (error) throw new Error(error.message);
-      return data;
+      return (await fetchFollowing(currentUser.uid)).find(p => p.uid === profileUid) ?? null;
     },
     enabled: !!currentUser?.uid && !!profileUid && currentUser?.uid !== profileUid,
   });
@@ -104,6 +97,7 @@ export default function Profile() {
     },
     onSuccess: (nowFollowing) => {
       queryClient.invalidateQueries({ queryKey: ['profile', profileUid] });
+      queryClient.invalidateQueries({ queryKey: ['profile', currentUser?.uid] });
       queryClient.invalidateQueries({ queryKey: ['isFollowing', currentUser?.uid, profileUid] });
       toast.success(nowFollowing ? `Followed @${profile?.username}` : `Unfollowed @${profile?.username}`);
     },

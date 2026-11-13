@@ -1,7 +1,7 @@
 /**
  * Content server services — unit tests (Phase 2D).
  *
- * **Mocked.** The session, the database and the Supabase community client are stubs,
+ * **Mocked.** The session, the database and the Neon community-facts port are stubs,
  * so this file proves **authorization policy**: that the viewer's identity and role
  * come from the server, that a failed permission lookup refuses rather than narrowing,
  * and that the moderation previews are staff-gated.
@@ -17,48 +17,28 @@ const isDatabaseConfigured = vi.fn();
 const getDatabase = vi.fn();
 const execute = vi.fn();
 
-const communitySelect = vi.fn();
-const createSupabaseServerClient = vi.fn();
+const communityFacts = vi.fn();
+vi.mock("@/server/features/social/social-queries", () => ({ communityFacts: (...args: unknown[]) => communityFacts(...args) }));
 
 vi.mock("@/lib/server-session", () => ({ getServerSession: () => getServerSession() }));
 vi.mock("@/server/db", () => ({
   isDatabaseConfigured: () => isDatabaseConfigured(),
   getDatabase: () => getDatabase(),
 }));
-vi.mock("@/lib/supabase-server", () => ({
-  createSupabaseServerClient: () => createSupabaseServerClient(),
-}));
-
 const { resolveViewer, getContentPreviews, isContentFailure } = await import(
   "@/server/features/content"
 );
 
 const UID = "11111111-1111-4111-8111-111111111111";
 
-/** A Supabase stub whose two selects answer with the given rows. */
-function supabaseStub(members: string[], owned: string[]) {
-  communitySelect.mockImplementation((columns: string) => ({
-    eq: () => ({
-      // `communitySlug` for membership, `slug` for ownership — the shape the caller
-      // passes decides which list comes back.
-      then: (resolve: (value: unknown) => void) =>
-        resolve({
-          data: columns === "communitySlug" ? members.map((communitySlug) => ({ communitySlug })) : owned.map((slug) => ({ slug })),
-          error: null,
-        }),
-    }),
-  }));
-  return { from: () => ({ select: communitySelect }) };
-}
-
 beforeEach(() => {
   getServerSession.mockReset();
   isDatabaseConfigured.mockReset();
   getDatabase.mockReset();
   execute.mockReset();
-  communitySelect.mockReset();
-  createSupabaseServerClient.mockReset();
-  getDatabase.mockReturnValue({ execute });
+  communityFacts.mockReset();
+  communityFacts.mockResolvedValue({ memberSlugs: [], ownedSlugs: [] });
+  getDatabase.mockReturnValue({ execute, transaction: async (run: (tx: { execute: typeof execute }) => Promise<unknown>) => run({ execute }) });
   isDatabaseConfigured.mockReturnValue(true);
 });
 
@@ -70,13 +50,12 @@ describe("viewer resolution", () => {
 
     expect(viewer).toEqual({ uid: null, role: "member", memberSlugs: [], ownedSlugs: [] });
     expect(getDatabase).not.toHaveBeenCalled();
-    expect(createSupabaseServerClient).not.toHaveBeenCalled();
   });
 
-  it("reads the role from Neon and the community facts from Supabase", async () => {
+  it("reads the role and community facts from Neon", async () => {
     getServerSession.mockResolvedValue({ uid: UID });
     execute.mockResolvedValue({ rows: [{ role: "moderator" }] });
-    createSupabaseServerClient.mockResolvedValue(supabaseStub(["writers"], ["designers"]));
+    communityFacts.mockResolvedValue({ memberSlugs: ["writers"], ownedSlugs: ["designers"] });
 
     const viewer = await resolveViewer();
 
@@ -92,7 +71,6 @@ describe("viewer resolution", () => {
     // world plus an identity.
     getServerSession.mockResolvedValue({ uid: UID });
     execute.mockResolvedValue({ rows: [] });
-    createSupabaseServerClient.mockResolvedValue(supabaseStub([], []));
 
     const viewer = await resolveViewer();
     expect(viewer).toEqual({ uid: UID, role: "member", memberSlugs: [], ownedSlugs: [] });
@@ -104,9 +82,7 @@ describe("viewer resolution", () => {
     // the user is entitled to see.
     getServerSession.mockResolvedValue({ uid: UID });
     execute.mockResolvedValue({ rows: [{ role: "member" }] });
-    createSupabaseServerClient.mockResolvedValue({
-      from: () => ({ select: () => ({ eq: () => ({ then: (r: (v: unknown) => void) => r({ data: null, error: { message: "boom" } }) }) }) }),
-    });
+    communityFacts.mockRejectedValue(new Error("Could not load your permissions."));
 
     await expect(resolveViewer()).rejects.toThrow("Could not load your permissions.");
   });
@@ -114,7 +90,7 @@ describe("viewer resolution", () => {
   it("throws rather than demoting when the community client is unavailable", async () => {
     getServerSession.mockResolvedValue({ uid: UID });
     execute.mockResolvedValue({ rows: [{ role: "admin" }] });
-    createSupabaseServerClient.mockResolvedValue(null);
+    communityFacts.mockRejectedValue(new Error("Could not load your permissions."));
 
     await expect(resolveViewer()).rejects.toThrow("Could not load your permissions.");
   });
@@ -133,7 +109,6 @@ describe("moderation previews are staff-gated", () => {
   it("refuses a member", async () => {
     getServerSession.mockResolvedValue({ uid: UID });
     execute.mockResolvedValue({ rows: [{ role: "member" }] });
-    createSupabaseServerClient.mockResolvedValue(supabaseStub([], []));
 
     const result = await getContentPreviews(["post-1"], []);
     expect(isContentFailure(result)).toBe(true);
@@ -147,7 +122,6 @@ describe("moderation previews are staff-gated", () => {
       .mockResolvedValueOnce({ rows: [{ role: "moderator" }] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] });
-    createSupabaseServerClient.mockResolvedValue(supabaseStub([], []));
 
     const result = await getContentPreviews([], []);
     expect(isContentFailure(result)).toBe(false);
@@ -159,7 +133,6 @@ describe("moderation previews are staff-gated", () => {
       .mockResolvedValueOnce({ rows: [{ role: "admin" }] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] });
-    createSupabaseServerClient.mockResolvedValue(supabaseStub([], []));
 
     const result = await getContentPreviews([], []);
     expect(isContentFailure(result)).toBe(false);
@@ -235,12 +208,11 @@ describe("role and verification services pass the actor from the session", () =>
       .mockResolvedValueOnce({ rows: [{ role: "admin" }] }) // resolveViewer's role read
       .mockResolvedValueOnce({ rows: [{ role: "admin" }] }) // setUserRole's actor check
       .mockResolvedValueOnce({ rows: [{ uid: "target" }] }); // the update
-    createSupabaseServerClient.mockResolvedValue(supabaseStub([], []));
 
     const { setUserRoleByCurrentUser } = await import("@/server/features/content");
     const result = await setUserRoleByCurrentUser("22222222-2222-4222-8222-222222222222", "moderator");
 
-    expect(isContentFailure(result)).toBe(false);
+    expect(result).toEqual({ ok: true, data: { status: "updated" } });
     // The signature cannot express "act as somebody else": 2 parameters, target + role.
     expect(setUserRoleByCurrentUser.length).toBe(2);
   });

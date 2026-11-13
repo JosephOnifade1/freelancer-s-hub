@@ -67,7 +67,7 @@ describe("no Supabase profile access remains", () => {
     // adjusts `reputation` inside the vote transaction — both server-side, neither
     // in a client path.
     for (const file of filesWithProfileSql) {
-      expect(file).toMatch(/^src\/server\/features\/(profile|identity|content)\//);
+      expect(file).toMatch(/^src\/server\/features\/(profile|identity|content|social)\//);
     }
   });
 });
@@ -95,11 +95,10 @@ describe("no duplicate provisioning mechanism", () => {
       // additionally guards the RPCs that used to mutate profile counters.
       return /rpc\(\s*["'](increment|decrement)_(followers|following)["']/.test(source);
     });
-    // `increment_followers` legitimately survives until `follows` migrates: it updates
-    // the *target's* counter, and the target's row is a different user's.
-    expect(offenders).toEqual(["src/lib/users.ts"]);
+    // Phase 2E moves both halves into a Neon transaction. No RPC may survive.
+    expect(offenders).toEqual([]);
     const source = read("src/lib/users.ts");
-    expect(source).toContain("increment_followers");
+    expect(source).not.toContain("increment_followers");
     // But the caller's own half must no longer go through an RPC.
     expect(source).not.toContain("increment_following\"");
     expect(source).not.toContain("decrement_following\"");
@@ -112,7 +111,6 @@ describe("authorization shape", () => {
       "src/app/api/profile/me/route.ts",
       "src/app/api/profile/avatar/route.ts",
       "src/app/api/profile/reputation/route.ts",
-      "src/app/api/profile/following-counter/route.ts",
     ]) {
       const source = read(route);
       // None of them reads a uid from the request.
