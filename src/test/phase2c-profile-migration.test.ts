@@ -62,10 +62,12 @@ describe("no Supabase profile access remains", () => {
       // A Drizzle query against the profile tables.
       return /(from|update|insert\s+into)\s+profiles\b/i.test(source);
     });
-    // Only the two server feature modules may query these tables: the profile domain,
-    // and the identity domain (provisioning inserts, claiming updates).
+    // Only server feature modules may query these tables. As of Phase 2D that
+    // includes `content`, which reads the viewer's own `role` for authorization and
+    // adjusts `reputation` inside the vote transaction — both server-side, neither
+    // in a client path.
     for (const file of filesWithProfileSql) {
-      expect(file).toMatch(/^src\/server\/features\/(profile|identity)\//);
+      expect(file).toMatch(/^src\/server\/features\/(profile|identity|content)\//);
     }
   });
 });

@@ -1,28 +1,42 @@
 import { supabase } from "./supabase";
 import { fetchOwnRole } from "./profile-client";
+import {
+  createContentPost,
+  deleteContentPost,
+  fetchContentPost,
+  fetchContentPosts,
+  hydrateAuthor,
+  hydrateAuthors,
+  isContentError,
+  recordContentView,
+  updateContentPost,
+  type ContentPost,
+  type FeedQuery as ContentFeedQuery,
+} from "./content-client";
 import { PostData } from "@/components/PostCard";
 
-const POST_COLUMNS = `
-  id, title, body, category, tags, type, score, ups, downs, views,
-  commentCount, isDeleted, isEdited, createdAt, communitySlug, authorUid,
-  visibility, allowComments, isPinned, externalLink,
-  profiles (username, displayName, avatarUrl, reputation, isVerifiedPro)
-`;
-
-const POST_COLUMNS_FKEY = `
-  id, title, body, category, tags, type, score, ups, downs, views,
-  commentCount, isDeleted, isEdited, createdAt, communitySlug, authorUid,
-  visibility, allowComments, isPinned, externalLink,
-  profiles!posts_authorUid_fkey (username, displayName, avatarUrl, reputation, isVerifiedPro)
-`;
-
-interface PostProfileJoin {
-  username?: string;
-  displayName?: string;
-  avatarUrl?: string;
-  reputation?: number;
-  isVerifiedPro?: boolean;
-}
+/**
+ * Posts — read and write against Neon via `/api/content` (Phase 2D).
+ *
+ * What changed from the Supabase implementation
+ * ---------------------------------------------
+ *  1. **No `profiles!` join.** Posts and profiles are now both in Neon but the API
+ *     keeps them as separate authorized reads: the post payload carries `authorUid`,
+ *     and the browser hydrates authors from the profile endpoint in one batched
+ *     request (`hydrateAuthors`). The join existed only because both tables were in
+ *     the same database; keeping it would mean the post endpoint projecting profile
+ *     columns, which is exactly how `role` leaked in the old `select("*")` paths.
+ *
+ *  2. **Visibility is a server `where` clause, not a client filter.** `visibleOnly`
+ *     used to fetch every post and filter in the browser — so protected rows crossed
+ *     the network and were removed in JavaScript. The server now applies
+ *     `authorizationFilter` inside the query. `canViewPost` is kept and still exported
+ *     because `PostCard` and demo mode use it, but it is no longer the boundary.
+ *
+ *  3. **Author checks moved to the server.** `updatePost`/`softDeletePost` used to
+ *     send `.eq("id", id)` and rely on RLS. The route scopes the update to the
+ *     caller's own row; a non-author gets `not_found`.
+ */
 
 export interface PostRow {
   id: string;
@@ -45,10 +59,35 @@ export interface PostRow {
   allowComments?: boolean;
   isPinned?: boolean;
   externalLink?: string | null;
-  profiles?: PostProfileJoin | null;
+  profiles?: {
+    username?: string;
+    displayName?: string;
+    avatarUrl?: string;
+    reputation?: number;
+    isVerifiedPro?: boolean;
+  } | null;
 }
 
-export function mapPostRow(p: PostRow): PostData {
+/**
+ * Maps a Neon post plus an already-hydrated author to the shape the UI renders.
+ *
+ * Kept as a plain function (rather than folded into the fetch calls) because
+ * `search.ts` and the tests use it directly, and because the author is now supplied
+ * by the caller instead of arriving as a nested object.
+ */
+/** The author identity `mapPostRow` accepts, from either source. */
+export interface AuthorIdentity {
+  name?: string;
+  displayName?: string;
+  username?: string;
+  avatar?: string | null;
+  avatarUrl?: string | null;
+  reputation?: number;
+  isVerifiedPro?: boolean;
+}
+
+export function mapPostRow(p: PostRow, author?: AuthorIdentity | null): PostData {
+  const resolved: AuthorIdentity | undefined = author ?? p.profiles ?? undefined;
   return {
     id: p.id,
     title: p.title,
@@ -65,27 +104,38 @@ export function mapPostRow(p: PostRow): PostData {
     isEdited: p.isEdited,
     createdAt: new Date(p.createdAt).getTime(),
     communitySlug: p.communitySlug || undefined,
-    visibility: p.visibility || "public",
+    visibility: (p.visibility as PostData["visibility"]) || "public",
     allowComments: p.allowComments ?? true,
     isPinned: p.isPinned ?? false,
     externalLink: p.externalLink || undefined,
     author: {
       uid: p.authorUid,
-      name: p.profiles?.displayName || p.profiles?.username || "Unknown",
-      username: p.profiles?.username,
-      avatar: p.profiles?.avatarUrl,
-      avatarUrl: p.profiles?.avatarUrl,
-      reputation: p.profiles?.reputation || 0,
-      isVerifiedPro: p.profiles?.isVerifiedPro || false,
+      name: resolved?.name || resolved?.displayName || "Unknown",
+      username: resolved?.username,
+      avatar: resolved?.avatar ?? resolved?.avatarUrl ?? undefined,
+      avatarUrl: resolved?.avatarUrl ?? resolved?.avatar ?? undefined,
+      reputation: resolved?.reputation || 0,
+      isVerifiedPro: resolved?.isVerifiedPro || false,
     },
   };
 }
 
-// ─── Visibility enforcement (client mirror of public.can_view_post) ────
-// The database enforces visibility with RLS; this mirror keeps demo mode
-// (no RLS) behaving identically and hides rows the API should never have
-// returned. 'admins' = author + community owner + platform staff;
-// 'members' additionally includes community members.
+/**
+ * Hydrates a batch of Neon posts into `PostData`, with **one** profile request.
+ *
+ * Exposed because comments and search do the same thing for their own rows.
+ */
+export async function mapPostsWithAuthors(posts: ContentPost[]): Promise<PostData[]> {
+  const authors = await hydrateAuthors(posts.map((post) => post.authorUid));
+  return posts.map((post) =>
+    mapPostRow(post as unknown as PostRow, authors.get(post.authorUid) ?? null),
+  );
+}
+
+// ─── Visibility (client mirror of the server predicate) ────────────────────
+// The server is the boundary; this mirrors the rules so demo mode (no server) and
+// optimistic UI behave identically. 'admins' = author + community owner + platform
+// staff; 'members' additionally includes community members.
 export interface PostViewer {
   uid: string | null;
   role: string;
@@ -99,23 +149,21 @@ export async function getPostViewer(): Promise<PostViewer> {
   const uid = (data?.session?.user?.id as string | undefined) ?? null;
   if (!uid) return { uid: null, role: "member", memberSlugs: [], ownedSlugs: [] };
 
-  // Phase 2C: the viewer's role now comes from Neon, because profiles moved. This is
-  // the `can_view_post` staff check — an authorization input — so it must be the
-  // server's read of the caller's own row, not a client-supplied value.
+  // Phase 2C: the viewer's role comes from Neon, because profiles moved. This is an
+  // authorization input, so it must be the server's read of the caller's own row.
   //
   // Membership and ownership stay in Supabase: `community_members` and `communities`
-  // are content domains that have not migrated, and reading them from two databases
-  // would be the dual-read this migration exists to remove.
+  // have not migrated, and reading them from two databases would be the dual-read
+  // this migration exists to remove.
   const [roleResult, memberRes, ownedRes] = await Promise.all([
     fetchOwnRole(),
     supabase.from("community_members").select("communitySlug").eq("userId", uid),
     supabase.from("communities").select("slug").eq("ownerId", uid),
   ]);
 
-  // Missing visibility context is not a "no posts" result. In particular,
-  // a failed membership lookup must not make private posts vanish silently — and a
-  // failed role lookup must not silently demote a moderator, which would hide posts
-  // they are entitled to see. Both throw.
+  // Missing visibility context is not a "no posts" result. A failed membership lookup
+  // must not make private posts vanish silently, and a failed role lookup must not
+  // silently demote a moderator. Both throw.
   if (!roleResult.ok) {
     throw new Error("Could not load your permissions.");
   }
@@ -142,158 +190,97 @@ export function canViewPost(post: PostData, viewer: PostViewer): boolean {
   return viewer.ownedSlugs.includes(post.communitySlug);
 }
 
-async function visibleOnly(posts: PostData[]): Promise<PostData[]> {
-  if (posts.length === 0) return posts;
-  const viewer = await getPostViewer();
-  return posts.filter((p) => canViewPost(p, viewer));
+/** Fetches a feed page and maps it, preserving the pre-2D return type. */
+async function loadFeed(query: ContentFeedQuery): Promise<PostData[]> {
+  const result = await fetchContentPosts(query);
+  if (isContentError(result)) throw new Error("Could not load posts.");
+  return mapPostsWithAuthors(result.data);
 }
 
-export const fetchPosts = async (): Promise<PostData[]> => {
-  let { data, error } = await supabase
-    .from("posts")
-    .select(POST_COLUMNS)
-    .eq("isDeleted", false)
-    .order("createdAt", { ascending: false });
+export const fetchPosts = async (): Promise<PostData[]> => loadFeed({ limit: 100 });
 
-  if (error) {
-    const retry = await supabase
-      .from("posts")
-      .select(POST_COLUMNS_FKEY)
-      .eq("isDeleted", false)
-      .order("createdAt", { ascending: false });
-
-    data = retry.data;
-    error = retry.error;
-  }
-
-  // No silent "*" fallback: a degraded feed with missing author data is
-  // worse than an honest error state the UI can show and retry.
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Could not load posts.");
-
-  return visibleOnly((data as PostRow[]).map(mapPostRow));
-};
-
-// Posts scoped to a single community — used by CommunityDetail.tsx instead
-// of hardcoded fake posts. Pinned posts float to the top of their space.
+/** Posts scoped to a single community — `CommunityDetail.tsx`. */
 export const fetchPostsByCommunity = async (slug: string): Promise<PostData[]> => {
-  const { data, error } = await supabase
-    .from("posts")
-    .select(POST_COLUMNS_FKEY)
-    .eq("isDeleted", false)
-    .eq("communitySlug", slug)
-    .order("createdAt", { ascending: false });
-
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Could not load space posts.");
-
-  const visible = await visibleOnly((data as PostRow[]).map(mapPostRow));
-  return visible.sort(
-    (a, b) => Number(b.isPinned ?? false) - Number(a.isPinned ?? false) || (b.createdAt || 0) - (a.createdAt || 0)
+  const posts = await loadFeed({ community: slug, limit: 100 });
+  // Pinned posts float to the top of their space, then newest first — the ordering
+  // the previous implementation applied after fetching.
+  return posts.sort(
+    (a, b) =>
+      Number(b.isPinned ?? false) - Number(a.isPinned ?? false) ||
+      (b.createdAt || 0) - (a.createdAt || 0),
   );
 };
 
-// Posts authored by a single user — used by Profile.tsx instead of
-// hardcoded fake posts.
-export const fetchPostsByAuthor = async (uid: string): Promise<PostData[]> => {
-  const { data, error } = await supabase
-    .from("posts")
-    .select(POST_COLUMNS_FKEY)
-    .eq("isDeleted", false)
-    .eq("authorUid", uid)
-    .order("createdAt", { ascending: false });
-
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Could not load author posts.");
-
-  return visibleOnly((data as PostRow[]).map(mapPostRow));
-};
+/** Posts authored by one user — `Profile.tsx`. */
+export const fetchPostsByAuthor = async (uid: string): Promise<PostData[]> =>
+  loadFeed({ author: uid, limit: 100 });
 
 export const createPost = async (
-  postData: Omit<PostData, "id"> & { pollOptions?: string[] }
-) => {
-  const { data, error } = await supabase
-    .from("posts")
-    .insert({
-      title: postData.title,
-      body: postData.body,
-      category: postData.category,
-      tags: postData.tags || [],
-      type: postData.type || "discussion",
-      score: 0,
-      ups: 0,
-      downs: 0,
-      views: 0,
-      commentCount: 0,
-      isDeleted: false,
-      isEdited: false,
-      authorUid: postData.author?.uid,
-      communitySlug: postData.communitySlug || null,
-      visibility: postData.visibility || "public",
-      allowComments: postData.allowComments ?? true,
-      isPinned: postData.isPinned ?? false,
-      externalLink: postData.externalLink || null,
-    })
-    .select("id")
-    .single();
+  postData: Omit<PostData, "id"> & { pollOptions?: string[] },
+): Promise<string> => {
+  const result = await createContentPost({
+    title: postData.title,
+    body: postData.body,
+    category: postData.category ?? null,
+    tags: postData.tags || [],
+    type: postData.type || "discussion",
+    communitySlug: postData.communitySlug || null,
+    visibility: postData.visibility || "public",
+    allowComments: postData.allowComments ?? true,
+    externalLink: postData.externalLink || null,
+    pollOptions: postData.pollOptions,
+  });
 
-  if (error) throw new Error(error.message);
-  const postId = data?.id as string;
-
-  // Real poll: create the poll row + its options so voting has something
-  // to attach to. Silently skipped if no options were actually provided.
-  const cleanOptions = (postData.pollOptions || []).map((o) => o.trim()).filter(Boolean);
-  if (postData.type === "poll" && cleanOptions.length >= 2) {
-    const { data: poll, error: pollError } = await supabase
-      .from("polls")
-      .insert({ postId })
-      .select("id")
-      .single();
-
-    if (!pollError && poll?.id) {
-      await supabase.from("poll_options").insert(
-        cleanOptions.map((label, i) => ({ pollId: poll.id, label, position: i }))
-      );
-    }
+  if (isContentError(result)) {
+    throw new Error(
+      result.error === "unauthenticated"
+        ? "Sign in to publish a post."
+        : "Could not publish your post. Please try again.",
+    );
   }
-
-  return postId;
+  // `author.uid` is no longer sent — the server uses the session. The parameter is
+  // kept in the type so call sites do not change.
+  return result.data.id;
 };
 
 export const fetchPostById = async (id: string): Promise<PostData | null> => {
-  const { data, error } = await supabase
-    .from("posts")
-    .select(POST_COLUMNS_FKEY)
-    .eq("id", id)
-    .maybeSingle();
+  const result = await fetchContentPost(id);
+  if (isContentError(result)) throw new Error("Could not load this post.");
+  if (!result.data) return null;
 
-  if (error) throw new Error(error.message);
-  if (!data) return null;
-
-  const post = mapPostRow(data as PostRow);
-  const viewer = await getPostViewer();
-  // A post the viewer may not see behaves exactly like a missing post.
-  if (!canViewPost(post, viewer)) return null;
-  return post;
+  // A post the viewer may not see is a 404 server-side, so anything returned here is
+  // already authorized; the author is hydrated for rendering only.
+  const author = await hydrateAuthor(result.data.authorUid);
+  return mapPostRow(result.data as unknown as PostRow, author);
 };
 
 export const updatePost = async (id: string, body: string) => {
-  const { data, error } = await supabase.from("posts").update({ body, isEdited: true }).eq("id", id).select("id");
-  if (error) throw new Error(error.message);
-  // PostgREST can return success with zero updated rows when RLS blocks the
-  // operation. Never report a successful edit when nothing was saved.
-  if (!data?.length) throw new Error("Post not found or not editable.");
+  const result = await updateContentPost(id, body);
+  if (isContentError(result)) {
+    // A non-author's update matches no row and comes back as `not_found`, which is
+    // the same message the previous implementation produced for a blocked edit.
+    throw new Error(
+      result.error === "not_found"
+        ? "Post not found or not editable."
+        : "Could not save your edit. Please try again.",
+    );
+  }
 };
 
 export const softDeletePost = async (id: string) => {
-  const { data, error } = await supabase.from("posts").update({ isDeleted: true }).eq("id", id).select("id");
-  if (error) throw new Error(error.message);
-  if (!data?.length) throw new Error("Post not found or not removable.");
+  const result = await deleteContentPost(id);
+  if (isContentError(result)) {
+    throw new Error(
+      result.error === "not_found"
+        ? "Post not found or not removable."
+        : "Could not remove this post. Please try again.",
+    );
+  }
 };
 
 export const incrementPostViews = async (id: string) => {
-  // Fire-and-forget by design (called from a view effect), but never silent:
-  // a failed view increment must show up in logs, not vanish.
-  const { error } = await supabase.rpc("increment_post_views", { post_id: id });
-  if (error) console.warn("incrementPostViews failed:", error.message);
+  // Fire-and-forget by design (called from a view effect). The failure is swallowed
+  // inside the client, which matches the previous `console.warn` behaviour without
+  // turning a counter into an error state.
+  await recordContentView(id);
 };

@@ -8,6 +8,13 @@ import {
   adjustFollowingCounter,
   isProfileError,
 } from "./profile-client";
+import {
+  fetchAuthorResourceCount,
+  fetchAuthorScores,
+  fetchSavedPostIds,
+  isContentError,
+  toggleSavedPost,
+} from "./content-client";
 
 export type UserProfile = {
   uid: string;
@@ -80,15 +87,16 @@ export const getUserProfile = async (identifier: string): Promise<UserProfile | 
   return profile;
 };
 
+/**
+ * How many resource posts an author has.
+ *
+ * Phase 2D: counted in Neon by a `count(*)` rather than transferring a row set with
+ * `head: true`. Both are a single round trip; this one is a single number.
+ */
 export const getUserResourcesCount = async (uid: string) => {
-  const { count } = await supabase
-    .from("posts")
-    .select("*", { count: "exact", head: true })
-    .eq("authorUid", uid)
-    .eq("type", "resource")
-    .eq("isDeleted", false);
-
-  return count || 0;
+  const result = await fetchAuthorResourceCount(uid);
+  if (isContentError(result)) return 0;
+  return result.data;
 };
 
 export const isVeteran = (reputation: number) => {
@@ -124,37 +132,44 @@ export const getUidByUsername = async (username: string) => {
   return result.ok ? result.data.uid : null;
 };
 
+/**
+ * The caller's bookmarks, as a lookup map.
+ *
+ * Phase 2D: Neon, via `/api/content/saved`. The `uid` argument is kept for call-site
+ * compatibility but is **not sent**: the server uses the verified session, so this
+ * cannot be pointed at another user's bookmarks. Before the migration the parameter
+ * was honoured by the API and silently narrowed by RLS — the same trap as the profile
+ * writes in 2C.
+ */
 export const getSavedPostIds = async (uid: string): Promise<Record<string, boolean>> => {
   if (!uid) return {};
-  const { data, error } = await supabase.from("saved_posts").select("postId").eq("userId", uid);
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Could not load bookmarks.");
+  const result = await fetchSavedPostIds();
+  if (isContentError(result)) {
+    if (result.error === "unauthenticated") return {};
+    throw new Error("Could not load bookmarks.");
+  }
   const map: Record<string, boolean> = {};
-  for (const row of data) if (row.postId) map[row.postId] = true;
+  for (const postId of result.data) map[postId] = true;
   return map;
 };
 
+/**
+ * Toggles a bookmark and reports the new state.
+ *
+ * Returns `true` when the post is now saved. The previous implementation did a
+ * `select` followed by an `insert`/`delete`; the server now performs the toggle in one
+ * statement, so a double-click cannot race itself into a duplicate-key error.
+ */
 export const toggleBookmark = async (uid: string, postId: string) => {
   if (!uid || !postId) return false;
 
-  const { data: existing, error: lookupError } = await supabase
-    .from("saved_posts")
-    .select("postId")
-    .eq("userId", uid)
-    .eq("postId", postId)
-    .maybeSingle();
-
-  if (lookupError) throw new Error(lookupError.message);
-
-  if (existing) {
-    const { error } = await supabase.from("saved_posts").delete().eq("userId", uid).eq("postId", postId);
-    if (error) throw new Error(error.message);
-    return false;
-  } else {
-    const { error } = await supabase.from("saved_posts").insert({ userId: uid, postId });
-    if (error) throw new Error(error.message);
-    return true;
+  const result = await toggleSavedPost(postId);
+  if (isContentError(result)) {
+    if (result.error === "not_found") throw new Error("Post not found.");
+    if (result.error === "unauthenticated") throw new Error("Sign in to save posts.");
+    throw new Error("Bookmark could not be saved.");
   }
+  return result.data === "saved";
 };
 
 /**
@@ -230,22 +245,22 @@ export const toggleFollow = async (currentUid: string, targetUid: string) => {
   return !isFollowing;
 };
 
+/**
+ * Recomputes a user's reputation from their content.
+ *
+ * Phase 2D resolves the asymmetry 2C documented: the derivation used to read Supabase
+ * while the write went to Neon. Posts and comments are now both in Neon, so the sum
+ * and the write are in the same database and the earlier caveat ("moving the
+ * derivation now would sum empty tables and zero everyone") no longer applies.
+ *
+ * The write still goes through the profile service with the session uid, so a caller
+ * cannot recompute someone else's reputation.
+ */
 export const calculateReputation = async (uid: string) => {
-  const { data: postsData } = await supabase
-    .from("posts")
-    .select("score")
-    .eq("authorUid", uid)
-    .eq("isDeleted", false);
-
-  const { data: commentsData } = await supabase
-    .from("comments")
-    .select("score")
-    .eq("authorUid", uid)
-    .eq("isDeleted", false);
-
-  const totalScore =
-    (postsData || []).reduce((sum, p) => sum + (p.score || 0), 0) +
-    (commentsData || []).reduce((sum, c) => sum + (c.score || 0), 0);
+  const scores = await fetchAuthorScores(uid);
+  // A failed aggregate must not be turned into "0" and written over a real reputation.
+  if (isContentError(scores)) throw new Error("Could not recalculate reputation.");
+  const totalScore = scores.data;
 
   // Phase 2C: the *derivation* still reads Supabase (posts and comments have not
   // migrated), but the *write* goes to Neon where the profile now lives. Sending the

@@ -1,24 +1,26 @@
-import { supabase } from "./supabase";
+import {
+  createContentComment,
+  deleteContentComment,
+  fetchContentComments,
+  fetchContentCommentsByAuthor,
+  hydrateAuthor,
+  hydrateAuthors,
+  isContentError,
+  updateContentComment,
+  type ContentComment,
+} from "./content-client";
 
-interface CommentProfileJoin {
-  username?: string;
-  displayName?: string;
-  reputation?: number;
-  isVerifiedPro?: boolean;
-}
-
-interface CommentRow {
-  id: string;
-  body: string;
-  score: number;
-  createdAt: string;
-  parentId?: string | null;
-  isDeleted?: boolean;
-  isEdited?: boolean;
-  authorUid?: string;
-  postId?: string;
-  profiles?: CommentProfileJoin | null;
-}
+/**
+ * Comments — Neon via `/api/content` (Phase 2D).
+ *
+ * The embedded `profiles!comments_authorUid_fkey` join is gone; authors are hydrated
+ * from the profile endpoint in one batched request, using the public projection, so
+ * `role` cannot appear in a comment payload.
+ *
+ * Threading is unchanged: the server returns a flat list oldest-first and the UI
+ * nests replies by `parentId`. `replies` is still attached here so `CommentData` is
+ * the same type the components already expect.
+ */
 
 export interface CommentData {
   id: string;
@@ -33,122 +35,114 @@ export interface CommentData {
   replies?: CommentData[];
   isDeleted?: boolean;
   isEdited?: boolean;
+  avatar?: string | null;
+}
+
+async function mapComments(rows: ContentComment[]): Promise<CommentData[]> {
+  const authors = await hydrateAuthors(rows.map((row) => row.authorUid));
+
+  return rows.map((row) => {
+    const author = authors.get(row.authorUid);
+    return {
+      id: row.id,
+      // A missing profile renders as "Unknown", exactly as the join fallback did.
+      author: author?.name || "Unknown",
+      authorUid: row.authorUid,
+      reputation: author?.reputation ?? 0,
+      body: row.body,
+      score: row.score,
+      createdAt: new Date(row.createdAt).getTime(),
+      parentId: row.parentId || undefined,
+      isVerifiedPro: author?.isVerifiedPro ?? false,
+      isDeleted: row.isDeleted,
+      isEdited: row.isEdited,
+      avatar: author?.avatarUrl ?? null,
+    };
+  });
 }
 
 export const fetchComments = async (postId: string): Promise<CommentData[]> => {
-  const { data, error } = await supabase
-    .from("comments")
-    .select(`
-      id, body, score, createdAt, parentId, isDeleted, isEdited, authorUid,
-      profiles!comments_authorUid_fkey (username, displayName, reputation, isVerifiedPro)
-    `)
-    .eq("postId", postId)
-    .order("createdAt", { ascending: true });
-
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Could not load comments.");
-
-  return (data as CommentRow[]).map((c) => ({
-    id: c.id,
-    author: c.profiles?.displayName || c.profiles?.username || "Unknown",
-    authorUid: c.authorUid,
-    reputation: c.profiles?.reputation || 0,
-    body: c.body,
-    score: c.score,
-    createdAt: new Date(c.createdAt).getTime(),
-    parentId: c.parentId || undefined,
-    isVerifiedPro: c.profiles?.isVerifiedPro || false,
-    isDeleted: c.isDeleted,
-    isEdited: c.isEdited,
-  }));
+  const result = await fetchContentComments(postId);
+  // A post the viewer cannot see yields no comments — the same result RLS produced,
+  // and not an error state the UI would have to explain.
+  if (isContentError(result)) {
+    if (result.error === "not_found") return [];
+    throw new Error("Could not load comments.");
+  }
+  return mapComments(result.data);
 };
 
 export const addComment = async (
   postId: string,
-  commentData: Omit<CommentData, "id" | "createdAt" | "score">
-) => {
-  // allowComments / deleted state are enforced by RLS on the real backend;
-  // this check gives the same behavior (and a clear message) in demo mode,
-  // where there is no RLS. Comments stay readable when off — only new ones
-  // are blocked — and a removed post is frozen entirely.
-  const { data: postRow, error: postError } = await supabase
-    .from("posts")
-    .select("allowComments, isDeleted")
-    .eq("id", postId)
-    .maybeSingle();
-  if (postError) throw new Error(postError.message);
-  if (!postRow) throw new Error("Post not found or not accessible.");
-  if (postRow.isDeleted) {
-    throw new Error("This post has been removed, so comments are closed.");
+  commentData: Omit<CommentData, "id" | "createdAt" | "score">,
+): Promise<string> => {
+  // `allowComments`, the deleted state and post visibility are all enforced inside
+  // the server transaction (row-locked), so the client no longer pre-reads the post.
+  const result = await createContentComment(postId, commentData.body, commentData.parentId);
+
+  if (isContentError(result)) {
+    switch (result.error) {
+      case "unauthenticated":
+        throw new Error("Sign in to join the discussion.");
+      case "not_found":
+        throw new Error("Post not found or not accessible.");
+      case "forbidden":
+        throw new Error("You cannot comment on this post.");
+      default:
+        // The server returns a human-readable reason for the closed-post cases
+        // (`comments_closed`, `post_removed`); prefer it over a generic message.
+        throw new Error(result.message || "Could not post your comment. Please try again.");
+    }
   }
-  if (postRow.allowComments === false) {
-    throw new Error("Comments are turned off for this post.");
+
+  // `posts.commentCount` is maintained by the server in the same transaction, so
+  // there is no client-side counter to keep in sync.
+  return result.data.id;
+};
+
+export const updateComment = async (_postId: string, commentId: string, body: string) => {
+  const result = await updateContentComment(commentId, body);
+  if (isContentError(result)) {
+    throw new Error(
+      result.error === "not_found"
+        ? "Comment not found or not editable."
+        : "Could not save your edit. Please try again.",
+    );
   }
-
-  const { data, error } = await supabase
-    .from("comments")
-    .insert({
-      postId,
-      authorUid: commentData.authorUid,
-      body: commentData.body,
-      parentId: commentData.parentId || null,
-      score: 0,
-      isDeleted: false,
-      isEdited: false,
-    })
-    .select("id")
-    .single();
-
-  if (error) throw new Error(error.message);
-
-  // posts.commentCount is maintained by the trg_post_comment_count database
-  // trigger (and mirrored in the mock), so it can no longer drift when a
-  // client-side counter call fails or is skipped.
-  return data?.id as string;
 };
 
-export const updateComment = async (postId: string, commentId: string, body: string) => {
-  const { error } = await supabase
-    .from("comments")
-    .update({ body, isEdited: true })
-    .eq("id", commentId);
-  if (error) throw new Error(error.message);
+export const softDeleteComment = async (_postId: string, commentId: string) => {
+  const result = await deleteContentComment(commentId);
+  if (isContentError(result)) {
+    throw new Error(
+      result.error === "not_found"
+        ? "Comment not found or not removable."
+        : "Could not remove this comment. Please try again.",
+    );
+  }
 };
 
-export const softDeleteComment = async (postId: string, commentId: string) => {
-  const { error } = await supabase
-    .from("comments")
-    .update({ isDeleted: true })
-    .eq("id", commentId);
-  if (error) throw new Error(error.message);
-};
-
+/**
+ * Comments written by one author, for their profile page.
+ *
+ * The profile argument is kept for call-site compatibility but only its uid is used:
+ * the author name now comes from the same batched hydration as everything else, so a
+ * stale `displayName` passed by the caller cannot label the wrong person.
+ */
 export const fetchCommentsByAuthor = async (profile: {
   uid: string;
   username: string;
   displayName: string;
 }): Promise<(CommentData & { postId: string })[]> => {
-  const { data, error } = await supabase
-    .from("comments")
-    .select("id, body, score, createdAt, parentId, isDeleted, isEdited, authorUid, postId")
-    .eq("authorUid", profile.uid)
-    .eq("isDeleted", false)
-    .order("createdAt", { ascending: false });
+  const result = await fetchContentCommentsByAuthor(profile.uid);
+  if (isContentError(result)) {
+    if (result.error === "not_found") return [];
+    throw new Error("Could not load author comments.");
+  }
 
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Could not load author comments.");
-
-  return (data as CommentRow[]).map((c) => ({
-    id: c.id,
-    author: profile.displayName || profile.username,
-    authorUid: c.authorUid,
-    reputation: 0,
-    body: c.body,
-    score: c.score,
-    createdAt: new Date(c.createdAt).getTime(),
-    parentId: c.parentId || undefined,
-    isDeleted: c.isDeleted,
-    isEdited: c.isEdited,
-    postId: c.postId || "",
+  const mapped = await mapComments(result.data);
+  return mapped.map((comment, index) => ({
+    ...comment,
+    postId: result.data[index].postId,
   }));
 };

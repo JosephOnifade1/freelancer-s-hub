@@ -76,8 +76,16 @@ describe("server client (Step 2)", () => {
       if (file.startsWith("src/test/")) continue;
       const src = read(file);
       if (!src.includes("@/lib/supabase-server")) continue;
+      // `import "server-only"` is the framework marker and is *stronger* than either
+      // of the other signals: Next aliases it to a throwing module for client
+      // compilations, so a Client Component importing the file fails the build.
+      // `src/server/features/content/index.ts` uses it (Phase 2D) to read community
+      // membership server-side, which is exactly the case this guard exists to allow.
       const isServerFile =
-        src.includes("next/server") || file.endsWith("route.ts") || src.includes("next/headers");
+        src.includes("next/server") ||
+        file.endsWith("route.ts") ||
+        src.includes("next/headers") ||
+        /^\s*import\s+"server-only";/m.test(src);
       if (!isServerFile) offenders.push(file);
     }
     expect(offenders).toEqual([]);
@@ -141,8 +149,12 @@ describe("single session source (Step 8)", () => {
       (f) => !f.startsWith("src/test/") && /supabase\.auth\.getSession\(/.test(read(f)),
     );
     expect(sessionReaders.sort()).toEqual([
+      // Phase 2D: the demo-mode content backend reads the mock session to decide who
+      // is acting. It is a reader of the same singleton, not a second client — the
+      // `clientFactories` assertion below is what actually enforces that.
       "src/hooks/useAuth.tsx",
       "src/lib/attachments.ts",
+      "src/lib/content-demo.ts",
       "src/lib/posts.ts",
       "src/lib/uploads.ts",
       "src/lib/users.ts",

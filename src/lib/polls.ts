@@ -1,19 +1,18 @@
-import { supabase } from "./supabase";
+import { fetchContentPoll, isContentError, submitPollVote, type ContentPoll } from "./content-client";
+
+/**
+ * Polls — Neon via `/api/content/polls` (Phase 2D).
+ *
+ * The previous implementation made three round trips (poll, options, every vote row)
+ * and tallied counts in the browser. The server now returns options with their counts
+ * in one response, which also means the counts cannot be computed from rows the caller
+ * was not authorized to see.
+ */
 
 export interface PollOption {
   id: string;
   label: string;
   votes: number;
-}
-
-interface PollVoteRow {
-  pollOptionId: string;
-  userId: string;
-}
-
-interface PollOptionRow {
-  id: string;
-  label: string;
 }
 
 export interface PollData {
@@ -23,72 +22,60 @@ export interface PollData {
   userVoteOptionId: string | null;
 }
 
-// Fetches a post's poll (if it has one), including live vote counts per
-// option and whether the current viewer has already voted.
-export const fetchPollByPostId = async (
-  postId: string,
-  viewerUid?: string
-): Promise<PollData | null> => {
-  const { data: poll, error: pollError } = await supabase
-    .from("polls")
-    .select("id")
-    .eq("postId", postId)
-    .maybeSingle();
-
-  if (pollError) throw new Error(pollError.message);
-  if (!poll) return null;
-
-  const { data: options, error: optionsError } = await supabase
-    .from("poll_options")
-    .select("id, label, position")
-    .eq("pollId", poll.id)
-    .order("position", { ascending: true });
-
-  if (optionsError) throw new Error(optionsError.message);
-  if (!options) throw new Error("Could not load poll options.");
-
-  const { data: votes, error: votesError } = await supabase
-    .from("poll_votes")
-    .select("pollOptionId, userId")
-    .eq("pollId", poll.id);
-
-  if (votesError) throw new Error(votesError.message);
-  if (!votes) throw new Error("Could not load poll votes.");
-
-  const voteCounts: Record<string, number> = {};
-  let userVoteOptionId: string | null = null;
-
-  ((votes || []) as PollVoteRow[]).forEach((v) => {
-    voteCounts[v.pollOptionId] = (voteCounts[v.pollOptionId] || 0) + 1;
-    if (viewerUid && v.userId === viewerUid) userVoteOptionId = v.pollOptionId;
-  });
-
-  const mappedOptions: PollOption[] = (options as PollOptionRow[]).map((o) => ({
-    id: o.id,
-    label: o.label,
-    votes: voteCounts[o.id] || 0,
-  }));
-
+function toPollData(poll: ContentPoll): PollData {
   return {
     id: poll.id,
-    options: mappedOptions,
-    totalVotes: mappedOptions.reduce((sum, o) => sum + o.votes, 0),
-    userVoteOptionId,
+    options: poll.options.map((option) => ({
+      id: option.id,
+      label: option.label,
+      votes: option.votes,
+    })),
+    totalVotes: poll.totalVotes,
+    userVoteOptionId: poll.viewerOptionId,
   };
+}
+
+/**
+ * A post's poll, or `null` when it has none.
+ *
+ * `viewerUid` is no longer a parameter: the viewer is the session, resolved
+ * server-side. Passing it from the browser would have let a caller see whether
+ * *someone else* had voted.
+ */
+export const fetchPollByPostId = async (
+  postId: string,
+  _viewerUid?: string,
+): Promise<PollData | null> => {
+  const result = await fetchContentPoll(postId);
+  if (isContentError(result)) {
+    // A poll on a post the viewer cannot see is not an error — it is simply not there.
+    if (result.error === "not_found" || result.error === "unavailable") return null;
+    throw new Error("Could not load this poll.");
+  }
+  return result.data ? toPollData(result.data) : null;
 };
 
-// Casts a vote. One vote per user per poll is enforced by a unique
-// (pollId, userId) constraint in the database — this surfaces that as a
-// clean error instead of a raw Postgres message.
-export const votePollOption = async (pollId: string, pollOptionId: string, uid: string) => {
-  const { error } = await supabase
-    .from("poll_votes")
-    .insert({ pollId, pollOptionId, userId: uid });
+/**
+ * Casts a poll vote. One vote per user per poll is enforced by the unique key; a
+ * repeat is reported as `already_voted` rather than a raw constraint violation.
+ *
+ * `uid` is kept for call-site compatibility and deliberately not used — the server
+ * uses the session.
+ */
+export const votePollOption = async (
+  pollId: string,
+  pollOptionId: string,
+  _uid?: string,
+): Promise<void> => {
+  const result = await submitPollVote(pollId, pollOptionId);
 
-  if (error) {
-    if (error.code === "23505") {
-      throw new Error("You've already voted on this poll");
-    }
-    throw new Error(error.message);
+  if (isContentError(result)) {
+    if (result.error === "unauthenticated") throw new Error("Sign in to vote in this poll.");
+    if (result.error === "not_found") throw new Error("This poll is no longer available.");
+    throw new Error(result.message || "Could not record your vote. Please try again.");
+  }
+
+  if (result.data.status === "already_voted") {
+    throw new Error("You've already voted on this poll");
   }
 };

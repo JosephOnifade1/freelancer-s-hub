@@ -1,5 +1,10 @@
-import { supabase } from "./supabase";
 import { fetchPublicProfiles, isProfileError } from "./profile-client";
+import {
+  fetchCommunityHealth,
+  fetchContributionDates,
+  fetchRecentContributors,
+  isContentError,
+} from "./content-client";
 
 interface AuthoredRow {
   authorUid?: string;
@@ -38,25 +43,19 @@ export interface ActiveContributor {
 export const getMostActiveThisWeek = async (limit = 5): Promise<ActiveContributor[]> => {
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [{ data: posts, error: postsError }, { data: comments, error: commentsError }] = await Promise.all([
-    supabase.from("posts").select("authorUid, createdAt").eq("isDeleted", false).gte("createdAt", sevenDaysAgo),
-    supabase.from("comments").select("authorUid, createdAt").eq("isDeleted", false).gte("createdAt", sevenDaysAgo),
-  ]);
-
-  if (postsError || commentsError || !posts || !comments) {
-    throw new Error(postsError?.message || commentsError?.message || "Could not load recent activity.");
-  }
+  // Phase 2D: the counting moved into Neon, so this is one aggregate query rather
+  // than two full row sets that were reduced in the browser. `sevenDaysAgo` is still
+  // computed here so the window matches the `days` the route is asked for.
+  void sevenDaysAgo;
+  const activity = await fetchRecentContributors(7);
+  if (isContentError(activity)) throw new Error("Could not load recent activity.");
 
   const counts: Record<string, number> = {};
-  [...posts, ...comments].forEach((row: AuthoredRow) => {
-    if (!row.authorUid) return;
-    counts[row.authorUid] = (counts[row.authorUid] || 0) + 1;
-  });
+  for (const row of activity.data) {
+    if (row.uid) counts[row.uid] = row.contributions;
+  }
 
-  const topUids = Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, limit)
-    .map(([uid]) => uid);
+  const topUids = activity.data.slice(0, limit).map((row) => row.uid);
 
   if (topUids.length === 0) return [];
 
@@ -84,19 +83,13 @@ export interface StreakData {
 export const getUserStreak = async (uid: string): Promise<StreakData> => {
   const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [{ data: posts, error: postsError }, { data: comments, error: commentsError }] = await Promise.all([
-    supabase.from("posts").select("createdAt").eq("authorUid", uid).eq("isDeleted", false).gte("createdAt", ninetyDaysAgo),
-    supabase.from("comments").select("createdAt").eq("authorUid", uid).eq("isDeleted", false).gte("createdAt", ninetyDaysAgo),
-  ]);
+  // Phase 2D: distinct dates, computed in the database. The previous version pulled
+  // every post and comment from 90 days and de-duplicated them here.
+  void ninetyDaysAgo;
+  const dates = await fetchContributionDates(uid, 90);
+  if (isContentError(dates)) throw new Error("Could not load your activity.");
 
-  if (postsError || commentsError || !posts || !comments) {
-    throw new Error(postsError?.message || commentsError?.message || "Could not load your activity.");
-  }
-
-  const activeDates = new Set<string>();
-  [...posts, ...comments].forEach((row: AuthoredRow) => {
-    activeDates.add(new Date(row.createdAt).toISOString().slice(0, 10));
-  });
+  const activeDates = new Set<string>(dates.data);
 
   // Walk backwards from today counting consecutive active days. A streak is
   // still "alive" if the most recent activity was today or yesterday.
@@ -134,42 +127,28 @@ export interface CommunityHealth {
 }
 
 export const getCommunityHealthStats = async (): Promise<CommunityHealth> => {
-  const { data: posts, error: postsError } = await supabase
-    .from("posts")
-    .select("id, createdAt, commentCount")
-    .eq("isDeleted", false);
+  // Phase 2D: the whole computation is one aggregate query in Neon — counts, plus the
+  // first comment per post. The previous version transferred every post and every
+  // comment from 90 days to compute two numbers in the browser.
+  const health = await fetchCommunityHealth();
+  if (isContentError(health)) throw new Error("Could not load post activity.");
+  if (health.data.postCount === 0) return { helpfulRate: 0, avgResponseLabel: "—" };
 
-  if (postsError || !posts) throw new Error(postsError?.message || "Could not load post activity.");
-  if (posts.length === 0) return { helpfulRate: 0, avgResponseLabel: "—" };
+  const helpfulRate = Math.round(
+    (health.data.postsWithReplies / health.data.postCount) * 100,
+  );
 
-  const postsWithReplies = (posts as PostHealthRow[]).filter((p) => (p.commentCount || 0) > 0);
-  const helpfulRate = Math.round((postsWithReplies.length / posts.length) * 100);
-
-  if (postsWithReplies.length === 0) {
+  if (health.data.postsWithReplies === 0) {
     return { helpfulRate, avgResponseLabel: "—" };
   }
 
-  const { data: firstComments, error: commentsError } = await supabase
-    .from("comments")
-    .select("postId, createdAt")
-    .eq("isDeleted", false)
-    .in("postId", postsWithReplies.map((p) => p.id))
-    .order("createdAt", { ascending: true });
-
-  if (commentsError || !firstComments) throw new Error(commentsError?.message || "Could not load response activity.");
-
-  const firstCommentByPost: Record<string, string> = {};
-  (firstComments as CommentTimingRow[]).forEach((c) => {
-    if (!firstCommentByPost[c.postId]) firstCommentByPost[c.postId] = c.createdAt;
-  });
-
   const diffsMs: number[] = [];
-  postsWithReplies.forEach((p) => {
-    const firstReply = firstCommentByPost[p.id];
-    if (firstReply) {
-      diffsMs.push(new Date(firstReply).getTime() - new Date(p.createdAt).getTime());
-    }
-  });
+  for (const response of health.data.responses) {
+    if (!response.firstCommentAt) continue;
+    diffsMs.push(
+      new Date(response.firstCommentAt).getTime() - new Date(response.postedAt).getTime(),
+    );
+  }
 
   if (diffsMs.length === 0) return { helpfulRate, avgResponseLabel: "—" };
 
