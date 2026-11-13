@@ -1,3 +1,4 @@
+import { notifyApplication } from "../trust/notification-events";
 import { sql } from "drizzle-orm";
 import type { ContentDatabase, ContentTransactionDatabase } from "../content/content-queries";
 import type { Lead } from "@/lib/leads";
@@ -132,6 +133,7 @@ export async function submitApplication(db: ContentTransactionDatabase, uid: str
       appId=rows(await tx.execute(sql`insert into lead_applications ("leadId","applicantUid",proposal) values (${leadId},${uid},${note}) returning id`))[0].id;
     }
     await tx.execute(sql`update leads set "applicantsCount"="applicantsCount"+1 where id=${leadId}`);
+    if (!old) await notifyApplication(tx, String(appId), null);
     // Hydrate before commit: a hydration failure must roll back the submission too.
     const hydrated=(await listApplications(tx,uid,"detail",String(appId)))[0];
     if (!hydrated) throw new MarketplaceError(503,"application_hydration_failed");
@@ -158,6 +160,7 @@ export async function setApplicationStatus(db: ContentTransactionDatabase, uid: 
     const delta=(a.status === "withdrawn" ? 1 : 0)-(status === "withdrawn" ? 1 : 0);
     await tx.execute(sql`update lead_applications set status=${status},"updatedAt"=now() where id=${applicationId}`);
     if (delta) await tx.execute(sql`update leads set "applicantsCount"="applicantsCount"+${delta} where id=${l.id}`);
+    await notifyApplication(tx, applicationId, String(a.status));
   });
 }
 function pipeline(r: Record<string,unknown>): PipelineItem { return { ...r,createdAt:iso(r.createdAt),updatedAt:iso(r.updatedAt) } as unknown as PipelineItem; }

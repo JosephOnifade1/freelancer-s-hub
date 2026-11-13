@@ -286,7 +286,7 @@ function ReportsQueue({
       ) : (
         <div className="space-y-3">
           {filteredReports.map((report) => {
-            const preview = previews.get(report.entityId);
+            const preview = previews.get(`${report.entityType}:${report.entityId}`);
             return (
               <article
                 key={report.id}

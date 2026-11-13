@@ -80,7 +80,7 @@ describe.skipIf(!url)("transactions and concurrent application lifecycle",()=>{
   // Failure injection only at the final required read; preceding SQL and rollback
   // execute against real PostgreSQL, not a simulated transaction.
   const faulted: ContentTransactionDatabase={execute:query=>db.execute(query),transaction:run=>db.transaction(async tx=>run({execute:async query=>{
-    statements++;if(statements===5)return {rows:[]};return tx.execute(query);
+    statements++;if(statements===7)return {rows:[]};return tx.execute(query);
   }}))};
   await expect(q.submitApplication(faulted,APPLICANT,id,"Proposal")).rejects.toMatchObject({status:503});
   expect(await count(id)).toBe(0);expect(await q.listApplications(db,APPLICANT,"sent")).toEqual([]);

@@ -1,0 +1,12 @@
+/** Static runtime-dependency/boundary guards, not SQL evidence. */
+import {describe,it,expect} from "vitest";
+import {readFileSync,readdirSync} from "node:fs";
+const read=(p:string)=>readFileSync(p,"utf8");
+const walk=(p:string):string[]=>readdirSync(p,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(`${p}/${e.name}`):/\.[jt]sx?$/.test(e.name)?[`${p}/${e.name}`]:[]);
+describe("Phase 2G architecture",()=>{
+ it("no production Supabase notifications/reports tables or moderation RPC calls",()=>{for(const p of walk("src").filter(p=>!p.includes("mockSupabase")&&!p.includes("/test/")&&!p.includes(".test.")))expect(read(p),p).not.toMatch(/\.from\(\s*["'](notifications|reports)["']|\.rpc\(\s*["'](moderate_report|set_user_role|set_user_verified_pro)["']/);});
+ it("retains Auth/Storage and excludes server modules from browser adapters",()=>{expect(read("src/lib/attachments.ts")).toContain("supabase.storage");expect(read("src/lib/server-session.ts")).toContain("getUser");for(const p of ["notifications","reports","trust-client"])expect(read(`src/lib/${p}.ts`)).not.toMatch(/@\/server\/|\.\/supabase|mockSupabase|localStorage/);});
+ it("keeps all audited emitters in domain transactions and absent from browser API",()=>{for(const [domain,event] of [["content","notifyComment"],["content","notifyUpvote"],["social","notifyFollow"],["marketplace","notifyApplication"]])expect(read(`src/server/features/${domain}/${domain}-queries.ts`)).toContain(`await ${event}(tx,`);expect(read("src/server/features/trust/index.ts")).not.toMatch(/notifyComment|notifyFollow|notifyUpvote|notifyApplication/);});
+ it("schema preserves polymorphic targets, limits and internal dedupe key",()=>{const s=read("src/server/db/schema/trust.ts");expect(s).toContain('unique("notifications_event_recipient_unique")');expect(s).toContain('entityId:uuid("entityId")');expect(s).toContain("reports_reason_check");expect(s).not.toContain('entityId:uuid("entityId").references');const j=JSON.parse(read("src/server/db/migrations/meta/_journal.json"));expect(j.entries[5].tag).toBe("0005_notifications_reports_moderation");});
+ it("query layer is injectable/server entry guarded; existing role implementation reused",()=>{expect(read("src/server/features/trust/index.ts")).toMatch(/^import "server-only"/);expect(read("src/server/features/trust/trust-queries.ts")).not.toContain('from "@/server/db"');expect(read("src/lib/reports.ts")).toContain("changeUserRole");});
+});

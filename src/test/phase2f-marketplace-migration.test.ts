@@ -31,20 +31,19 @@ describe("Phase 2F migration boundaries",()=>{
  });
  it("lead moderation stops targeting obsolete Supabase lead records",()=>{
   const source=read("src/lib/reports.ts");
-  expect(source).toContain("fetchLeadsByIds(leadIds)");
-  expect(source).toContain("archiveLeadAsStaff(report.entityId)");
-  expect(source).toContain("removeLegacyContent = false");
-  expect(source).toContain('supabase.rpc("moderate_report"');
+  expect(source).toContain('trustRequest("moderate"');
+  expect(source).not.toMatch(/supabase|archiveLeadAsStaff/);
+  expect(read("src/server/features/trust/trust-queries.ts")).toContain("return db.transaction");
  });
- it("does not replace Auth, Storage or notification/report persistence",()=>{
-  expect(read("src/lib/notifications.ts")).toMatch(/\.from\("notifications"\)/);
-  expect(read("src/lib/reports.ts")).toMatch(/\.from\("reports"\)/);
+ it("preserves Auth/Storage while Phase 2G migrates notifications/reports",()=>{
+  expect(read("src/lib/notifications.ts")).not.toMatch(/supabase/);
+  expect(read("src/lib/reports.ts")).not.toMatch(/supabase/);
   expect(read("src/lib/attachments.ts")).toContain("supabase.storage");
   expect(read("src/server/features/marketplace/index.ts")).toContain("getServerSession()");
  });
  it("schema journal contains a reproducible marketplace migration after social",()=>{
   const journal=JSON.parse(read("src/server/db/migrations/meta/_journal.json"));
-  expect(journal.entries.slice(-2).map((entry:{tag:string})=>entry.tag)).toEqual(["0003_community_social_graph","0004_leads_applications_pipeline"]);
+  expect(journal.entries.slice(3,5).map((entry:{tag:string})=>entry.tag)).toEqual(["0003_community_social_graph","0004_leads_applications_pipeline"]);
   expect(read("src/server/db/migrations/0004_leads_applications_pipeline.sql")).toContain('CREATE TABLE "lead_pipeline"');
  });
 });

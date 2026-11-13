@@ -13,7 +13,7 @@
  *
  * Phase 2E: social — communities, community members, follows.
  * Phase 2F: marketplace — leads, lead applications, private lead pipeline.
- * Still in Supabase: notifications and reports.
+ * Phase 2G: notifications and reports. Supabase retains Auth/Storage only.
  */
 export * from "./identity";
 export * from "./content";
@@ -21,3 +21,5 @@ export * from "./content";
 export * from "./social";
 
 export * from "./marketplace";
+
+export * from "./trust";
