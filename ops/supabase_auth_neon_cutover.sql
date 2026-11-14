@@ -2,6 +2,8 @@
 -- Backup/review first. Retires only the exact legacy trigger shipped by this repo.
 -- Auth accounts, sessions, passwords, OAuth and email flows are NOT removed.
 begin;
+set local lock_timeout = '5s';
+set local statement_timeout = '30s';
 do $$
 declare function_name text;
 begin

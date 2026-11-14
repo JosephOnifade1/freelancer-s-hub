@@ -3,6 +3,8 @@
 -- No application table/function is consulted. Bucket remains PRIVATE.
 -- Audit OTHER policies on this bucket before cutover: policies OR together.
 begin;
+set local lock_timeout = '5s';
+set local statement_timeout = '30s';
 insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
 values('post-documents','post-documents',false,10485760,array['application/pdf','text/plain','text/csv','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'])
 on conflict(id) do update set public=false,file_size_limit=excluded.file_size_limit,allowed_mime_types=excluded.allowed_mime_types;
