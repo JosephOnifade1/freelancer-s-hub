@@ -20,8 +20,8 @@
  * pull a server-only secret into a client bundle. Privileged Storage credentials are isolated in a server-only module, never here.
  */
 
-const nextPublicSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const nextPublicSupabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const nextPublicSupabaseUrl = readNextPublicEnv("NEXT_PUBLIC_SUPABASE_URL");
+const nextPublicSupabaseAnonKey = readNextPublicEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
 const nextPublicDemoMode = readNextPublicEnv("NEXT_PUBLIC_DEMO_MODE");
 
 /**
@@ -49,12 +49,18 @@ function readViteEnv(key: string): string | undefined {
  * `const x = process.env.FOO` moved into a helper) resolves to nothing. Each
  * supported variable is listed explicitly; anything else is not public config.
  */
-function readNextPublicEnv(key: "NEXT_PUBLIC_DEMO_MODE"): string | undefined {
-  switch (key) {
-    case "NEXT_PUBLIC_DEMO_MODE":
-      return process.env.NEXT_PUBLIC_DEMO_MODE;
-    default:
-      return undefined;
+function readNextPublicEnv(key: "NEXT_PUBLIC_SUPABASE_URL" | "NEXT_PUBLIC_SUPABASE_ANON_KEY" | "NEXT_PUBLIC_DEMO_MODE"): string | undefined {
+  // Keep literal reads for Next's compiler, but don't require a Node process
+  // global in Vite browsers. After Next inlining these are simply constants.
+  try {
+    switch (key) {
+      case "NEXT_PUBLIC_SUPABASE_URL": return process.env.NEXT_PUBLIC_SUPABASE_URL;
+      case "NEXT_PUBLIC_SUPABASE_ANON_KEY": return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      case "NEXT_PUBLIC_DEMO_MODE": return process.env.NEXT_PUBLIC_DEMO_MODE;
+      default: return undefined;
+    }
+  } catch {
+    return undefined;
   }
 }
 
