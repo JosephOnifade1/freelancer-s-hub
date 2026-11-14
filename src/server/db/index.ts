@@ -3,6 +3,8 @@ import "server-only";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
+import { poolOptions } from "./pool-options.mjs";
+import { proveIsolatedTransaction } from "./verification-transaction.mjs";
 import { isDatabaseConfigured, requireDatabaseUrl, resolveConnectionSettings } from "./env";
 import * as schema from "./schema";
 
@@ -66,7 +68,6 @@ export async function isRequestScoped(): Promise<boolean> {
   }
 }
 
-const POOL_MAX_DEFAULT = 10;
 
 interface DbGlobal {
   __borynxPool?: Pool;
@@ -92,22 +93,12 @@ export function getPool(): Pool {
   // `?sslmode=no-verify` would otherwise win over a secure `ssl` object.
   const settings = resolveConnectionSettings(requireDatabaseUrl());
 
-  const pool = new Pool({
-    connectionString: settings.connectionString,
-    ssl: settings.ssl,
-    max: Number(process.env.DATABASE_POOL_MAX ?? POOL_MAX_DEFAULT),
-    idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 10_000,
-    // application_name makes Borynx's connections identifiable in
-    // `pg_stat_activity`, which matters for diagnosing lock waits caused by the
-    // advisory lock in `cast_vote`.
-    application_name: "borynx-next",
-  });
+  const pool = new Pool(poolOptions(settings, process.env.DATABASE_POOL_MAX));
 
   // A pool-level error (a dead idle client) must not crash the process: `pg`
   // emits it asynchronously with no listener otherwise.
-  pool.on("error", (error) => {
-    console.error("Neon pool error:", error.message);
+  pool.on("error", () => {
+    console.error("Neon pool error (connection unavailable).");
   });
 
   globalForDb.__borynxPool = pool;
@@ -189,59 +180,11 @@ export interface TransactionProof {
   rolledBack: boolean;
 }
 
-/**
- * Proves interactive transaction support *and* rollback.
- *
- * Writes inside the transaction, reads it back inside the same transaction,
- * then throws so the transaction rolls back. The read-back proves the write was
- * visible to the transaction; the post-rollback read (done by the caller) proves
- * it was not committed. Nothing is persisted: this uses a `TEMP` table that
- * exists only for the session.
- *
- * This is the capability `cast_vote` depends on — row locks and
- * `pg_advisory_xact_lock` require exactly this.
- */
+/** Session-independent diagnostic shared with the explicit local verification CLI.
+ * Uses unique TEMP structures exclusively inside pinned Drizzle transactions. */
 export async function proveTransaction(): Promise<TransactionProof> {
-  const db = getDatabase();
-
-  // No `ON COMMIT DROP`: the table is created outside a transaction, so it would
-  // be dropped immediately. It is session-local (TEMP) and dropped explicitly.
-  await db.execute(sql`create temp table if not exists spike_tx_probe (v text)`);
-  await db.execute(sql`truncate spike_tx_probe`);
-
-  let transactionId: string | null = null;
-  let rolledBack = false;
-
-  try {
-    await db.transaction(async (tx) => {
-      // Write first: `pg_current_xact_id_if_assigned()` is null until the
-      // transaction has actually done something, so reading it before the insert
-      // would report "no transaction" even inside a real one.
-      await tx.execute(sql`insert into spike_tx_probe (v) values ('committed?')`);
-
-      const idRows = await tx.execute(
-        sql`select pg_current_xact_id_if_assigned()::text as tid`,
-      );
-      const row = (idRows.rows ?? idRows)[0] as { tid: string | null };
-      transactionId = row.tid;
-
-      const check = await tx.execute(sql`select count(*)::int as n from spike_tx_probe`);
-      const count = ((check.rows ?? check)[0] as { n: number }).n;
-      if (count !== 1) throw new Error(`transaction visibility check failed: ${count}`);
-
-      // Deliberate rollback.
-      throw new Error("spike: intentional rollback");
-    });
-  } catch (error) {
-    if ((error as Error).message === "spike: intentional rollback") {
-      rolledBack = true;
-    } else {
-      throw error;
-    }
-  }
-
-  await db.execute(sql`drop table if exists spike_tx_probe`);
-  return { transactionId, rolledBack };
+  const result=await proveIsolatedTransaction(getDatabase());
+  return {transactionId:result.transactionId,rolledBack:result.rolledBack};
 }
 
 /**

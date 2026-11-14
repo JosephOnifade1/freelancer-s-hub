@@ -25,7 +25,16 @@
     "typecheck:legacy": "tsc --noEmit -p tsconfig.legacy.json",
     "dev:legacy": "vite --port 8080",
     "build:legacy": "vite build",
-    "preview:legacy": "vite preview --port 8080"
+    "preview:legacy": "vite preview --port 8080",
+    "verify:env": "node --experimental-strip-types scripts/verification/cli.mjs env",
+    "verify:neon": "node --experimental-strip-types scripts/verification/cli.mjs neon",
+    "verify:migrations": "node --experimental-strip-types scripts/verification/cli.mjs migrations",
+    "verify:migrate": "node --experimental-strip-types scripts/verification/cli.mjs migrate",
+    "verify:transaction": "node --experimental-strip-types scripts/verification/cli.mjs transaction",
+    "verify:auth": "node --experimental-strip-types scripts/verification/cli.mjs auth",
+    "verify:storage": "node --experimental-strip-types scripts/verification/cli.mjs storage",
+    "test:verification": "vitest run --config vitest.verification.config.ts",
+    "verify:bundle": "node --experimental-strip-types scripts/verification/cli.mjs bundle"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
