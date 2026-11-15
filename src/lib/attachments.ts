@@ -143,8 +143,8 @@ export async function getDocumentDownloadUrl(attachment: PostAttachment): Promis
 
 /** Remove metadata first so a cleanup failure cannot leave a broken download link. */
 export async function removePostAttachment(attachment: PostAttachment): Promise<void> {
-  // Metadata first (Neon, uploader-scoped server-side), then the object. Removing the
-  // record first means a failed cleanup cannot leave a broken download link.
+  // Server removes metadata and persists delete permission atomically, then tries
+  // byte cleanup. The follow-up below is an idempotent retry, not path authorization.
   const removed = await removeAttachmentRecord(attachment.id);
   if (isContentError(removed)) {
     throw new Error(

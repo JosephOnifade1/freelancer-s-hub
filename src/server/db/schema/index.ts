@@ -27,3 +27,4 @@ export * from "./trust";
 export * from "./badges";
 
 export * from "./auth";
+export * from "./security";

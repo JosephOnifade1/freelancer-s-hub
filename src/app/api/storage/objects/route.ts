@@ -1,3 +1,7 @@
+import {getDatabase} from "@/server/db";
+import {uploadPrivateDocument,cleanupPrivateDocument} from "@/server/storage/document-lifecycle";
+import {deleteDocumentBytes} from "@/server/storage/documents";
+import {DOCUMENT_MIMES,documentKey} from "@/server/storage/document-key";
 import { randomUUID } from "node:crypto";
 import { getServerSession } from "@/lib/server-session";
 import { storageBucket } from "@/server/storage/bridge";
@@ -6,7 +10,7 @@ import { trustedMutation } from "@/server/auth/config";
 import { isValidUid } from "@/server/features/identity/provision-profile";
 export const runtime = "nodejs";
 const allowed = ["image/png", "image/jpeg", "image/gif", "image/webp"];
-const documents: Record<string,string> = { pdf:"application/pdf",txt:"text/plain",csv:"text/csv",doc:"application/msword",docx:"application/vnd.openxmlformats-officedocument.wordprocessingml.document",xlsx:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" };
+const documents:Record<string,string>=DOCUMENT_MIMES;
 const fail = (status:number) => Response.json({ error: "storage_request_failed" }, { status });
 /** Bounded streaming read before FormData parsing (never buffer unbounded input). */
 async function boundedForm(request:Request) {
@@ -32,9 +36,12 @@ export async function POST(request:Request) {
       if(!isValidUid(postId))return fail(400);
       const post=await getPost(postId);if(!post.ok || post.data?.authorUid!==session.uid)return fail(404);
     }
-    const path=target==="post-documents"?`${session.uid}/${postId}/${randomUUID()}.${ext}`:`${session.uid}/${randomUUID()}.${mime.split("/")[1]}`;
-    const storage=storageBucket(target),result=await storage.upload(path,await file.arrayBuffer(),{contentType:mime,upsert:false});
-    if(result.error)return fail(503);
+    const storage=storageBucket(target);
+    const send=async(path:string)=>{const result=await storage.upload(path,await file.arrayBuffer(),{contentType:mime,upsert:false});if(result.error)throw Error("upload_failed");};
+    const path=target==="post-documents"
+      ?await uploadPrivateDocument(getDatabase(),session.uid,String(postId),ext as keyof typeof DOCUMENT_MIMES,file.size,send)
+      :`${session.uid}/${randomUUID()}.${mime.split("/")[1]}`;
+    if(target!=="post-documents")await send(path);
     return Response.json({path,...(target!=="post-documents"?{url:storage.getPublicUrl(path).data.publicUrl}:{})},{headers:{"cache-control":"no-store"}});
   }catch{return fail(503);}
 }
@@ -43,8 +50,8 @@ export async function DELETE(request:Request){
   try{
     const session=await getServerSession();if(!session)return fail(401);
     const body=await request.json();
-    // Own orphan cleanup only. No bucket supplied by browser and no prefix deletion.
-    if(typeof body.path!=="string" || !new RegExp(`^${session.uid}/[0-9a-f-]{36}/[0-9a-f-]{36}\\.(pdf|txt|csv|doc|docx|xlsx)$`).test(body.path))return fail(400);
-    const result=await storageBucket("post-documents").remove([body.path]);return result.error?fail(503):Response.json({ok:true});
+    if(!documentKey(body.path,session.uid))return fail(400);
+    const result=await cleanupPrivateDocument(getDatabase(),session.uid,body.path,deleteDocumentBytes);
+    return result.status==="removed"?Response.json({ok:true}):fail(result.status==="pending"?503:409);
   }catch{return fail(503);}
 }

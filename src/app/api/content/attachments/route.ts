@@ -14,13 +14,11 @@ import { failure, readJsonBody, writeResponse } from "@/server/features/content/
  * `POST /api/content/attachments` — record an upload that already exists in Storage.
  *
  * **This route does not upload bytes.** The file is written to Supabase Storage by
- * the browser (`attachments.ts`), and only the resulting path is registered here.
- * Storage is unchanged this phase (Phase 2D §8); the split is what keeps the metadata
- * authorized while the bytes stay where they are.
+ * the authenticated server upload route, which persists a one-use intent.
+ * Registration consumes that exact actor/post/size/MIME-bound intent.
  *
- * The server re-derives ownership from the session and rejects a `storagePath` that
- * does not begin `<uid>/<postId>/`, so a caller cannot register a file in someone
- * else's folder.
+ * Canonical keys and server-issued intents are checked in the service; a raw
+ * ownership prefix is never sufficient authorization.
  */
 export const dynamic = "force-dynamic";
 

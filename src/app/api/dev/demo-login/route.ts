@@ -21,6 +21,8 @@ export async function POST(request:Request){
     const window=Math.floor(Date.now()/60000),key=`local-demo:${window}`;
     const result=await getDatabase().execute(sql`insert into auth_rate_limits (key,count,last_request) values (${key},1,${Date.now()}) on conflict (key) do update set count=auth_rate_limits.count+1 returning count`);
     if(Number(result.rows[0]?.count)>10)return new Response(null,{status:429});
+    const proof=await getDatabase().execute(sql`select s.user_id from public.development_seed_identities s join public.auth_users u on u.id=s.user_id and u.email=s.email where s.email=${account.email} and s.purpose=${account.key} and u.email_verified=true`);
+    if(!proof.rows.length)return new Response(null,{status:409});
     // Password never crosses the browser boundary. Better Auth verifies the
     // credential and emits the SAME signed opaque session cookie as normal login.
     return await getAuth().api.signInEmail({body:{email:account.email,password:process.env.BORYNX_DEMO_PASSWORD!},headers:request.headers,asResponse:true});

@@ -6,9 +6,9 @@ import { failure, writeResponse } from "@/server/features/content/http";
 /**
  * `DELETE /api/content/attachments/[id]` — remove a document record.
  *
- * Uploader only, enforced in the `where` clause. Storage cleanup is the client's
- * follow-up (`removePostAttachment` removes metadata first, then the object, so a
- * failed cleanup cannot leave a broken link).
+ * Uploader only. Metadata removal and durable deletion authorization commit
+ * together. Server attempts cleanup; repeated ID requests and the owner cleanup
+ * endpoint retry failures without reauthorizing arbitrary paths.
  */
 export const dynamic = "force-dynamic";
 

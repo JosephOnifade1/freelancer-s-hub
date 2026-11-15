@@ -57,6 +57,13 @@
       "when": 1794705093191,
       "tag": "0007_better_auth_uuid_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794708144574,
+      "tag": "0008_security_document_lifecycle_seed_provenance",
+      "breakpoints": true
     }
   ]
 }
