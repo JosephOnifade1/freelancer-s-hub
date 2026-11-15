@@ -1,5 +1,5 @@
 import { fetchFollowing, setFollowing } from "./social-client";
-import { supabase } from "./supabase";
+import { authClient } from "./auth-client";
 import {
   fetchPublicProfile,
   fetchTopProfiles,
@@ -71,8 +71,8 @@ export const getUserProfile = async (identifier: string): Promise<UserProfile | 
 
   const profile = result.data as UserProfile;
 
-  const { data: sessionData } = await supabase.auth.getSession();
-  const sessionUser = sessionData?.session?.user;
+  const { data: sessionData } = await authClient.getSession();
+  const sessionUser = sessionData?.user;
   if (sessionUser && sessionUser.id === profile.uid) {
     // Private bookmarks belong to the viewer, not everyone who visits their profile.
     try {

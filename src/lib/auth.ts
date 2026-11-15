@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { authClient } from "./auth-client";
 import { getErrorMessage } from "./utils";
 import { sanitizeReturnPath, DEFAULT_RETURN_PATH } from "./return-path";
 
@@ -32,22 +32,14 @@ export function authErrorMessage(error: unknown, fallback: string): string {
 }
 
 export async function resendConfirmationEmail(email: string): Promise<void> {
-  const { error } = await supabase.auth.resend({
-    type: "signup",
-    email,
-    options: { emailRedirectTo: `${window.location.origin}/login` },
-  });
-  if (error) throw new Error(error.message);
+  const { error } = await authClient.sendVerificationEmail({ email, callbackURL: "/login" });
+  if (error) throw new Error("Could not request verification. Please retry later.");
 }
-
 export async function requestPasswordReset(email: string): Promise<void> {
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/reset-password`,
-  });
-  if (error) throw new Error(error.message);
+  const { error } = await authClient.requestPasswordReset({ email, redirectTo: "/reset-password" });
+  if (error) throw new Error("Could not request password recovery. Please retry later.");
 }
-
-export async function updatePassword(newPassword: string): Promise<void> {
-  const { error } = await supabase.auth.updateUser({ password: newPassword });
-  if (error) throw new Error(error.message);
+export async function updatePassword(newPassword: string, token: string): Promise<void> {
+  const { error } = await authClient.resetPassword({ newPassword, token });
+  if (error) throw new Error("Reset link invalid or expired. Request another link.");
 }

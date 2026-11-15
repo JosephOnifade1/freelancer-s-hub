@@ -171,7 +171,7 @@ describe("Supabase Auth and Storage are untouched", () => {
 
   it("Storage uploads are unchanged", () => {
     const source = read("src/lib/uploads.ts");
-    expect(source).toContain("supabase.storage");
+    expect(source).toContain("/api/storage/objects");
     expect(source).toContain("avatars");
   });
 

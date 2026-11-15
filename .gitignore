@@ -30,3 +30,6 @@ next-env.d.ts
 
 # TypeScript incremental build info
 *.tsbuildinfo
+
+# Private local auth-email outbox (contains recovery/verification links)
+.local/

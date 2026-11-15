@@ -25,3 +25,5 @@ export * from "./marketplace";
 export * from "./trust";
 
 export * from "./badges";
+
+export * from "./auth";

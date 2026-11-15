@@ -38,7 +38,7 @@ describe("Phase 2F migration boundaries",()=>{
  it("preserves Auth/Storage while Phase 2G migrates notifications/reports",()=>{
   expect(read("src/lib/notifications.ts")).not.toMatch(/supabase/);
   expect(read("src/lib/reports.ts")).not.toMatch(/supabase/);
-  expect(read("src/lib/attachments.ts")).toContain("supabase.storage");
+  expect(read("src/lib/attachments.ts")).toContain("/api/storage/objects");
   expect(read("src/server/features/marketplace/index.ts")).toContain("getServerSession()");
  });
  it("schema journal contains a reproducible marketplace migration after social",()=>{

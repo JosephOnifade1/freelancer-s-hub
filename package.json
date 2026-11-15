@@ -34,9 +34,15 @@
     "verify:auth": "node --experimental-strip-types scripts/verification/cli.mjs auth",
     "verify:storage": "node --experimental-strip-types scripts/verification/cli.mjs storage",
     "test:verification": "vitest run --config vitest.verification.config.ts",
-    "verify:bundle": "node --experimental-strip-types scripts/verification/cli.mjs bundle"
+    "verify:bundle": "node --experimental-strip-types scripts/verification/cli.mjs bundle",
+    "typecheck:auth": "tsc --noEmit -p tsconfig.auth.json",
+    "dev:data:plan": "tsx scripts/development/cli.ts plan",
+    "dev:data:reset": "tsx scripts/development/cli.ts reset",
+    "dev:data:seed": "tsx scripts/development/cli.ts seed",
+    "test:auth": "vitest run --config vitest.auth.config.ts"
   },
   "dependencies": {
+    "@better-auth/drizzle-adapter": "1.7.25",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",
@@ -88,6 +94,7 @@
     "@tiptap/pm": "^3.22.5",
     "@tiptap/react": "^3.22.5",
     "@tiptap/starter-kit": "^3.22.5",
+    "better-auth": "1.7.25",
     "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -123,9 +130,10 @@
     "turndown": "^7.2.4",
     "turndown-plugin-gfm": "^1.0.2",
     "vaul": "^1.1.2",
-    "zod": "^3.25.76"
+    "zod": "4.6.7"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.3.14",
     "@eslint/js": "^9.32.0",
     "@tailwindcss/typography": "^0.5.16",
     "@testing-library/dom": "^10.4.2",
@@ -150,6 +158,7 @@
     "lovable-tagger": "^1.1.13",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
+    "tsx": "4.21.0",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
     "vite": "^5.4.19",

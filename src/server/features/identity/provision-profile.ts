@@ -1,8 +1,8 @@
 /**
  * Profile provisioning (Phase 2B.3).
  *
- * Supabase Auth owns identity; Neon owns application data. The two are joined by
- * one value: the Supabase Auth UUID, stored as `profiles.uid`. Nothing in this
+ * Better Auth owns identity; Neon owns application data. The two are joined by
+ * one value: the Better Auth UUID, stored as `profiles.uid`. Nothing in this
  * module invents an identity — see `provisionProfile`.
  *
  * Why this exists at all
@@ -29,21 +29,22 @@
 import { sql } from "drizzle-orm";
 
 /**
- * The minimum a provisional profile needs from Supabase Auth.
+ * The minimum a provisional profile needs from Better Auth.
  *
  * Deliberately *not* the whole `User` object: this module must not be able to
  * read a token, an email, or anything else it does not store.
  */
 export interface ProvisioningIdentity {
-  /** The verified Supabase Auth UUID. The only trusted identifier here. */
+  /** The verified Better Auth UUID. The only trusted identifier here. */
   uid: string;
-  /** Display name hint from `user_metadata`; may be absent or junk. */
+  /** Display name hint from the authenticated user name; may be absent or junk. */
   displayName?: string | null;
 }
 
 /** A Drizzle client, or anything structurally similar (used by tests). */
 export interface ProvisioningDatabase {
   execute: (query: ReturnType<typeof sql>) => Promise<unknown>;
+  transaction?: <T>(run: (tx: ProvisioningDatabase) => Promise<T>) => Promise<T>;
 }
 
 export interface ProvisionedProfile {
@@ -74,7 +75,7 @@ export function isProvisioningFailure(
  * Handle rules, mirroring `USERNAME_RE` in `src/lib/auth.ts`.
  *
  * Kept as a literal here rather than imported from `@/lib/auth` because that
- * module imports the Supabase browser client, and this module must stay
+ * module imports the auth browser client, and this module must stay
  * importable in a Node test and must never pull a browser bundle into the
  * server graph. A test asserts the two constants are identical.
  */
@@ -82,7 +83,7 @@ export const USERNAME_PATTERN = /^[a-z0-9_]{3,15}$/;
 export const USERNAME_MIN = 3;
 export const USERNAME_MAX = 15;
 
-/** True when a string is a plausible Supabase Auth UUID. */
+/** True when a string is a plausible Better Auth UUID. */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function isValidUid(uid: unknown): uid is string {
@@ -144,64 +145,39 @@ export function fallbackUsername(uid: string): string {
  *     so a crash cannot leave a profile with no registry row (which would make
  *     its own handle look available to someone else).
  */
-export async function provisionProfile(
-  db: ProvisioningDatabase,
-  identity: ProvisioningIdentity,
-): Promise<ProvisioningOutcome> {
-  if (!isValidUid(identity.uid)) {
-    return { ok: false, reason: "invalid_identity" };
-  }
-
-  const uid = identity.uid;
-  const seed = deriveUsernameSeed(identity.displayName) ?? fallbackUsername(uid);
-  // The initial is what the avatar shows; the app computes it the same way.
-  const initial = (identity.displayName ?? seed).trim().charAt(0).toUpperCase() || "?";
-
+/** One real transaction: actor lock, collision-safe profile, registry together.
+ * Errors escape the transaction callback so the driver ROLLBACKs both writes. */
+export async function provisionProfile(db: ProvisioningDatabase, identity: ProvisioningIdentity): Promise<ProvisioningOutcome> {
+  if (!isValidUid(identity.uid)) return { ok: false, reason: "invalid_identity" };
+  if (!db.transaction) return { ok: false, reason: "database_error" };
   try {
-    // A single statement, so it is atomic without an explicit transaction:
-    // the `insert … on conflict` for the profile, then the handle claim, are
-    // two statements only because `usernames` has its own unique key. Both are
-    // wrapped in one `db.transaction` by the caller (`index`), and this function
-    // is safe to call bare because each statement is individually idempotent.
-    const inserted = await db.execute(sql`
-      insert into profiles (uid, username, "displayName", initial)
-      values (${uid}, ${seed}, ${identity.displayName ?? null}, ${initial})
-      on conflict (uid) do nothing
-      returning uid, username
-    `);
-
-    const insertedRows = rowsOf<{ uid: string; username: string }>(inserted);
-
-    if (insertedRows.length > 0) {
-      // Only claim the handle when this call actually created the profile. A
-      // pre-existing profile already owns its handle; re-inserting could not
-      // succeed anyway, but skipping it keeps the common path to one statement.
-      await db.execute(sql`
-        insert into usernames (username, uid)
-        values (${seed}, ${uid})
-        on conflict (username) do nothing
-      `);
-      return { ok: true, profile: { uid, username: seed, created: true } };
-    }
-
-    // Profile already existed: report what is there, do not touch it.
-    const existing = await db.execute(sql`
-      select uid, username from profiles where uid = ${uid} limit 1
-    `);
-    const rows = rowsOf<{ uid: string; username: string }>(existing);
-    if (rows.length === 0) {
-      // `ON CONFLICT` fired but the row is not readable. Only possible if the
-      // row vanished between statements; treat as a failure rather than claim
-      // success we cannot substantiate.
-      return { ok: false, reason: "database_error" };
-    }
-    return { ok: true, profile: { ...rows[0], created: false } };
-  } catch {
-    // Never surface the driver error: it can carry the connection string, and
-    // the caller must not learn anything about the database's internals.
-    return { ok: false, reason: "database_error" };
-  }
+    return await db.transaction(async tx => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${identity.uid}, 823))`);
+      const existing = rowsOf<{uid:string;username:string}>(await tx.execute(sql`select uid, username from profiles where uid=${identity.uid} limit 1`))[0];
+      if (existing) return { ok: true, profile: { ...existing, created: false } };
+      const seed = deriveUsernameSeed(identity.displayName) ?? fallbackUsername(identity.uid);
+      for (let attempt=0;attempt<32;attempt++) {
+        const suffix = identity.uid.replaceAll("-", "").slice(-8) + (attempt || "");
+        const candidate = attempt === 0 ? seed : `${seed.slice(0, Math.max(3,14-suffix.length))}_${suffix}`.slice(0,15);
+        // Claim registry first under a savepoint: FK is deferred only within this
+        // algorithm by inserting profile first and rolling back on registry collision.
+        const result = await tx.transaction!(async nested => {
+          const inserted=rowsOf<{uid:string;username:string}>(await nested.execute(sql`
+            insert into profiles (uid,username,"displayName",initial)
+            values (${identity.uid},${candidate},${identity.displayName ?? null},${(identity.displayName ?? seed).trim().charAt(0).toUpperCase() || "?"})
+            on conflict do nothing returning uid,username`));
+          if (!inserted.length) return null;
+          const registry=rowsOf<{uid:string}>(await nested.execute(sql`insert into usernames (username,uid) values (${candidate},${identity.uid}) on conflict do nothing returning uid`));
+          if (!registry.length) throw new UsernameCollision();
+          return inserted[0];
+        }).catch(error => { if(error instanceof UsernameCollision)return null; throw error; });
+        if (result) return { ok: true, profile: { ...result, created: true } };
+      }
+      throw new Error("username_candidates_exhausted");
+    });
+  } catch { return { ok: false, reason: "database_error" }; }
 }
+class UsernameCollision extends Error {}
 
 /**
  * Normalises whatever the driver returned into an array of rows.

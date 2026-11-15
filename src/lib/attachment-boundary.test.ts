@@ -6,16 +6,6 @@ const m = vi.hoisted(() => ({
   register: vi.fn(),
   attachments: vi.fn(),
 }));
-vi.mock("./supabase", () => ({
-  supabase: {
-    auth: {
-      getSession: async () => ({
-        data: { session: { user: { id: "owner" } } },
-      }),
-    },
-    storage: { from: () => ({ upload: m.upload, remove: m.remove }) },
-  },
-}));
 vi.mock("./content-client", () => ({
   fetchContentAttachments: m.attachments,
   registerAttachment: m.register,
@@ -28,6 +18,10 @@ beforeEach(() => {
   m.attachments.mockResolvedValue({ ok: true, data: [] });
   m.upload.mockResolvedValue({ error: null });
   m.remove.mockResolvedValue({ error: null });
+  vi.stubGlobal("fetch",vi.fn(async (_url,options)=>{
+    const result=options?.method==="DELETE"?await m.remove():await m.upload();
+    return {ok:!result.error,json:async()=>({path:"owner/post/fixture.txt"})};
+  }));
 });
 const file = () => new File(["text"], "note.txt", { type: "text/plain" });
 describe("Storage/Neon compensation", () => {

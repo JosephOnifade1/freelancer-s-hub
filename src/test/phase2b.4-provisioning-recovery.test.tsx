@@ -27,19 +27,15 @@ const signOut = vi.fn(async () => {
   return { error: null };
 });
 
-vi.mock("@/lib/supabase", () => ({
-  supabase: {
-    auth: {
-      getSession: async () => ({ data: { session: initialSession }, error: null }),
-      onAuthStateChange: (cb: (event: string, session: Session) => void) => {
-        authListener = cb;
-        return { data: { subscription: { unsubscribe: () => { authListener = null; } } } };
-      },
-      signOut: () => signOut(),
-    },
-  },
-  isDemoMode: false,
-}));
+vi.mock("@/lib/auth-client", async () => {
+ const React=await import("react");
+ const project=(session:Session)=>session?{user:{...session.user,emailVerified:true,name:session.user.user_metadata?.display_name??"Ada"},session:{id:"fixture"}}:null;
+ return {authClient:{
+  useSession:()=>{const [state,setState]=React.useState<{data:unknown;isPending:boolean;error:null}>({data:null,isPending:true,error:null});
+   React.useEffect(()=>{ Promise.resolve().then(()=>setState({data:project(initialSession),isPending:false,error:null}));authListener=(_event,session)=>setState({data:project(session),isPending:false,error:null});return()=>{authListener=null;};},[]);return state;},
+  signOut:async()=>{return signOut();}
+ }};
+});
 
 /** Scripted provisioning endpoint. Each entry is consumed per call. */
 type ProvisionReply = { status: number } | "network-error";

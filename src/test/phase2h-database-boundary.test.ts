@@ -25,7 +25,7 @@ describe("Phase 2H final database boundary", () => {
         expect([
           "src/lib/uploads.ts",
           "src/lib/attachments.ts",
-          "src/server/storage/documents.ts",
+          "src/server/storage/bridge.ts",
         ]).toContain(p);
         expect(s, p).not.toMatch(/supabase\s*\.from\(/);
       }
@@ -42,9 +42,9 @@ describe("Phase 2H final database boundary", () => {
     const readers = production.filter((p) =>
       /process\.env\.SUPABASE_SERVICE_ROLE_KEY/.test(read(p)),
     );
-    expect(readers).toEqual(["src/server/storage/documents.ts"]);
+    expect(readers).toEqual(["src/server/storage/bridge.ts"]);
     expect(read(readers[0])).toMatch(/^import "server-only"/);
-    expect(read(readers[0])).toContain('.storage.from("post-documents")');
+    expect(read(readers[0])).toContain('.storage.from(bucket)');
   });
   it("Storage cutover policy references no application database or can_view_post", () => {
     const s = read("ops/supabase_storage_neon_cutover.sql");

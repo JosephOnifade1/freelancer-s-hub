@@ -1,7 +1,8 @@
+import { DemoAccounts } from "@/components/auth/DemoAccounts";
 import { useEffect, useState } from "react";
 import { AppLink as Link } from "@/components/AppLink";
 import { useRouter, useSearchParams } from "next/navigation";
-import { supabase } from "../lib/supabase";
+import { authClient, startGoogleSignIn } from "../lib/auth-client";
 import { postAuthRedirect, resendConfirmationEmail, authErrorMessage } from "../lib/auth";
 import { readReturnPath } from "../lib/return-path";
 import { oauthCallbackUrl } from "../lib/oauth";
@@ -35,9 +36,9 @@ export default function Login() {
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await authClient.signIn.email({ email, password });
       if (error) {
-        if (error.message.includes("Email not confirmed")) {
+        if ((error.code === "EMAIL_NOT_VERIFIED" || error.message.includes("Email not confirmed"))) {
           setUnconfirmedEmail(email);
           throw new Error("Your email address has not been confirmed yet. Please check your inbox for the confirmation link.");
         } else if (error.message.includes("Invalid login credentials")) {
@@ -55,7 +56,7 @@ export default function Login() {
     } catch (error) {
       const message = authErrorMessage(error, "Failed to log in.");
       if (message.includes("Failed to fetch")) {
-        toast.error("Unable to connect to Supabase backend. Please check your connection or project status.");
+        toast.error("Authentication is temporarily unavailable. Please retry.");
       } else {
         toast.error(message);
       }
@@ -93,14 +94,7 @@ export default function Login() {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        // Phase 1.1: land on the server-side callback, which exchanges the code
-        // and writes the cookie session, then forwards to the validated
-        // destination. Sending the provider straight to the destination would
-        // leave the code to the client (the Phase 1 behaviour).
-        options: { redirectTo: oauthCallbackUrl(window.location.origin, redirectTo) },
-      });
+      const { error } = await startGoogleSignIn(postAuthRedirect(readReturnPath(searchParams?.get("from"))));
       if (error) throw error;
     } catch (error) {
       toast.error(authErrorMessage(error, "Failed to log in with Google."));
@@ -205,6 +199,7 @@ export default function Login() {
             </div>
           </CardFooter>
         </form>
+        <div className="px-6 pb-6"><DemoAccounts /></div>
       </Card>
     </div>
   );

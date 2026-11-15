@@ -9,7 +9,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/auth-context";
 import { saveOwnProfile, isProfileError } from "@/lib/profile-client";
-import { supabase } from "@/lib/supabase";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { QueryErrorState } from "@/components/QueryErrorState";
 import { getUserProfile } from "@/lib/users";

@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+
 import {
   fetchContentAttachments,
   isContentError,
@@ -78,11 +78,6 @@ export async function uploadPostDocuments(postId: string, files: File[]): Promis
   if (!files.length || files.length > MAX_DOCUMENTS_PER_POST) {
     throw new Error(`Select 1–${MAX_DOCUMENTS_PER_POST} documents.`);
   }
-  const { data: session, error: sessionError } = await supabase.auth.getSession();
-  if (sessionError) throw new Error(sessionError.message);
-  const uid = session?.session?.user?.id;
-  if (!uid) throw new Error("Sign in before attaching documents.");
-
   const uploaded: PostAttachment[] = [];
   const failed: { file: File; error: string }[] = [];
 
@@ -98,9 +93,11 @@ export async function uploadPostDocuments(postId: string, files: File[]): Promis
   for (const file of files) {
     try {
       const { extension, mime } = validateDocument(file);
-      const path = `${uid}/${postId}/${crypto.randomUUID()}.${extension}`;
-      const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, file, { contentType: mime, upsert: false });
-      if (uploadError) throw new Error(uploadError.message);
+      const body = new FormData(); body.set("bucket", BUCKET); body.set("postId", postId); body.set("file", file);
+      const response = await fetch("/api/storage/objects", { method: "POST", body, credentials: "same-origin" });
+      if (!response.ok) throw new Error("Could not upload document.");
+      const { path } = await response.json();
+      if (typeof path !== "string") throw new Error("Invalid upload response.");
 
       // Phase 2D: the bytes went to Storage; the pointer and metadata go to Neon.
       // The server re-derives the uploader from the session and rejects a path outside
@@ -119,7 +116,7 @@ export async function uploadPostDocuments(postId: string, files: File[]): Promis
         if (["error","unavailable"].includes(registered.error)) {
           throw new Error(`Could not confirm document details. Reload documents before retrying. Recovery path: ${path}`);
         }
-        const {error:cleanupError}=await supabase.storage.from(BUCKET).remove([path]);
+        const cleanupError = !await cleanupDocument(path);
         if(cleanupError)throw new Error(`Document registration failed and file cleanup failed. Contact support with recovery path: ${path}`);
         throw new Error(
           registered.error === "conflict"
@@ -146,10 +143,6 @@ export async function getDocumentDownloadUrl(attachment: PostAttachment): Promis
 
 /** Remove metadata first so a cleanup failure cannot leave a broken download link. */
 export async function removePostAttachment(attachment: PostAttachment): Promise<void> {
-  const { data: session, error: sessionError } = await supabase.auth.getSession();
-  if (sessionError) throw new Error(sessionError.message);
-  const uid = session?.session?.user?.id;
-  if (!uid || uid !== attachment.uploaderUid) throw new Error("Only the uploader can remove this document.");
   // Metadata first (Neon, uploader-scoped server-side), then the object. Removing the
   // record first means a failed cleanup cannot leave a broken download link.
   const removed = await removeAttachmentRecord(attachment.id);
@@ -160,7 +153,7 @@ export async function removePostAttachment(attachment: PostAttachment): Promise<
         : "Could not remove this document. Please try again.",
     );
   }
-  const { error: cleanupError } = await supabase.storage.from(BUCKET).remove([attachment.storagePath]);
+  const cleanupError = !await cleanupDocument(attachment.storagePath);
   if (cleanupError) throw new Error("Document removed from the post, but file cleanup failed. Please contact support.");
 }
 
@@ -172,4 +165,9 @@ export function formatSize(bytes: number): string {
 /** Whether a document type can be previewed inline (text/CSV). */
 export function isPreviewable(mimeType: string): boolean {
   return mimeType === "text/plain" || mimeType === "text/csv";
+}
+
+async function cleanupDocument(path: string): Promise<boolean> {
+  try { return (await fetch("/api/storage/objects", { method: "DELETE", credentials: "same-origin", headers: {"content-type":"application/json"}, body: JSON.stringify({path}) })).ok; }
+  catch { return false; }
 }

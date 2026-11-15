@@ -14,7 +14,6 @@ import { globalSearch, SearchResults } from "@/lib/search";
 import { VerifiedBadge } from "./VerifiedBadge";
 import { LiveReputation } from "./LiveReputation";
 import { useTheme, ThemeMode } from "@/hooks/useTheme";
-import { supabase } from "@/lib/supabase";
 import { saveOwnProfile, isProfileError } from "@/lib/profile-client";
 import { toast } from "sonner";
 import {
@@ -440,7 +439,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 >
                   <div className="h-full w-full rounded-full overflow-hidden bg-brand/10 hover:bg-brand/20 transition-colors flex items-center justify-center">
                     <img
-                      src={profile?.avatarUrl || user?.user_metadata?.avatar_url || ""}
+                      src={profile?.avatarUrl || user?.photoURL || ""}
                       alt="Avatar"
                       className="h-full w-full object-cover"
                       onError={(e) => {
@@ -456,9 +455,9 @@ export function AppLayout({ children }: AppLayoutProps) {
                     />
                     <span
                       className="font-heading text-xs font-bold text-brand flex items-center justify-center h-full w-full"
-                      style={{ display: (profile?.avatarUrl || user?.user_metadata?.avatar_url) ? 'none' : 'flex' }}
+                      style={{ display: (profile?.avatarUrl || user?.photoURL) ? 'none' : 'flex' }}
                     >
-                      {profile?.initial || user?.user_metadata?.display_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || "?"}
+                      {profile?.initial || user?.displayName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || "?"}
                     </span>
                   </div>
                 </button>

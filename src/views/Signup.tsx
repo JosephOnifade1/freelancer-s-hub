@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { AppLink as Link } from "@/components/AppLink";
 import { useRouter, useSearchParams } from "next/navigation";
-import { supabase } from "../lib/supabase";
+import { authClient, startGoogleSignIn } from "../lib/auth-client";
 import { checkUsernameAvailability } from "../lib/users";
 import { postAuthRedirect, resendConfirmationEmail, authErrorMessage, normalizeUsername, isValidUsername } from "../lib/auth";
 import { readReturnPath } from "../lib/return-path";
@@ -69,14 +69,7 @@ export default function Signup() {
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { display_name: name, username },
-          emailRedirectTo: `${window.location.origin}/login`,
-        },
-      });
+      const { data, error } = await authClient.signUp.email({ email, password, name, callbackURL: "/login" });
 
       if (error) throw error;
 
@@ -87,7 +80,7 @@ export default function Signup() {
       // path above). With email confirmation enabled there is no session yet, so there
       // is nothing to provision; it happens on first sign-in.
 
-      if (data?.user && !data?.session) {
+      if (data?.user && !data?.token) {
         // Email confirmation is enabled: the account exists but cannot be
         // used until the inbox link is clicked. Say exactly that.
         setConfirmationSentTo(email);
@@ -98,7 +91,7 @@ export default function Signup() {
     } catch (error) {
       const message = authErrorMessage(error, "Failed to create account.");
       if (message.includes("Failed to fetch")) {
-        toast.error("Unable to connect to Supabase backend. Please check your connection or project status.");
+        toast.error("Authentication is temporarily unavailable. Please retry.");
       } else {
         toast.error(message);
       }
@@ -160,14 +153,7 @@ export default function Signup() {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        // Phase 1.1: land on the server-side callback, which exchanges the code
-        // and writes the cookie session, then forwards to the validated
-        // destination. Sending the provider straight to the destination would
-        // leave the code to the client (the Phase 1 behaviour).
-        options: { redirectTo: oauthCallbackUrl(window.location.origin, redirectTo) },
-      });
+      const { error } = await startGoogleSignIn(postAuthRedirect(readReturnPath(searchParams?.get("from"))));
       if (error) throw error;
     } catch (error) {
       toast.error(authErrorMessage(error, "Failed to sign up with Google."));
@@ -245,7 +231,7 @@ export default function Signup() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={12}
               />
             </div>
           </CardContent>

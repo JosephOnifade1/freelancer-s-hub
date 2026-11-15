@@ -19,25 +19,15 @@ let initialSession: Session = null;
 let sessionFetchCount = 0;
 let authListener: ((event: string, session: Session) => void) | null = null;
 
-vi.mock("@/lib/supabase", () => ({
-  supabase: {
-    auth: {
-      getSession: async () => {
-        sessionFetchCount += 1;
-        return { data: { session: initialSession }, error: null };
-      },
-      onAuthStateChange: (cb: (event: string, session: Session) => void) => {
-        authListener = cb;
-        return { data: { subscription: { unsubscribe: () => { authListener = null; } } } };
-      },
-      signOut: async () => {
-        initialSession = null;
-        return { error: null };
-      },
-    },
-  },
-  isDemoMode: false,
-}));
+vi.mock("@/lib/auth-client", async () => {
+ const React=await import("react");
+ const project=(session:Session)=>session?{user:{...session.user,emailVerified:true,name:session.user.user_metadata?.display_name??"Ada"},session:{id:"fixture"}}:null;
+ return {authClient:{
+  useSession:()=>{const [state,setState]=React.useState<{data:unknown;isPending:boolean;error:null}>({data:null,isPending:true,error:null});
+   React.useEffect(()=>{sessionFetchCount += 1; Promise.resolve().then(()=>setState({data:project(initialSession),isPending:false,error:null}));authListener=(_event,session)=>setState({data:project(session),isPending:false,error:null});return()=>{authListener=null;};},[]);return state;},
+  signOut:async()=>{initialSession=null;return {error:null};}
+ }};
+});
 
 vi.mock("@/lib/users", () => ({
   ensureUserProfile: vi.fn(async () => null),
@@ -157,8 +147,8 @@ describe("logout (Step 9)", () => {
     const { client, ctx } = await mountProvider();
     await waitFor(() => expect(screen.getByTestId("state")).toHaveTextContent("signed-in"));
 
-    const { supabase } = await import("@/lib/supabase");
-    vi.spyOn(supabase.auth, "signOut").mockRejectedValueOnce(new Error("network down"));
+    const { authClient } = await import("@/lib/auth-client");
+    vi.spyOn(authClient, "signOut").mockRejectedValueOnce(new Error("network down"));
 
     await act(async () => {
       await expect(ctx().signOut()).rejects.toThrow("network down");

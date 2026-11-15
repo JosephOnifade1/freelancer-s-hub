@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Link } from "react-router-dom";
-import { supabase } from "../lib/supabase";
+
 import { updatePassword, authErrorMessage } from "../lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,45 +18,13 @@ export default function ResetPassword() {
   const [confirm, setConfirm] = useState("");
   const router = useRouter();
 
-  useEffect(() => {
-    let settled = false;
-
-    // Supabase turns the emailed link into a recovery session and fires
-    // PASSWORD_RECOVERY. Any live session on this page is also accepted:
-    // Supabase owns and verifies this session; no local recovery record is accepted.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string) => {
-      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN" || event === "INITIAL_SESSION") {
-        supabase.auth.getSession().then(({ data }: { data: { session: unknown } }) => {
-          if (data.session) {
-            settled = true;
-            setPhase((p) => (p === "checking" ? "ready" : p));
-          }
-        });
-      }
-    });
-
-    const timer = setTimeout(() => {
-      if (!settled) {
-        supabase.auth.getSession().then(({ data }: { data: { session: unknown } }) => {
-          if (data.session) {
-            setPhase((p) => (p === "checking" ? "ready" : p));
-          } else {
-            setPhase((p) => (p === "checking" ? "invalid" : p));
-          }
-        });
-      }
-    }, 2000);
-
-    return () => {
-      subscription.unsubscribe();
-      clearTimeout(timer);
-    };
-  }, []);
+  const token = typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("token") ?? "";
+  useEffect(() => { setPhase(token && token.length < 2048 ? "ready" : "invalid"); }, [token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters.");
+    if (password.length < 12) {
+      toast.error("Password must be at least 12 characters.");
       return;
     }
     if (password !== confirm) {
@@ -65,10 +33,10 @@ export default function ResetPassword() {
     }
     setPhase("saving");
     try {
-      await updatePassword(password);
+      await updatePassword(password, token);
       setPhase("done");
-      toast.success("Password updated. You're signed in with your new password.");
-      setTimeout(() => router.replace("/"), 1200);
+      toast.success("Password updated. Please sign in with your new password.");
+      setTimeout(() => router.replace("/login"), 1200);
     } catch (error) {
       setPhase("ready");
       toast.error(authErrorMessage(error, "Could not update your password. The reset link may have expired — request a new one."));
@@ -129,7 +97,7 @@ export default function ResetPassword() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  minLength={6}
+                  minLength={12}
                   autoComplete="new-password"
                 />
               </div>
@@ -142,7 +110,7 @@ export default function ResetPassword() {
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
                   required
-                  minLength={6}
+                  minLength={12}
                   autoComplete="new-password"
                 />
               </div>

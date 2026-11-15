@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { supabase } from "./supabase";
+import { historicalClient as supabase } from "../test/fixtures/historical-client";
 import { MockSupabaseClient, seedMockData } from "../test/fixtures/mockSupabase";
 import { fetchLeads, fetchLeadById } from "./leads";
 import { addPipelineItem, changePipelineStage, fetchPipeline, removePipelineItem, saveOpportunity } from "./pipeline";
@@ -17,7 +17,7 @@ vi.mock("./content-client",async original=>{
 // production fallback. Actual Neon query semantics run in marketplace-integration.
 vi.mock("./marketplace-client", () => ({
   marketplaceRequest: async (op: string, params: Record<string,string> = {}, method = "GET", body: Record<string,unknown> = {}) => {
-    const { supabase: apiFixture } = await import("./supabase");
+    const { historicalClient: apiFixture } = await import("../test/fixtures/historical-client");
     const session = JSON.parse(localStorage.getItem("mock_supabase_session") || "null");
     const actor = session?.user?.id;
     if (op === "leads" || op === "lead") {
@@ -184,7 +184,7 @@ describe("post document privacy and persistence", () => {
     const forged = await uploadPostDocuments(privatePostId, [file("forged.pdf")]);
     expect(forged.uploaded).toEqual([]);
     expect(forged.failed).toHaveLength(1);
-    expect(forged.failed[0].error).toMatch(/Only the post author/);
+    expect(forged.failed[0].error).toMatch(/Could not upload document/);
     signOut();
     expect((await client.from("posts").insert({ id: "anonymous", authorUid: author, title: "No" })).error).not.toBeNull();
   });
@@ -201,7 +201,17 @@ describe("post document privacy and persistence", () => {
 });
 
 // Signed URL endpoint fixture: metadata/RLS lookup precedes Storage signing.
-beforeEach(()=>{vi.stubGlobal("fetch",vi.fn(async(input:string)=>{
+beforeEach(()=>{vi.stubGlobal("fetch",vi.fn(async(input:string,options?:RequestInit)=>{
+ if(input==="/api/storage/objects") {
+  const body=options?.body as FormData;
+  if(options?.method==="DELETE") {const payload=JSON.parse(options.body as string);const result=await supabase.storage.from("post-documents").remove([payload.path]);return {ok:!result.error,status:result.error?403:200,json:async()=>({})};}
+  const session=JSON.parse(localStorage.getItem("mock_supabase_session")||"null");
+  const post=body.get("postId") as string;
+  const path=`${session?.user.id}/${post}/${crypto.randomUUID()}.pdf`;
+  const result=await supabase.storage.from("post-documents").upload(path,body.get("file") as File);
+  return {ok:!result.error,status:result.error?403:200,json:async()=>result.error?{error:result.error.message}:{path}};
+ }
+
  const id=decodeURIComponent(input.split("/attachments/")[1]?.split("/")[0]??"");
  const {data,error}=await supabase.from("post_attachments").select("*").eq("id",id).single();
  if(error||!data)return {ok:false,status:404,json:async()=>({error:"not_found"})};

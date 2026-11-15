@@ -174,5 +174,5 @@ export async function claimUsernameForCurrentUser(desired: string): Promise<Clai
  * `ServerSession` is a follow-up, not a reason to loosen this boundary now.
  */
 function readDisplayName(_session: ServerSession): string | null {
-  return null;
+  return _session.displayName ?? null;
 }
