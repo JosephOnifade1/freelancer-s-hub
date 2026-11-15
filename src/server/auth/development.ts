@@ -1,14 +1,7 @@
-/** Fail closed. Development identity tooling intentionally supports LOOPBACK
- * PostgreSQL only, never a remote Neon/provider endpoint. NODE_ENV alone is
- * insufficient. Exact database designation + environment + separate consent. */
+import {developmentTarget} from "./development-target";
+/** Compatibility projection used by local-browser demo gates and owner tools. */
 export function requireDevelopmentTarget(env: NodeJS.ProcessEnv = process.env) {
-  if(env.NODE_ENV!=="development" || env.BORYNX_ENVIRONMENT!=="development")throw Error("development_only");
-  const url=new URL(env.DATABASE_URL??"");
-  if(!["postgres:","postgresql:"].includes(url.protocol) || !["localhost","127.0.0.1","[::1]"].includes(url.hostname))throw Error("loopback_database_required");
-  const name=decodeURIComponent(url.pathname.slice(1));
-  if(!/^borynx_(dev|test)(_[a-z0-9]+)?$/.test(name) || env.BORYNX_DEV_DATABASE_NAME!==name)throw Error("explicit_development_database_required");
-  if(url.searchParams.has("options"))throw Error("ambiguous_database_target");
-  return {database:name};
+  return {database:developmentTarget(env).database};
 }
 export function demoEnabled(env: NodeJS.ProcessEnv = process.env) {
   try { requireDevelopmentTarget(env);const url=new URL(env.BETTER_AUTH_URL??"");return env.BORYNX_ENABLE_DEMO_LOGIN==="true" && !!env.BORYNX_DEMO_PASSWORD && env.BORYNX_DEMO_PASSWORD.length>=20 && ["localhost","127.0.0.1","[::1]"].includes(url.hostname); }catch{return false;}
