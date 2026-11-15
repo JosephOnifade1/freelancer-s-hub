@@ -207,13 +207,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       value={{
         user,
         loading,
+        authError: !!sessionState.error,
+        retrySession: () => {void sessionState.refetch();},
         signOut,
         provisioning,
         retryProvisioning,
         isProvisioned: provisioning.status === "ready",
       }}
     >
-      {sessionState.error && loading ? <p role="alert">Authentication is temporarily unavailable. Reload to retry.</p> : !loading && children}
+      {sessionState.error && <div role="alert" className="relative z-[60] border-b bg-background p-3 text-sm">Authentication is temporarily unavailable. Public pages remain available. <button type="button" className="underline" onClick={()=>{void sessionState.refetch();}}>Retry connection</button></div>}
+      {loading && !sessionState.error ? <div role="status" className="min-h-screen flex items-center justify-center">Loading…</div> : children}
     </AuthContext.Provider>
   );
 };

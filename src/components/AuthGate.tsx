@@ -34,17 +34,18 @@ import { loginPath } from "@/lib/return-path";
  *  - Signed in → render the children.
  */
 export function AuthGate({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, authError, retrySession } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (loading || user) return;
+    if (loading || user || authError) return;
     router.replace(loginPath(pathname));
-  }, [loading, user, pathname, router]);
+  }, [loading, user, authError, pathname, router]);
 
   // Session unknown → hold. This is what prevents protected content from
   // flashing before the redirect.
+  if(authError)return <p role="alert">Cannot verify your session right now. <button onClick={retrySession}>Retry authentication</button></p>;
   if (loading) return null;
   // Redirecting → render nothing rather than the protected subtree.
   if (!user) return null;

@@ -17,7 +17,9 @@ export function createBorynxAuth(db: Parameters<typeof drizzleAdapter>[0], sendE
     verification: { modelName: "authVerifications" },
     emailAndPassword: { enabled: true, requireEmailVerification: true, minPasswordLength: 12, revokeSessionsOnPasswordReset: true,
       sendResetPassword: async ({ user, url }) => sendEmail({ to: user.email, url, subject: "Reset your Borynx password", purpose: "password-reset" }) },
-    emailVerification: { sendOnSignUp: true, sendOnSignIn: true, autoSignInAfterVerification: false,
+    // Login must report EMAIL_NOT_VERIFIED even when delivery is unavailable.
+    // Delivery is explicit at signup/resend, not an implicit login side effect.
+    emailVerification: { sendOnSignUp: true, sendOnSignIn: false, autoSignInAfterVerification: false,
       sendVerificationEmail: async ({ user, url }) => sendEmail({ to: user.email, url, subject: "Verify your Borynx email", purpose: "verification" }) },
     socialProviders: env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET ? { google: { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET, prompt: "select_account" } } : {},
     rateLimit: { enabled: true, storage: "database", modelName: "authRateLimits", window: 60, max: 60, customRules: { "/sign-in/email": { window: 60, max: 5 }, "/sign-up/email": { window: 300, max: 5 }, "/request-password-reset": { window: 300, max: 3 }, "/send-verification-email": { window: 300, max: 3 } } },
