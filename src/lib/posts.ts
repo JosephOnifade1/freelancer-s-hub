@@ -1,5 +1,5 @@
 import { fetchSocialFacts } from "./social-client";
-import { supabase } from "./supabase";
+import { authClient } from "./auth-client";
 import { fetchOwnRole } from "./profile-client";
 import {
   createContentPost,
@@ -145,9 +145,9 @@ export interface PostViewer {
 }
 
 export async function getPostViewer(): Promise<PostViewer> {
-  const { data, error: sessionError } = await supabase.auth.getSession();
+  const { data, error: sessionError } = await authClient.getSession();
   if (sessionError) throw new Error(sessionError.message);
-  const uid = (data?.session?.user?.id as string | undefined) ?? null;
+  const uid = (data?.user?.id as string | undefined) ?? null;
   if (!uid) return { uid: null, role: "member", memberSlugs: [], ownedSlugs: [] };
 
   const [roleResult, facts] = await Promise.all([fetchOwnRole(), fetchSocialFacts()]);

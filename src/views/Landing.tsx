@@ -19,7 +19,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { fetchAllCommunities, type CommunityData } from "@/lib/communities";
-import { supabase } from "@/lib/supabase";
+import { authClient, startGoogleSignIn } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { QueryErrorState } from "@/components/QueryErrorState";
@@ -372,9 +372,7 @@ const Landing = () => {
     if (googlePending) return;
     setGooglePending(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google", options: { redirectTo: `${window.location.origin}/` },
-      });
+      const { error } = await startGoogleSignIn("/");
       if (error) throw error;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Couldn't start Google sign-in");

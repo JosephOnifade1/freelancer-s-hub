@@ -1,5 +1,5 @@
 /** Historical RLS fixture for attachment UX tests only, never runtime. */
-import {supabase} from "../../lib/supabase";
+import {historicalClient as supabase} from "./historical-client";
 import type {ContentAttachment,ContentClientResult} from "../../lib/content-client";
 const fail=<T,>(error:{code?:string}|null):ContentClientResult<T>=>({ok:false,error:error?.code==="23505"?"conflict":"error"});
 const currentUid=async()=> (await supabase.auth.getSession()).data?.session?.user?.id;

@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+
 
 /**
  * Image uploads to Supabase Storage (buckets: `avatars`, `post-images`).
@@ -28,21 +28,10 @@ export async function uploadImage(file: File, bucket: UploadBucket): Promise<str
     throw new Error(`Image must be smaller than ${Math.round(limit / (1024 * 1024))}MB.`);
   }
 
-  const { data } = await supabase.auth.getSession();
-  const uid = data?.session?.user?.id;
-  if (!uid) throw new Error("You need to be signed in to upload images.");
-
-  const rawExt = file.name.split(".").pop() || "png";
-  const ext = rawExt.toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
-  const path = `${uid}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-
-  const { error } = await supabase.storage.from(bucket).upload(path, file, {
-    contentType: file.type,
-    upsert: false,
-  });
-  if (error) throw new Error(error.message);
-
-  const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(path);
-  if (!urlData?.publicUrl) throw new Error("Upload finished but no URL was returned.");
-  return urlData.publicUrl as string;
+  const body = new FormData(); body.set("bucket", bucket); body.set("file", file);
+  const response = await fetch("/api/storage/objects", { method: "POST", body, credentials: "same-origin" });
+  if (!response.ok) throw new Error("Could not upload image. Please retry.");
+  const result = await response.json();
+  if (!result.url) throw new Error("Upload did not return an image reference.");
+  return result.url;
 }

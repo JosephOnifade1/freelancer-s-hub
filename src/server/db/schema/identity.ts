@@ -36,6 +36,7 @@
  * docs/PHASE_2B_2_DATABASE_FOUNDATION.md §6.
  */
 import { sql } from "drizzle-orm";
+import { authUsers } from "./auth";
 import {
   boolean,
   check,
@@ -79,7 +80,7 @@ export const USERNAME_PATTERN = "^[a-z0-9_]{3,15}$";
 export const profiles = pgTable(
   "profiles",
   {
-    uid: uuid("uid").primaryKey(),
+    uid: uuid("uid").primaryKey().references(() => authUsers.id, { onDelete: "restrict" }),
 
     /**
      * The handle, always stored lowercase.

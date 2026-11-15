@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "strictNullChecks": true, "incremental": false },
+  "include": ["src/server/auth/**/*.ts", "src/server/email/**/*.ts", "src/lib/auth-client.ts", "src/server/db/schema/*.ts"],
+  "exclude": ["node_modules", "src/server/auth/index.ts"]
+}

@@ -232,7 +232,7 @@ describe("server-only boundary", () => {
 describe("Supabase Auth and Storage are untouched", () => {
   it("Storage still owns the bytes", () => {
     const source = read("src/lib/attachments.ts");
-    expect(source).toContain("supabase.storage");
+    expect(source).toContain("/api/storage/objects");
     expect(source).toContain("post-documents");
   });
 

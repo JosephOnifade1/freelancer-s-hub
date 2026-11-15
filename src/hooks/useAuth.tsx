@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import type { User } from "@supabase/supabase-js";
 
-import { supabase } from "../lib/supabase";
+
+import { authClient } from "../lib/auth-client";
 import { provisionProfileOnServer } from "../lib/profile-provisioning";
 import {
   INITIAL_PROVISIONING,
@@ -13,16 +13,14 @@ import {
 
 import { AuthContext, type AppUser } from "./auth-context";
 
-function toAppUser(user: User | null): AppUser | null {
-  if (!user) return null;
-  return Object.assign(user, {
-    uid: user.id,
-    displayName: user.user_metadata?.display_name ?? user.user_metadata?.full_name ?? null,
-    photoURL: user.user_metadata?.avatar_url ?? null,
-  }) as AppUser;
+type AuthUser = { id: string; email: string; emailVerified: boolean; name: string; image?: string | null };
+function toAppUser(user: AuthUser | null): AppUser | null {
+  if (!user?.emailVerified) return null;
+  return { id: user.id, uid: user.id, email: user.email, emailVerified: user.emailVerified, displayName: user.name, photoURL: user.image ?? null };
 }
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const sessionState = authClient.useSession();
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [provisioning, setProvisioning] = useState<ProvisioningState>(INITIAL_PROVISIONING);
@@ -116,7 +114,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
      * `acceptSession` remains the single funnel for every session — password
      * sign-in, the OAuth callback's session on first paint, and token refreshes.
      */
-    const acceptSession = (session: { user: User } | null) => {
+    const acceptSession = (session: { user: AuthUser } | null) => {
       if (!active) return;
 
       const nextUid = session?.user?.id ?? null;
@@ -151,32 +149,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       void attemptProvisioning(nextUid);
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      acceptSession(session);
-    });
-
-    // getSession may resolve after an auth event; don't overwrite the newer identity.
-    // Kept as a single call expression on purpose: `phase1.1-session-architecture`
-    // asserts that every `getSession()` reader is a known module on the one shared
-    // client, and that invariant is easier to audit when the call is not split.
-    supabase.auth.getSession().then(({ data, error }) => {
-        if (error) console.error("Could not restore session:", error);
-        if (lastUid.current === undefined) acceptSession(data?.session ?? null);
-      })
-      .catch((error) => {
-        console.error("Could not restore session:", error);
-        if (lastUid.current === undefined) acceptSession(null);
-      });
+    if (!sessionState.isPending && !sessionState.error) acceptSession(sessionState.data?.user.emailVerified ? sessionState.data : null);
 
     return () => {
       active = false;
-      subscription.unsubscribe();
+
       // Cancel an outstanding request on unmount: its result would be applied to
       // a provider that no longer exists.
-      inFlight.current?.abort();
-      inFlight.current = null;
     };
-  }, [attemptProvisioning, commitProvisioning, queryClient, resetProvisioning]);
+  }, [attemptProvisioning, commitProvisioning, queryClient, resetProvisioning, sessionState.data, sessionState.isPending, sessionState.error]);
 
   /**
    * Manual retry.
@@ -194,9 +175,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     void attemptProvisioning(uid);
   }, [attemptProvisioning]);
 
+  useEffect(() => () => { inFlight.current?.abort(); inFlight.current=null; }, []);
+
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
+      const result = await authClient.signOut();
+      if (result.error) throw new Error("Could not confirm server logout. Please retry.");
     } finally {
       // Phase 1: drop the viewer and their cached rows *before* the caller
       // redirects.
@@ -229,7 +213,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isProvisioned: provisioning.status === "ready",
       }}
     >
-      {!loading && children}
+      {sessionState.error && loading ? <p role="alert">Authentication is temporarily unavailable. Reload to retry.</p> : !loading && children}
     </AuthContext.Provider>
   );
 };

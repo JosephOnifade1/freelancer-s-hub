@@ -170,6 +170,6 @@ describe("authentication boundary (Phase 1: auth views are native)", () => {
   it("does not alter the auth provider or session module", () => {
     // Guard against accidental edits to the Supabase auth wiring.
     const authProvider = read("hooks/useAuth.tsx");
-    expect(authProvider).toMatch(/getSession|onAuthStateChange/);
+    expect(authProvider).toMatch(/useSession/);
   });
 });
