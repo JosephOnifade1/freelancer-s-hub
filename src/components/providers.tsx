@@ -2,11 +2,12 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
-import { useState, type ReactNode } from "react";
+import { useState, type ReactNode, type CSSProperties } from "react";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -30,11 +31,13 @@ export function Providers({ children }: { children: ReactNode }) {
         disableTransitionOnChange
       >
         <AuthProvider>
-          <TooltipProvider>
-            {children}
-            <Toaster />
-            <SonnerToaster position="top-right" richColors />
-          </TooltipProvider>
+          <SidebarProvider style={{ "--sidebar-top": "3.5rem" } as CSSProperties}>
+            <TooltipProvider>
+              {children}
+              <Toaster />
+              <SonnerToaster position="top-right" richColors />
+            </TooltipProvider>
+          </SidebarProvider>
         </AuthProvider>
       </NextThemesProvider>
     </QueryClientProvider>
