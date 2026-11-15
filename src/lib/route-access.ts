@@ -47,7 +47,7 @@ export const PROTECTED_ROUTES = [
  * account" copy on the opportunities board).
  */
 export const PUBLIC_ROUTES = [
-  "/", // feed, including ?feed=following (filtered client-side)
+  "/", // guest landing; signed-in feed (filters applied client-side)
   "/login",
   "/signup",
   "/forgot-password",

@@ -1,3 +1,4 @@
+import { EmailDeliveryNotice } from "@/components/auth/EmailDeliveryNotice";
 import { DemoAccounts } from "@/components/auth/DemoAccounts";
 import { useEffect, useState } from "react";
 import { AppLink as Link } from "@/components/AppLink";
@@ -40,7 +41,7 @@ export default function Login() {
       if (error) {
         if ((error.code === "EMAIL_NOT_VERIFIED" || error.message.includes("Email not confirmed"))) {
           setUnconfirmedEmail(email);
-          throw new Error("Your email address has not been confirmed yet. Please check your inbox for the confirmation link.");
+          throw new Error("Your email address has not been confirmed yet. Request a confirmation link below and check the email delivery instructions.");
         } else if (error.message.includes("Invalid login credentials")) {
           throw new Error("Invalid email or password. Please check your details or create a new account.");
         }
@@ -72,7 +73,7 @@ export default function Login() {
     setResending(true);
     try {
       await resendConfirmationEmail(unconfirmedEmail);
-      toast.success("Confirmation email sent. Check your inbox, then log in.");
+      toast.success("Verification requested. Check your configured email delivery, then log in.");
     } catch (error) {
       toast.error(authErrorMessage(error, "Could not resend the confirmation email."));
     } finally {
@@ -116,6 +117,7 @@ export default function Login() {
             Enter your email and password to log in to your account.
           </CardDescription>
         </CardHeader>
+        <div className="px-6 pb-4"><EmailDeliveryNotice /></div>
         <form onSubmit={handleLogin}>
           <CardContent className="space-y-4">
             <div className="space-y-2">

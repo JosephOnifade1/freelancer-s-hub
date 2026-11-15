@@ -1,3 +1,4 @@
+import { EmailDeliveryNotice } from "@/components/auth/EmailDeliveryNotice";
 import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { requestPasswordReset, authErrorMessage } from "../lib/auth";
@@ -55,12 +56,13 @@ export default function ForgotPassword() {
         {sent ? (
           <>
             <CardContent className="space-y-3">
+              <EmailDeliveryNotice />
               <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 p-3">
                 <MailCheck className="mt-0.5 h-5 w-5 shrink-0 text-brand" />
                 <p className="text-sm leading-relaxed text-muted-foreground">
                   If an account exists for{" "}
                   <span className="font-medium text-foreground">{email}</span>, a password reset
-                  link is on its way. The link expires after a short time — if it does, request a
+                  link has been requested. Check the delivery instructions below. The link expires after a short time — if it does, request a
                   new one here.
                 </p>
               </div>
@@ -75,7 +77,9 @@ export default function ForgotPassword() {
             </CardFooter>
           </>
         ) : (
-          <form onSubmit={handleSubmit}>
+          <>
+          <div className="px-6 pb-4"><EmailDeliveryNotice /></div>
+        <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -98,6 +102,7 @@ export default function ForgotPassword() {
               </Link>
             </CardFooter>
           </form>
+          </>
         )}
       </Card>
     </div>

@@ -2,6 +2,7 @@ import { createContext, useContext } from "react";
 import type { ProvisioningState } from "@/lib/provisioning-state";
 export interface AppUser { id: string; uid: string; email: string; emailVerified: boolean; displayName: string | null; photoURL: string | null }
 export interface AuthContextType {
+  authError?: boolean; retrySession?: () => void;
   user: AppUser | null; loading: boolean; signOut: () => Promise<void>;
   provisioning: ProvisioningState; retryProvisioning: () => void; isProvisioned: boolean;
 }

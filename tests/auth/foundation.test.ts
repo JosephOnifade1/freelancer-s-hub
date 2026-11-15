@@ -33,7 +33,10 @@ describe("Better Auth UUID foundation (embedded PostgreSQL, not live Neon)",()=>
   expect(uid).toMatch(/^[0-9a-f-]{36}$/);expect(result.token).toBeNull();
   const types=await engine.query<{data_type:string}>("select data_type from information_schema.columns where table_name='auth_users' and column_name='id'");expect(types.rows[0].data_type).toBe("uuid");
   const account=await engine.query<{user_id:string;password:string}>("select user_id,password from auth_accounts where user_id=$1",[uid]);expect(account.rows[0].user_id).toBe(uid);expect(account.rows[0].password).not.toBe(password);
-  await expect(auth.api.signInEmail({body:{email:"fixture@borynx.test",password},headers})).rejects.toThrow();
+  const count=mail.length;
+  await expect(auth.api.signInEmail({body:{email:"fixture@borynx.test",password},headers})).rejects.toMatchObject({body:{code:"EMAIL_NOT_VERIFIED"}});
+  expect(mail).toHaveLength(count); // login never implicitly sends another message
+
  });
  it("verification token validates; creates and validates a normal session",async()=>{
   const link=mail.find(m=>m.to==="fixture@borynx.test"&&m.purpose==="verification")!;

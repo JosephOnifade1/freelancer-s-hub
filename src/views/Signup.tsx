@@ -1,3 +1,4 @@
+import { EmailDeliveryNotice } from "@/components/auth/EmailDeliveryNotice";
 import { useEffect, useState } from "react";
 import { AppLink as Link } from "@/components/AppLink";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -82,7 +83,7 @@ export default function Signup() {
 
       if (data?.user && !data?.token) {
         // Email confirmation is enabled: the account exists but cannot be
-        // used until the inbox link is clicked. Say exactly that.
+        // used until the verification link is opened. Say exactly that.
         setConfirmationSentTo(email);
       } else {
         toast.success("Account created. Let's set up your profile!");
@@ -107,7 +108,7 @@ export default function Signup() {
     setResending(true);
     try {
       await resendConfirmationEmail(confirmationSentTo);
-      toast.success("Confirmation email sent again. Check your inbox.");
+      toast.success("Verification requested again. Check your configured email delivery.");
     } catch (error) {
       toast.error(authErrorMessage(error, "Could not resend the confirmation email."));
     } finally {
@@ -129,14 +130,15 @@ export default function Signup() {
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-1 text-center">
             <MailCheck className="mx-auto h-10 w-10 text-brand" />
-            <CardTitle className="text-2xl font-bold tracking-tight">Check your email</CardTitle>
+            <CardTitle className="text-2xl font-bold tracking-tight">Verify your email</CardTitle>
             <CardDescription>
-              We sent a confirmation link to{" "}
-              <span className="font-medium text-foreground">{confirmationSentTo}</span>. Click it to
+              Verification was requested for{" "}
+              <span className="font-medium text-foreground">{confirmationSentTo}</span>. Use the confirmation link to
               verify your account, then log in. The link expires after a while — if it does, come
               back and we'll send a new one.
             </CardDescription>
           </CardHeader>
+          <div className="px-6 pb-4"><EmailDeliveryNotice /></div>
           <CardFooter className="flex flex-col gap-3">
             <Button className="w-full" onClick={handleResendConfirmation} disabled={resending}>
               {resending ? "Sending..." : "Resend confirmation email"}
@@ -175,6 +177,7 @@ export default function Signup() {
             Enter your details below to create your account and get started.
           </CardDescription>
         </CardHeader>
+        <div className="px-6 pb-4"><EmailDeliveryNotice /></div>
         <form onSubmit={handleSignup}>
           <CardContent className="space-y-4">
             <div className="space-y-2">

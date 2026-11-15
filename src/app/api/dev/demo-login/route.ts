@@ -1,4 +1,5 @@
 import { DEMO_ACCOUNTS, localDemoRequest } from "@/server/auth/development";
+import { localDevelopmentRequest } from "@/server/auth/public-configuration";
 import { trustedMutation } from "@/server/auth/config";
 import { getAuth } from "@/server/auth";
 import { getDatabase } from "@/server/db";
@@ -7,8 +8,14 @@ export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const absent=()=>new Response(null,{status:404});
 export async function GET(request:Request){
-  if(process.env.NODE_ENV!=="development" || !localDemoRequest(request))return absent();
-  return Response.json({accounts:DEMO_ACCOUNTS.map(({key,name})=>({key,name}))},{headers:{"cache-control":"no-store"}});
+  if(!localDevelopmentRequest(request))return absent();
+  const headers={"cache-control":"no-store"};
+  if(!localDemoRequest(request))return Response.json({status:"setup-required",accounts:[]},{headers});
+  try{
+    const proof=await getDatabase().execute(sql`select s.purpose,s.email from public.development_seed_identities s join public.auth_users u on u.id=s.user_id and u.email=s.email where u.email_verified=true`);
+    const ready=new Set(proof.rows.filter(row=>DEMO_ACCOUNTS.some(account=>account.key===row.purpose&&account.email===row.email)).map(row=>row.purpose));
+    return Response.json({status:"enabled",accounts:DEMO_ACCOUNTS.map(({key,name})=>({key,name,ready:ready.has(key)}))},{headers});
+  }catch{return Response.json({status:"database-unavailable",accounts:[]},{status:503,headers});}
 }
 export async function POST(request:Request){
   if(process.env.NODE_ENV!=="development" || !localDemoRequest(request))return absent();
