@@ -1,5 +1,7 @@
 import "server-only";
-import {verifyUploadedDocument,signDocument} from "@/server/storage/documents";
+import {verifyUploadedDocument,signDocument,deleteDocumentBytes} from "@/server/storage/documents";
+import {registerPrivateDocument,requestAttachmentDeletion,cleanupPrivateDocument} from "@/server/storage/document-lifecycle";
+import {documentKey} from "@/server/storage/document-key";
 import { communityFacts } from "../social/social-queries";
 
 import { sql } from "drizzle-orm";
@@ -21,7 +23,6 @@ import {
   findContributionDates,
   findRecentContributors,
   sumScoresForAuthor,
-  createAttachment,
   createComment,
   createPost,
   findAttachmentsForViewer,
@@ -34,7 +35,6 @@ import {
   findSavedPostIds,
   findVoteValue,
   incrementPostViews,
-  removeAttachment,
   setUserRole,
   setUserVerifiedPro,
   softDeleteComment,
@@ -367,15 +367,13 @@ export async function createAttachmentForCurrentUser(postId: string, input: Atta
   const identity = await requireViewer();
   if (identity.ok === false) return identity;
   try {
-    if(!input.storagePath?.startsWith(`${identity.viewer.uid}/${postId}/`))return {ok:true as const,data:{status:"invalid"}};
+    if(!documentKey(input.storagePath,identity.viewer.uid!,postId))return {ok:true as const,data:{status:"invalid"}};
     const post=await findPostForViewer(getDatabase(),identity.viewer,postId);
     if(!post||post.authorUid!==identity.viewer.uid)return {ok:false as const,reason:"not_found" as const};
-    // Cross-provider precondition, not a distributed transaction. Files are immutable
-    // through browser policies; a failed/lost response is reconciled by metadata reload.
-    if(!await verifyUploadedDocument(input.storagePath,input.fileSize,input.mimeType))return {ok:true as const,data:{status:"invalid"}};
+    // Intent lock serializes object verification/registration against cleanup.
     return {
       ok: true as const,
-      data: await createAttachment(getDatabase(), identity.viewer, postId, input),
+      data: await registerPrivateDocument(getDatabase(), identity.viewer, postId, input,verifyUploadedDocument),
     };
   } catch {
     return { ok: false as const, reason: "not_ready" as const };
@@ -386,10 +384,9 @@ export async function removeAttachmentForCurrentUser(attachmentId: string) {
   const identity = await requireViewer();
   if (identity.ok === false) return identity;
   try {
-    return {
-      ok: true as const,
-      data: await removeAttachment(getDatabase(), identity.viewer, attachmentId),
-    };
+    const result=await requestAttachmentDeletion(getDatabase(),identity.viewer.uid!,attachmentId);
+    if(result.status==="removed")await cleanupPrivateDocument(getDatabase(),identity.viewer.uid!,result.path,deleteDocumentBytes);
+    return {ok:true as const,data:{status:result.status}};
   } catch {
     return { ok: false as const, reason: "not_ready" as const };
   }
@@ -554,6 +551,6 @@ export async function getAttachmentDownload(id:string){
  try{
   const row=await findAttachmentForViewer(getDatabase(),await resolveViewer(),id);
   if(!row)return {ok:false as const,reason:"not_found" as const};
-  return {ok:true as const,data:await signDocument(row.storagePath,row.fileName)};
+  return {ok:true as const,data:await signDocument(row.storagePath,row.fileName,row.uploaderUid,row.postId)};
  }catch{return {ok:false as const,reason:"not_ready" as const};}
 }

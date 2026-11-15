@@ -38,6 +38,7 @@
  * that *do* exist: account deletion is not implemented (2B.4 §11), so those cascades
  * are dormant safety, not an executed path.
  */
+import {DOCUMENT_KEY_PATTERN} from "../../storage/document-key";
 import { sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
@@ -343,6 +344,7 @@ export const postAttachments = pgTable(
     createdAt: hasSeenAt("createdAt"),
   },
   (table) => [
+    check("attachment_canonical_key",sql`${table.storagePath} ~ ${sql.raw("'"+DOCUMENT_KEY_PATTERN+"'")}`),
     unique("post_attachments_storage_path_key").on(table.storagePath),
     index("post_attachments_post_idx").on(table.postId),
     check("post_attachments_file_name_check", sql`length(${table.fileName}) between 1 and 255`),

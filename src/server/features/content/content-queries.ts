@@ -20,6 +20,7 @@ import { notifyComment, notifyUpvote } from "../trust/notification-events";
  *     behaviour `cast_vote` provided. Nothing here is a read-then-write that a
  *     second request could interleave with.
  */
+import {documentKey} from "../../storage/document-key";
 import { sql } from "drizzle-orm";
 
 import {
@@ -1226,10 +1227,12 @@ export async function createAttachment(
   if (!storagePath || !fileName || !mimeType) return { status: "invalid" };
   // Mirrors the schema's `attachment_path_owned` check; refusing here gives a
   // clearer error than a constraint violation.
-  if (!storagePath.startsWith(`${viewer.uid}/${postId}/`)) return { status: "invalid" };
+  if (!documentKey(storagePath,viewer.uid,postId)) return { status: "invalid" };
 
   try {
     const outcome = await db.transaction<AttachmentWriteOutcome>(async (tx) => {
+      const intents=rowsOf(await tx.execute(sql`select path from public.document_uploads where path=${storagePath} and actor=${viewer.uid} and post_id=${postId} and bucket='post-documents' and state='ready' and size=${fileSize} and mime=${mimeType} and expires_at>now() for update`));
+      if(!intents.length)return {status:"invalid"};
       const postRows = rowsOf<Record<string, unknown>>(
         await tx.execute(sql`
           select "authorUid", "isDeleted" from posts where id = ${postId} for update
@@ -1265,23 +1268,18 @@ export async function createAttachment(
   }
 }
 
-/** Removes an attachment record. Uploader only. */
+/** Compatibility entry point: metadata removal must also persist deletion permission.
+ * Byte cleanup is performed by the server service, never by this query alone. */
 export async function removeAttachment(
-  db: ContentDatabase,
+  db: ContentTransactionDatabase,
   viewer: ContentViewer,
   attachmentId: string,
 ): Promise<AttachmentWriteOutcome> {
   if (!viewer.uid) return { status: "forbidden" };
   if (!isValidUuid(attachmentId)) return { status: "invalid" };
-
-  const rows = rowsOf<Record<string, unknown>>(
-    await db.execute(sql`
-      delete from post_attachments
-      where id = ${attachmentId} and "uploaderUid" = ${viewer.uid}
-      returning id
-    `),
-  );
-  return rows.length > 0 ? { status: "removed" } : { status: "not_found" };
+  const {requestAttachmentDeletion}=await import("../../storage/document-lifecycle");
+  const result=await requestAttachmentDeletion(db,viewer.uid,attachmentId);
+  return {status:result.status};
 }
 
 // ─── Saved posts ────────────────────────────────────────────────────────────
