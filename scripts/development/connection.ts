@@ -5,7 +5,7 @@ import {verifyDevelopmentConnection,type developmentTarget} from "../../src/serv
 export function developmentConnectionVerifier(target:ReturnType<typeof developmentTarget>) {
   return (client:PoolClient,done:(error?:Error)=>void) => {
     void (async()=>{
-      const result=await client.query("select current_database() as database,current_user as role,inet_server_addr()::text as host");
+      const result=await client.query("select current_database() as database,current_user as role,host(inet_server_addr()) as host");
       const stream=(client as unknown as {connection:{stream:{encrypted?:boolean;authorized?:boolean}}}).connection?.stream;
       verifyDevelopmentConnection(target,{...result.rows[0],tls:stream?.encrypted===true&&stream?.authorized===true});
     })().then(()=>done(),()=>done(Error("development_connection_refused")));

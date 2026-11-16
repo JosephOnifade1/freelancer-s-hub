@@ -1,5 +1,9 @@
 export function localDevelopmentRequest(request:Request,env:NodeJS.ProcessEnv=process.env){
- try{return env.NODE_ENV==="development"&&["localhost","127.0.0.1","[::1]"].includes(new URL(request.url).hostname);}catch{return false;}
+ try{
+  const hostname=new URL(request.url).hostname;
+  const host=request.headers?.get("x-forwarded-host")?.split(":")[0]||request.headers?.get("host")?.split(":")[0]||hostname;
+  return env.NODE_ENV==="development"&&(["localhost","127.0.0.1","[::1]","0.0.0.0"].includes(hostname)||["localhost","127.0.0.1","[::1]"].includes(host));
+ }catch{return false;}
 }
 /** Configuration only: never sends mail, creates users, or exposes credentials. */
 export function publicAuthConfiguration(env:NodeJS.ProcessEnv=process.env){

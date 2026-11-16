@@ -34,5 +34,6 @@ export function developmentResetConfirmation(env: NodeJS.ProcessEnv = process.en
 export function verifyDevelopmentConnection(target: ReturnType<typeof developmentTarget>, identity: {database:unknown;role:unknown;host:unknown;tls?:unknown}) {
   if (identity.database !== target.database || identity.role !== target.user) throw Error("target_identity_mismatch");
   const local = ["127.0.0.1", "::1", null].includes(identity.host as string|null);
-  if (target.kind === "local" ? !local : typeof identity.host !== "string" || !isIP(identity.host) || identity.tls !== true) throw Error("target_connection_mismatch");
+  const host = typeof identity.host === "string" ? identity.host.replace(/\/\d+$/, "") : null;
+  if (target.kind === "local" ? !local : typeof host !== "string" || !isIP(host) || identity.tls !== true) throw Error("target_connection_mismatch");
 }
