@@ -173,48 +173,58 @@ export default function Profile() {
   const website = profile.website?.trim() || "";
   const joinedSpaces = allCommunities.filter((c) => joinedCommunities.includes(c.slug));
 
+  const profileHue = ((profile.username || "user").charCodeAt(0) * 47) % 360;
+
   return (
     <AppLayout>
       <div className="mx-auto max-w-6xl px-3 sm:px-6 py-4">
 
-        {/* Top Header bar with back button & Profile title */}
-        <div className="flex items-center gap-3 mb-6 text-foreground">
-          <Link to="/" className="p-1.5 rounded-radius-md hover:bg-secondary transition-colors">
-            <ArrowLeft className="h-5 w-5" />
+        {/* Top Header bar with back button */}
+        <div className="flex items-center gap-3 mb-4 text-ink">
+          <Link to="/" className="p-1.5 rounded-md hover:bg-sunken text-ink-3 hover:text-ink transition-colors">
+            <ArrowLeft className="h-4 w-4" />
           </Link>
-          <h1 className="font-display text-lg font-bold">Profile</h1>
+          <span className="eyebrow text-xs tracking-wider uppercase text-ink-3">Freelancer Profile</span>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
           {/* Main Content Column (Left - 8 cols) */}
-          <div className="lg:col-span-8 space-y-6">
+          <div className="lg:col-span-8 space-y-5">
 
-            {/* Header Banner & Profile Card */}
-            <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+            {/* Header Banner & Profile Card (Agent 2 Ledger style) */}
+            <div className="panel rounded-xl overflow-hidden shadow-sm">
 
-              <div className="h-24 sm:h-28 w-full bg-muted/40" />
+              <div
+                className="h-28 sm:h-32 w-full hairline-b"
+                style={{
+                  background: `linear-gradient(135deg, hsl(${profileHue}deg 40% 16%), hsl(${(profileHue + 40) % 360}deg 50% 10%))`
+                }}
+              />
 
               {/* Avatar & Action Buttons Bar */}
-              <div className="px-6 relative pb-6">
-                <div className="flex items-end justify-between -mt-16 sm:-mt-20 mb-4">
+              <div className="px-5 relative pb-5">
+                <div className="flex items-end justify-between -mt-12 sm:-mt-14 mb-3.5">
 
                   {/* Large Avatar */}
                   <div className="relative group">
-                    <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-full border-4 border-card bg-muted overflow-hidden shadow-xl relative">
+                    <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-xl border-2 border-surface bg-surface-raised overflow-hidden shadow-xl relative">
                       {profile.avatarUrl ? (
                         <img src={profile.avatarUrl} alt={profile.displayName} className="h-full w-full object-cover" />
                       ) : (
-                        <div className="h-full w-full flex items-center justify-center font-heading text-3xl font-bold text-foreground bg-muted">
+                        <div
+                          className="h-full w-full flex items-center justify-center font-heading text-2xl sm:text-3xl font-bold text-white"
+                          style={{ background: `hsl(${profileHue}deg 50% 32%)` }}
+                        >
                           {profile.initial || profile.displayName?.charAt(0) || "M"}
                         </div>
                       )}
 
                       {isOwnProfile && (
                         <button type="button" aria-label="Change profile photo" title="Change profile photo"
-                          className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember"
                           onClick={() => fileInputRef.current?.click()}>
-                          <Camera className="h-6 w-6 text-white" />
+                          <Camera className="h-5 w-5 text-white" />
                         </button>
                       )}
                     </div>
@@ -229,21 +239,21 @@ export default function Profile() {
                   </div>
 
                   {/* Actions Right */}
-                  <div className="flex items-center gap-2.5 pt-4">
+                  <div className="flex items-center gap-2 pt-2">
                     {isOwnProfile ? (
                       <Link
                         to="/settings"
-                        className="px-4 py-2 rounded-md font-medium text-sm border border-border text-foreground hover:bg-muted transition-colors"
+                        className="btn btn-ghost btn-sm"
                       >
                         Edit profile
                       </Link>
                     ) : !currentUser ? (
-                      <AppLink href={loginPath(pathname)} className="inline-flex min-h-10 items-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground">Sign in to follow</AppLink>
+                      <AppLink href={loginPath(pathname)} className="btn btn-primary btn-sm">Sign in to follow</AppLink>
                     ) : followingError ? (
-                      <button type="button" onClick={() => refetchFollow()} className="text-xs text-destructive hover:underline">Follow status unavailable. Retry</button>
+                      <button type="button" onClick={() => refetchFollow()} className="text-xs text-danger hover:underline">Follow status unavailable. Retry</button>
                     ) : (
                       <button onClick={() => followMutation.mutate()} disabled={followMutation.isPending}
-                        className={`min-h-10 rounded-md px-4 py-2 text-sm font-medium transition-colors ${isFollowing ? 'border border-border text-foreground hover:bg-muted' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`}>
+                        className={isFollowing ? "btn btn-ghost btn-sm" : "btn btn-primary btn-sm"}>
                         {followMutation.isPending ? "Updating..." : isFollowing ? "Following" : "Follow"}
                       </button>
                     )}
@@ -251,15 +261,15 @@ export default function Profile() {
                 </div>
 
                 {/* User Name and handle */}
-                <div className="space-y-1 mb-3">
+                <div className="space-y-0.5 mb-2.5">
                   <div className="flex items-center gap-2">
-                    <h2 className="font-heading text-xl sm:text-2xl font-bold text-foreground">
+                    <h2 className="font-heading text-lg sm:text-xl font-bold text-ink">
                       {profile.displayName || profile.username || "User"}
                     </h2>
-                    <VerifiedBadge isVerified={profile.isVerifiedPro ?? false} size={18} />
+                    <VerifiedBadge isVerified={profile.isVerifiedPro ?? false} size={16} />
                   </div>
-                  <p className="text-sm text-muted-foreground tabular-nums ">
-                    @{profile.username || "unknown"}
+                  <p className="num text-xs text-ink-3">
+                    f/{profile.username || "unknown"}
                   </p>
                 </div>
 
@@ -269,95 +279,92 @@ export default function Profile() {
                     <Textarea
                       value={bioInput}
                       onChange={(e) => setBioInput(e.target.value)}
-                      className="bg-background border-border/60 text-sm resize-none"
+                      className="bg-sunken border-line text-xs resize-none text-ink"
                       rows={3}
                     />
                     <div className="flex gap-2 justify-end">
                       <button
                         onClick={() => setIsEditingBio(false)}
-                        className="px-3 py-1 rounded text-xs border border-border text-muted-foreground hover:text-foreground"
+                        className="btn btn-ghost btn-sm"
                       >
                         Cancel
                       </button>
                       <button
                         onClick={handleSaveBio}
                         disabled={isSavingBio}
-                        className="px-3 py-1 rounded text-xs bg-primary text-primary-foreground font-medium"
+                        className="btn btn-primary btn-sm"
                       >
                         {isSavingBio ? "Saving..." : "Save Bio"}
                       </button>
                     </div>
                   </div>
                 ) : (bio || isOwnProfile) ? (
-                  <p className="mb-4 text-sm leading-relaxed text-foreground/90">
-                    {bio || (isOwnProfile ? <span className="text-muted-foreground">Add a short bio so people know what you do.</span> : null)}
-                    {isOwnProfile && <button type="button" onClick={() => { setBioInput(bio); setIsEditingBio(true); }} className="ml-2 inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline"><Edit2 className="h-3 w-3" /> Edit bio</button>}
+                  <p className="mb-3 text-xs leading-relaxed text-ink-2">
+                    {bio || (isOwnProfile ? <span className="text-ink-4">Add a short bio so people know what you do.</span> : null)}
+                    {isOwnProfile && <button type="button" onClick={() => { setBioInput(bio); setIsEditingBio(true); }} className="ml-2 inline-flex items-center gap-1 text-xs text-ember hover:underline"><Edit2 className="h-3 w-3" /> Edit bio</button>}
                   </p>
                 ) : null}
 
-                {/* Meta details row (only what the user actually filled in) */}
-                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground mb-4">
+                {/* Meta details row */}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-ink-3 mb-3.5">
                   {location && (
-                    <div className="flex items-center gap-1.5">
-                      <MapPin className="h-3.5 w-3.5" />
+                    <div className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3 text-ink-4" />
                       <span>{location}</span>
                     </div>
                   )}
                   {website && (
-                    <div className="flex items-center gap-1.5">
-                      <LinkIcon className="h-3.5 w-3.5" />
+                    <div className="flex items-center gap-1">
+                      <LinkIcon className="h-3 w-3 text-ink-4" />
                       <a
                         href={website.startsWith('http') ? website : `https://${website}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="hover:text-foreground transition-colors"
+                        className="text-ember hover:underline"
                       >
                         {website.replace(/^https?:\/\//, '')}
                       </a>
                     </div>
                   )}
                   {profile.joined && (
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5" />
+                    <div className="flex items-center gap-1 num">
+                      <Calendar className="h-3 w-3 text-ink-4" />
                       <span>Joined {profile.joined}</span>
                     </div>
                   )}
                 </div>
 
                 {skills.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-6">
+                  <div className="flex flex-wrap gap-1.5 mb-4">
                     {skills.map((skill) => (
-                      <span
-                        key={skill}
-                        className="rounded-md border border-border bg-muted/50 px-2.5 py-1 font-body text-[11px] font-medium text-muted-foreground hover:border-brand hover:text-brand transition-colors"
-                      >
+                      <span key={skill} className="tag text-[10px]">
                         {skill}
                       </span>
                     ))}
                   </div>
                 )}
 
-                {/* Stats Summary Bar (5 Stats Columns) */}
-                <div className="grid grid-cols-5 gap-2 py-3 px-3 sm:px-6 rounded-radius-md border border-border bg-secondary/40 text-center">
+                {/* Stats Summary Bar (5 Stats Columns — Monospace Ledger Grid) */}
+                <div className="num grid grid-cols-5 gap-1 py-2 px-3 rounded-lg bg-sunken border border-line text-center">
                   <div>
-                    <div className="font-display text-lg sm:text-xl font-bold text-foreground tabular-nums">{postsCount}</div>
-                    <div className="text-[10px] font-mono text-muted-foreground">Posts</div>
+                    <div className="text-sm sm:text-base font-bold text-ink">{postsCount}</div>
+                    <div className="eyebrow text-[8.5px]">Posts</div>
                   </div>
                   <div>
-                    <div className="font-display text-lg sm:text-xl font-bold text-foreground tabular-nums">{followersCount}</div>
-                    <div className="text-[10px] font-mono text-muted-foreground">Followers</div>
+                    <div className="text-sm sm:text-base font-bold text-ink">{followersCount}</div>
+                    <div className="eyebrow text-[8.5px]">Followers</div>
                   </div>
                   <div>
-                    <div className="font-display text-lg sm:text-xl font-bold text-foreground tabular-nums">{followingCount}</div>
-                    <div className="text-[10px] font-mono text-muted-foreground">Following</div>
+                    <div className="text-sm sm:text-base font-bold text-ink">{followingCount}</div>
+                    <div className="eyebrow text-[8.5px]">Following</div>
                   </div>
                   <div>
-                    <div className="font-display text-lg sm:text-xl font-bold text-foreground tabular-nums">{resourcesCount}</div>
-                    <div className="text-[10px] font-mono text-muted-foreground">Resources</div>
+                    <div className="text-sm sm:text-base font-bold text-ink">{resourcesCount}</div>
+                    <div className="eyebrow text-[8.5px]">Resources</div>
                   </div>
                   <div>
-                    <div className="font-display text-lg sm:text-xl font-bold text-foreground tabular-nums">{spacesCount}</div>
-                    <div className="text-[10px] font-mono text-muted-foreground">B-Spaces</div>
+                    <div className="text-sm sm:text-base font-bold text-ink">{spacesCount}</div>
+                    <div className="eyebrow text-[8.5px]">Spaces</div>
                   </div>
                 </div>
 
@@ -366,15 +373,15 @@ export default function Profile() {
             </div>
 
             {/* Tabs Row */}
-            <div className="flex items-center gap-6 overflow-x-auto border-b border-border pb-2 px-2 text-sm font-medium sm:gap-8">
+            <div className="flex items-center gap-6 hairline-b pb-1 px-1 text-xs">
               {(["Threads", "Resources", "B-Spaces", ...(isOwnProfile ? ["Bookmarks"] : [])] as Tab[]).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`pb-2 font-medium transition-all relative ${
+                  className={`pb-2 font-medium tracking-wide transition-all relative ${
                     activeTab === tab
-                      ? "text-brand after:absolute after:bottom-0 after:left-0 after:right-0 after:h-1 after:w-full after:bg-brand after:rounded-full"
-                      : "text-muted-foreground hover:text-foreground"
+                      ? "text-ember after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:w-full after:bg-ember"
+                      : "text-ink-4 hover:text-ink"
                   }`}
                 >
                   {tab}
@@ -383,14 +390,14 @@ export default function Profile() {
             </div>
 
             {/* Main Content Area based on Tab */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               {activeTab === "Threads" && (
                 postsError ? (
                   <QueryErrorState title="Couldn't load posts" onRetry={() => refetchPosts()} />
-                ) : loadingPosts ? <p role="status" className="py-8 text-center text-sm text-muted-foreground">Loading posts…</p> : userPosts.length === 0 ? (
-                  <div className="rounded-2xl border border-border/40 bg-card p-10 text-center space-y-2">
-                    <p className="font-heading font-bold text-foreground ">No posts yet</p>
-                    <p className="text-sm text-muted-foreground">
+                ) : loadingPosts ? <p role="status" className="py-8 text-center text-xs text-ink-3">Loading posts…</p> : userPosts.length === 0 ? (
+                  <div className="panel rounded-xl p-8 text-center border-dashed space-y-1">
+                    <p className="font-heading text-sm font-bold text-ink">No posts yet</p>
+                    <p className="text-xs text-ink-3">
                       Posts this user publishes will show up here.
                     </p>
                   </div>
@@ -402,8 +409,8 @@ export default function Profile() {
               {activeTab === "Resources" && (
                 postsError ? (
                   <QueryErrorState title="Couldn't load resources" onRetry={() => refetchPosts()} />
-                ) : loadingPosts ? <p role="status" className="py-8 text-center text-sm text-muted-foreground">Loading resources…</p> : resourcePosts.length === 0 ? (
-                  <div className="rounded-xl border border-border/40 bg-card p-10 text-center text-sm text-muted-foreground shadow-sm">
+                ) : loadingPosts ? <p role="status" className="py-8 text-center text-xs text-ink-3">Loading resources…</p> : resourcePosts.length === 0 ? (
+                  <div className="panel rounded-xl p-8 text-center text-xs text-ink-3 border-dashed">
                     No resources shared yet.
                   </div>
                 ) : (
@@ -413,27 +420,27 @@ export default function Profile() {
 
               {activeTab === "B-Spaces" && (
                 communitiesError || joinedError ? <QueryErrorState title="Couldn't load spaces" onRetry={() => { refetchCommunities(); refetchJoined(); }} /> : joinedSpaces.length === 0 ? (
-                  <div className="rounded-xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">
+                  <div className="panel rounded-xl p-8 text-center text-xs text-ink-3 border-dashed">
                     {isOwnProfile ? "You haven't joined any spaces yet." : "Not a member of any spaces yet."}
                   </div>
                 ) : (
-                  <div className="rounded-xl border border-border bg-card p-5 space-y-3">
-                    <h3 className="font-heading text-sm font-bold text-foreground">
-                      Member of {joinedSpaces.length} {joinedSpaces.length === 1 ? "B-Space" : "B-Spaces"}
+                  <div className="panel rounded-xl p-4 space-y-2.5">
+                    <h3 className="eyebrow text-xs tracking-wider uppercase text-ink-3">
+                      Member of {joinedSpaces.length} {joinedSpaces.length === 1 ? "Space" : "Spaces"}
                     </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {joinedSpaces.map((sp) => (
                         <Link
                           key={sp.slug}
                           to={`/b/${sp.slug}`}
-                          className="p-3 rounded-lg border border-border bg-background flex items-center gap-3 transition-colors hover:border-foreground/30"
+                          className="p-2.5 rounded-lg border border-line bg-sunken flex items-center gap-2.5 transition-colors hover:border-line-strong"
                         >
-                          <div className="h-10 w-10 rounded-lg bg-muted text-foreground font-bold flex items-center justify-center text-sm">
+                          <div className="h-8 w-8 rounded-md bg-surface text-ink font-bold flex items-center justify-center text-xs shrink-0">
                             {sp.name.charAt(0)}
                           </div>
                           <div className="min-w-0">
-                            <div className="truncate text-sm font-semibold text-foreground">{sp.name}</div>
-                            <div className="text-xs text-muted-foreground">{sp.memberCount.toLocaleString()} {sp.memberCount === 1 ? "member" : "members"}</div>
+                            <div className="truncate text-xs font-semibold text-ink">{sp.name}</div>
+                            <div className="eyebrow text-[9px]">{sp.memberCount.toLocaleString()} members</div>
                           </div>
                         </Link>
                       ))}
@@ -445,8 +452,8 @@ export default function Profile() {
               {isOwnProfile && activeTab === "Bookmarks" && (
                 postsError ? (
                   <QueryErrorState title="Couldn't load bookmarked posts" onRetry={() => refetchPosts()} />
-                ) : loadingPosts ? <p role="status" className="py-8 text-center text-sm text-muted-foreground">Loading bookmarks…</p> : savedPostsList.length === 0 ? (
-                  <div className="rounded-xl border border-border/40 bg-card p-10 text-center text-sm text-muted-foreground shadow-sm">
+                ) : loadingPosts ? <p role="status" className="py-8 text-center text-xs text-ink-3">Loading bookmarks…</p> : savedPostsList.length === 0 ? (
+                  <div className="panel rounded-xl p-8 text-center text-xs text-ink-3 border-dashed">
                     No bookmarks saved yet.
                   </div>
                 ) : (
@@ -457,77 +464,77 @@ export default function Profile() {
 
           </div>
 
-          {/* Right Sidebar Column (4 Cards) */}
-          <div className="lg:col-span-4 space-y-5">
+          {/* Right Sidebar Column (Agent 2 Ledger Widgets) */}
+          <div className="lg:col-span-4 space-y-4">
 
-            {/* About: only fields that exist on the profile */}
+            {/* About widget */}
             {(profile.status || location || website || profile.joined) && (
-              <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
-                <h3 className="font-display text-sm font-bold text-foreground tracking-tight">About</h3>
-                <dl className="space-y-2.5">
+              <div className="panel rounded-xl p-4 space-y-2.5">
+                <h3 className="eyebrow text-[10px] tracking-widest uppercase text-ink-3 hairline-b pb-1.5">About</h3>
+                <dl className="space-y-2">
                   {profile.status && (
                     <div className="flex justify-between gap-4">
-                      <dt className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Work</dt>
-                      <dd className="font-body text-sm font-medium text-foreground tabular-nums">{profile.status}</dd>
+                      <dt className="eyebrow text-[9.5px]">Work</dt>
+                      <dd className="num text-xs font-medium text-ink">{profile.status}</dd>
                     </div>
                   )}
                   {location && (
                     <div className="flex justify-between gap-4">
-                      <dt className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Location</dt>
-                      <dd className="font-body text-sm font-medium text-foreground tabular-nums">{location}</dd>
+                      <dt className="eyebrow text-[9.5px]">Location</dt>
+                      <dd className="text-xs text-ink">{location}</dd>
                     </div>
                   )}
                   {profile.joined && (
                     <div className="flex justify-between gap-4">
-                      <dt className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Joined</dt>
-                      <dd className="font-body text-sm font-medium text-foreground tabular-nums">{profile.joined}</dd>
+                      <dt className="eyebrow text-[9.5px]">Joined</dt>
+                      <dd className="num text-xs text-ink">{profile.joined}</dd>
                     </div>
                   )}
                 </dl>
               </div>
             )}
 
-            {/* Spaces */}
-            <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
-              <h3 className="font-display text-sm font-bold text-foreground tracking-tight">Spaces</h3>
+            {/* Spaces widget */}
+            <div className="panel rounded-xl p-4 space-y-2.5">
+              <h3 className="eyebrow text-[10px] tracking-widest uppercase text-ink-3 hairline-b pb-1.5">Spaces</h3>
               {joinedSpaces.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No spaces joined yet.</p>
+                <p className="text-xs text-ink-3">No spaces joined yet.</p>
               ) : (
-                <ul className="space-y-2.5">
+                <ul className="space-y-1.5">
                   {joinedSpaces.slice(0, 5).map((sp) => (
                     <li key={sp.slug}>
-                      <Link to={`/b/${sp.slug}`} className="flex items-center justify-between text-sm hover:opacity-80">
-                        <span className="font-medium text-foreground">{sp.name}</span>
-                        <span className="tabular-nums text-xs text-muted-foreground">b/{sp.slug}</span>
+                      <Link to={`/b/${sp.slug}`} className="flex items-center justify-between text-xs hover:text-ember transition-colors">
+                        <span className="font-medium text-ink truncate mr-2">{sp.name}</span>
+                        <span className="num text-[10px] text-ink-4 shrink-0">b/{sp.slug}</span>
                       </Link>
                     </li>
                   ))}
                 </ul>
               )}
-              <Link to="/communities" className="inline-block text-xs text-muted-foreground hover:text-foreground">
-                Browse all spaces
+              <Link to="/communities" className="inline-block eyebrow text-[9.5px] text-ember hover:underline">
+                Browse all spaces →
               </Link>
             </div>
 
-            {/* Badges */}
-            <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
-              <div className="flex items-center gap-2">
-                <Award className="h-4 w-4 text-muted-foreground" />
-                <h3 className="font-display text-sm font-bold text-foreground tracking-tight">Badges</h3>
+            {/* Badges widget */}
+            <div className="panel rounded-xl p-4 space-y-2.5">
+              <div className="flex items-center gap-2 hairline-b pb-1.5">
+                <Award className="h-3.5 w-3.5 text-gold" />
+                <h3 className="eyebrow text-[10px] tracking-widest uppercase text-ink-3">Badges & Trust</h3>
               </div>
               {badgesError ? (
-                <p className="text-xs text-destructive">Couldn't load badges.</p>
+                <p className="text-xs text-danger">Couldn't load badges.</p>
               ) : earnedBadges.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No badges earned yet.</p>
+                <p className="text-xs text-ink-3">No badges earned yet.</p>
               ) : (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   {earnedBadges.map((eb) => (
                     <span
                       key={eb.badgeId}
                       title={eb.badgeId}
-                      className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-foreground truncate"
+                      className="tag tag-gold text-[10px]"
                     >
-                      {eb.badgeId.charAt(0).toUpperCase()}
+                      ★ {eb.badgeId}
                     </span>
                   ))}
                 </div>

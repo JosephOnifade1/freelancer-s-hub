@@ -472,9 +472,11 @@ const PostDetail = () => {
             </div>
           </div>
         ) : (
-          <div className="rounded-2xl border border-border bg-card p-5 mb-6 shadow-sm">
-            <div className="flex gap-4">
-              <VoteControls score={post.score || 0} entityId={post.id} authorUid={post.author?.uid} type="post" disabled={!user} />
+          <div className="panel rounded-xl p-5 mb-5">
+            <div className="flex gap-3.5">
+              <div className="flex flex-col items-center justify-start self-start rounded-md bg-sunken px-1 py-1.5 shrink-0 border border-line">
+                <VoteControls score={post.score || 0} entityId={post.id} authorUid={post.author?.uid} type="post" disabled={!user} />
+              </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
@@ -607,23 +609,23 @@ const PostDetail = () => {
 
         {!post.isDeleted && <PostAttachments postId={post.id} canUpload={!!isOwnPost} />}
 
-        {!user && !post.isDeleted && post.allowComments !== false && <div className="mb-6 rounded-2xl border border-border bg-card p-4 text-center font-body text-sm text-muted-foreground">
-          <AppLink href={loginPath(pathname)} className="font-medium text-brand hover:underline">Sign in</AppLink> to comment, vote or save this post.
+        {!user && !post.isDeleted && post.allowComments !== false && <div className="mb-5 panel rounded-xl p-4 text-center text-xs text-ink-3">
+          <AppLink href={loginPath(pathname)} className="text-ember hover:underline font-semibold">Sign in</AppLink> to comment, vote or save this post.
         </div>}
 
         {/* Comment compose — blocked entirely when the author turned
             comments off (enforced in comments.ts + RLS as well) */}
         {!post.isDeleted && post.allowComments === false && (
-          <div className="rounded-2xl border border-border bg-card p-4 mb-6 text-center shadow-sm">
-            <p className="font-body text-sm font-medium text-foreground">Comments are turned off for this post</p>
-            <p className="mt-1 text-[10px] font-mono text-muted-foreground">
+          <div className="panel rounded-xl p-4 mb-5 text-center">
+            <p className="text-xs font-semibold text-ink">Comments are turned off for this post</p>
+            <p className="mt-1 eyebrow text-[9.5px]">
               Existing comments stay visible, but new comments and replies are disabled.
             </p>
           </div>
         )}
         {user && !post.isDeleted && post.allowComments !== false && (
-          <div className="rounded-2xl border border-border bg-card p-4 mb-6 shadow-sm">
-            <p className="font-body text-[10px] font-mono font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Leave a comment</p>
+          <div className="panel rounded-xl p-4 mb-5">
+            <p className="eyebrow text-[10px] tracking-widest uppercase text-ink-3 mb-2">Leave a comment</p>
             <CommentTextarea
               value={newComment}
               onChange={setNewComment}

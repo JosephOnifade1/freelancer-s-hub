@@ -107,6 +107,24 @@ export const posts = pgTable(
     type: text("type").notNull().default("discussion"),
 
     /**
+     * Editorial kind — describes the intent of the post.
+     * Added in migration 0009. All existing posts default to 'discussion'.
+     * `help` maps to what the UI used to call 'question'.
+     */
+    kind: text("kind").notNull().default("discussion"),
+
+    /** Whether a 'help'-kind post has been resolved with an accepted comment. */
+    isSolved: boolean("isSolved").notNull().default(false),
+
+    /**
+     * The comment that was accepted as the solution.
+     * NULL until the author accepts one; set to NULL if that comment is deleted.
+     * FK is deferred in the migration SQL (ON DELETE SET NULL) so comment
+     * deletes never violate referential integrity.
+     */
+    solutionCommentId: uuid("solutionCommentId"),
+
+    /**
      * Denormalised vote counters, maintained by `castVote` in the same
      * transaction as the vote row. They are not derived on read: the feed sorts by
      * `score` and the card renders `ups`/`downs`, and recomputing from `votes` for
@@ -147,6 +165,7 @@ export const posts = pgTable(
     /** Supports the visibility-restricted feed scan. */
     index("posts_visibility_created_idx").on(table.visibility, table.createdAt),
     check("posts_type_check", sql`${table.type} in ('discussion', 'question', 'resource', 'poll')`),
+    check("posts_kind_check", sql`${table.kind} in ('discussion', 'resource', 'help', 'showcase')`),
     check(
       "posts_visibility_check",
       sql`${table.visibility} in ('public', 'members', 'admins')`,

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, uuid, text, integer, primaryKey, index, check, unique } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, integer, primaryKey, index, check, unique, timestamp } from "drizzle-orm/pg-core";
 import { createdAt } from "./_shared";
 import { profiles } from "./identity";
 
@@ -34,4 +34,21 @@ export const follows = pgTable("follows", {
   primaryKey({ columns: [t.followerId, t.followingId] }),
   index("follows_following_idx").on(t.followingId),
   check("follows_not_self", sql`${t.followerId} <> ${t.followingId}`),
+]);
+
+// ---------------------------------------------------------------------------
+// referral_attributions — tracks which user referred a new signup (migration 0009)
+// ---------------------------------------------------------------------------
+// One row per referred user (refereeUid has a unique constraint).
+// The referrer earns karma via karma_events when a referee joins.
+
+export const referralAttributions = pgTable("referral_attributions", {
+  id:           uuid("id").primaryKey().defaultRandom(),
+  referrerUid:  uuid("referrerUid").notNull().references(()=>profiles.uid,{onDelete:"cascade"}),
+  refereeUid:   uuid("refereeUid").notNull().references(()=>profiles.uid,{onDelete:"cascade"}),
+  referralCode: text("referralCode").notNull(),
+  joinedAt:     timestamp("joinedAt",{withTimezone:true,mode:"date"}).notNull().defaultNow(),
+}, t=>[
+  unique("referral_unique_referee").on(t.refereeUid),
+  index("referral_referrer_idx").on(t.referrerUid, t.joinedAt),
 ]);

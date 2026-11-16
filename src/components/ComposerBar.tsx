@@ -43,11 +43,11 @@ export function ComposerBar({ spaceSlug, placeholder = "Start a post" }: Compose
     const params = new URLSearchParams({ type: "discussion" });
     if (spaceSlug) params.set("space", spaceSlug);
     return (
-      <div className="rounded-xl border border-border bg-card p-3 text-sm text-muted-foreground">
+      <div className="panel rounded-xl p-3 text-xs text-ink-3 flex items-center justify-between">
         <span className="min-w-0 flex-1">Want to join the conversation?</span>
         <Link
           href={loginPath(`/submit?${params}`)}
-          className="inline-flex min-h-9 items-center rounded-lg bg-brand px-3 font-semibold text-brand-foreground"
+          className="btn btn-primary btn-sm"
         >
           Sign in to post
         </Link>
@@ -59,15 +59,15 @@ export function ComposerBar({ spaceSlug, placeholder = "Start a post" }: Compose
   const initial = (profile?.displayName || profile?.username || user?.displayName || "?").charAt(0).toUpperCase();
 
   return (
-    <div className="rounded-xl border border-border bg-card p-2">
-      <div className="flex items-center gap-2">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted font-heading text-sm font-bold text-foreground">
+    <div className="panel rounded-xl p-2.5">
+      <div className="flex items-center gap-2.5">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-sunken border border-line font-heading text-xs font-bold text-ink">
           {avatar ? <img src={avatar} alt="" className="h-full w-full object-cover" /> : initial}
         </div>
         <button
           type="button"
           onClick={() => go("discussion")}
-          className="h-8 flex-1 truncate rounded-lg border border-border bg-background px-2 text-left font-body text-xs text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="h-8 flex-1 truncate rounded-md border border-line bg-sunken px-3 text-left font-body text-xs text-ink-3 transition-colors hover:border-line-strong hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember/50"
         >
           {placeholder}
         </button>
@@ -80,10 +80,10 @@ export function ComposerBar({ spaceSlug, placeholder = "Start a post" }: Compose
               type="button"
               aria-label={label}
               onClick={() => go(type)}
-              className="flex items-center justify-center rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-ink-3 transition-colors hover:bg-sunken hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember/50 text-[11px]"
             >
               <Icon className="h-3.5 w-3.5 shrink-0" />
-              <span className="sr-only">{label}</span>
+              <span className="hidden sm:inline font-medium">{label}</span>
             </button>
           ))}
         </div>

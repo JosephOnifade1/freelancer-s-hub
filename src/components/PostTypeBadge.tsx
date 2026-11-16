@@ -1,32 +1,39 @@
-import { Badge } from "@/components/ui/badge";
-import { BookOpen, MessageSquare, CircleHelp, Sparkles, BarChart2 } from "lucide-react";
+import { MessageSquare, CircleHelp, Sparkles, BarChart2, BookOpen } from "lucide-react";
 
+/** Agent 2 Ledger post-kind taxonomy.
+ * discussion → neutral tag
+ * resource   → verdigris (trust/knowledge)
+ * question   → ember (help / urgent)
+ * weekly     → gold  (community highlight)
+ * poll       → neutral tag
+ */
 type PostType = "discussion" | "question" | "resource" | "weekly" | "poll";
 
-const typeConfig: Record<PostType, { label: string; className: string; icon?: React.ReactNode }> = {
+const typeConfig: Record<PostType, { label: string; tagClass: string; icon?: React.ReactNode }> = {
   discussion: {
     label: "Discussion",
-    className: "bg-brand/10 text-brand border-brand/30",
-    icon: <MessageSquare className="h-3.5 w-3.5" />
+    tagClass: "tag",
+    icon: <MessageSquare className="h-3 w-3" />,
   },
   question: {
-    label: "Question",
-    className: "bg-info/10 text-info border-info/30",
-    icon: <CircleHelp className="h-3.5 w-3.5" />
+    label: "Help",
+    tagClass: "tag tag-ember",
+    icon: <CircleHelp className="h-3 w-3" />,
   },
   resource: {
     label: "Resource",
-    className: "bg-brand/10 text-brand border-brand/30",
-    icon: <Sparkles className="h-3.5 w-3.5" />
+    tagClass: "tag tag-verdigris",
+    icon: <BookOpen className="h-3 w-3" />,
   },
   weekly: {
     label: "Weekly",
-    className: "bg-warning/10 text-warning border-warning/30"
+    tagClass: "tag tag-gold",
+    icon: <Sparkles className="h-3 w-3" />,
   },
   poll: {
     label: "Poll",
-    className: "bg-info/10 text-info border-info/30",
-    icon: <BarChart2 className="h-3.5 w-3.5" />
+    tagClass: "tag",
+    icon: <BarChart2 className="h-3 w-3" />,
   },
 };
 
@@ -35,11 +42,11 @@ interface PostTypeBadgeProps {
 }
 
 export function PostTypeBadge({ type }: PostTypeBadgeProps) {
-  const config = typeConfig[type] || { label: "Post", className: "bg-secondary text-secondary-foreground border-border" };
+  const config = typeConfig[type] ?? { label: "Post", tagClass: "tag", icon: undefined };
   return (
-    <Badge variant="outline" className={`font-body text-[10px] font-bold ${config.className} flex items-center gap-1.5 py-0.5 px-2`}>
+    <span className={`${config.tagClass} inline-flex items-center gap-1 text-[10px]`}>
       {config.icon}
-      <span>{config.label}</span>
-    </Badge>
+      {config.label}
+    </span>
   );
 }

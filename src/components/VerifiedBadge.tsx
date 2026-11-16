@@ -1,4 +1,4 @@
-import { BadgeCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -20,10 +20,13 @@ export function VerifiedBadge({ isVerified, size = 14 }: VerifiedBadgeProps) {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <BadgeCheck 
-            size={size} 
-            className="text-brand" 
-          />
+          <span className="inline-flex items-center text-verdigris" title="Verified Pro" aria-label="Verified Pro">
+            <ShieldCheck 
+              size={size} 
+              strokeWidth={2.4}
+              className="text-verdigris" 
+            />
+          </span>
         </TooltipTrigger>
         <TooltipContent className="font-body text-[11px] bg-primary border-none text-primary-foreground p-2">
           <p className="font-bold">Verified Pro</p>

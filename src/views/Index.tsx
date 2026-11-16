@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Link, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -27,6 +27,7 @@ const Index = () => {
   const [bannerDismissed, setBannerDismissed] = useState(
     () => sessionStorage.getItem("borynx_profile_banner_dismissed") === "1"
   );
+  const [focusedIndex, setFocusedIndex] = useState(-1);
 
   const { data: myProfile } = useQuery({
     queryKey: ["myProfile", user?.uid],
@@ -66,20 +67,56 @@ const Index = () => {
     return [...posts].sort((a, b) => score(b) - score(a) || (b.createdAt || 0) - (a.createdAt || 0));
   }, [posts, activeTab, followingIds]);
 
+  // Feed keyboard navigation: J = next post, K = prev post, Enter = open post, Esc = clear focus
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable) {
+        return;
+      }
+      if (e.key === "j" || e.key === "J") {
+        e.preventDefault();
+        setFocusedIndex((prev) => {
+          const next = Math.min(prev + 1, displayedPosts.length - 1);
+          const el = document.getElementById(`feed-post-${next}`);
+          el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          return next;
+        });
+      } else if (e.key === "k" || e.key === "K") {
+        e.preventDefault();
+        setFocusedIndex((prev) => {
+          const next = Math.max(prev - 1, 0);
+          const el = document.getElementById(`feed-post-${next}`);
+          el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          return next;
+        });
+      } else if (e.key === "Enter" && focusedIndex >= 0) {
+        const post = displayedPosts[focusedIndex];
+        if (post) {
+          router.push(post.communitySlug ? `/b/${post.communitySlug}/p/${post.id}` : `/p/${post.id}`);
+        }
+      } else if (e.key === "Escape") {
+        setFocusedIndex(-1);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [displayedPosts, focusedIndex, router]);
+
   return (
     <AppLayout>
       <div className="px-2 py-4">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-          <div className="space-y-5 lg:col-span-9">
+          <div className="space-y-4 lg:col-span-9">
             {profileIncomplete && !bannerDismissed && (
-              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-brand/30 bg-brand/5 p-4">
-                <p className="min-w-0 flex-1 text-sm leading-relaxed text-muted-foreground">
-                  <span className="font-semibold text-foreground">Your profile is incomplete.</span>{" "}
+              <div className="panel flex flex-wrap items-center gap-3 rounded-xl border border-ember/30 bg-ember-soft p-4">
+                <p className="min-w-0 flex-1 text-sm leading-relaxed text-ink-2">
+                  <span className="font-semibold text-ink">Your profile is incomplete.</span>{" "}
                   Add your skills and a short bio so clients can find and trust you.
                 </p>
                 <Link
                   to="/onboarding"
-                  className="rounded-lg bg-primary px-3.5 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"
+                  className="btn btn-primary btn-sm"
                 >
                   Complete profile
                 </Link>
@@ -90,66 +127,74 @@ const Index = () => {
                     sessionStorage.setItem("borynx_profile_banner_dismissed", "1");
                     setBannerDismissed(true);
                   }}
-                  className="text-sm text-muted-foreground hover:text-foreground"
+                  className="text-xs text-ink-4 hover:text-ink transition-colors"
                 >
                   Dismiss
                 </button>
               </div>
             )}
-            <div className="flex items-center gap-6 border-b border-border pb-2">
+            <div className="flex items-center gap-6 hairline-b pb-1">
               {TABS.map((tab) => {
                 const isActive = activeTab === tab;
                 return (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`relative pb-2 text-sm font-semibold transition-colors ${
-                      isActive ? "text-brand" : "text-muted-foreground hover:text-foreground"
+                    className={`relative pb-2.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                      isActive ? "text-ember" : "text-ink-4 hover:text-ink"
                     }`}
                   >
                     {tab}
                     {isActive && (
-                      <motion.div layoutId="activeHomeTab" className="absolute inset-x-0 bottom-0 h-1 w-full bg-brand rounded-full" />
+                      <motion.div layoutId="activeHomeTab" className="absolute inset-x-0 bottom-0 h-0.5 w-full bg-ember" />
                     )}
                   </button>
                 );
               })}
             </div>
 
-            <p className="text-xs text-muted-foreground">{activeTab === "For You" ? "Active posts ranked by votes, replies and recency, with people you follow boosted." : "Recent posts from people you follow."} <Link to="/new" className="font-semibold text-brand hover:underline">See newest posts</Link></p>
+            <div className="flex items-center justify-between text-xs text-ink-4">
+              <p>{activeTab === "For You" ? "Ranked by votes, replies and recency." : "Recent posts from people you follow."} <Link to="/new" className="text-ember hover:underline ml-1">Newest</Link></p>
+              <span className="eyebrow text-[9.5px] hidden sm:inline text-ink-4">
+                <kbd className="px-1 py-0.5 rounded bg-sunken border border-line text-[9px]">J</kbd>/<kbd className="px-1 py-0.5 rounded bg-sunken border border-line text-[9px]">K</kbd> navigate
+              </span>
+            </div>
+
             <ComposerBar />
 
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {postsError || followingError ? (
                 <QueryErrorState
                   title="Couldn't load the feed"
                   onRetry={() => { refetchPosts(); refetchFollowing(); }}
                 />
               ) : isLoading || followingLoading ? (
-                <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+                <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-ink-4" /></div>
               ) : displayedPosts.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-border bg-card p-10 text-center">
+                <div className="panel rounded-xl p-10 text-center border-dashed">
                   <div className="flex items-center justify-center gap-2 mb-3">
-                    <PenTool className="h-5 w-5 text-muted-foreground/40" />
-                    <span className="font-body text-sm text-muted-foreground/40">Be the first to post</span>
+                    <PenTool className="h-5 w-5 text-ink-4" />
+                    <span className="eyebrow text-ink-4">Be the first to post</span>
                   </div>
-                  <p className="font-display text-lg font-semibold text-foreground mb-1">
+                  <p className="font-heading text-base font-bold text-ink mb-1">
                     {activeTab === "Following" ? "No posts from people you follow" : "No posts yet"}
                   </p>
-                  <p className="font-body text-sm text-muted-foreground mb-6 max-w-xs mx-auto">
+                  <p className="text-xs text-ink-3 mb-6 max-w-xs mx-auto">
                     {activeTab === "Following"
                       ? "Follow freelancers from their profile and their posts will show up here."
-                      : "Share a question, resource, or poll to start the conversation."}
+                      : "Share a question, resource, or discussion to start the conversation."}
                   </p>
                   <button
                     onClick={() => goCreate()}
-                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+                    className="btn btn-primary"
                   >
-                    <PenTool className="h-4 w-4" /> Create post
+                    <PenTool className="h-4 w-4 mr-1.5" /> Create post
                   </button>
                 </div>
               ) : displayedPosts.map((post, i) => (
-                <PostCard key={post.id} post={post} index={i} />
+                <div key={post.id} id={`feed-post-${i}`}>
+                  <PostCard post={post} index={i} isFocused={i === focusedIndex} />
+                </div>
               ))}
             </div>
           </div>

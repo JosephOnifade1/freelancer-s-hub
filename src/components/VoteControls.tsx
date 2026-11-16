@@ -154,8 +154,8 @@ export function VoteControls({ entityId, authorUid, score, type = "post", postId
           key={displayScore}
           initial={{ scale: 1.2, opacity: 0.7 }}
           animate={{ scale: 1, opacity: 1 }}
-          className={`font-heading ${isHorizontal ? 'text-[12px]' : 'text-sm'} font-bold leading-none ${
-            vote === "up" ? "text-upvote" : vote === "down" ? "text-downvote" : "text-foreground"
+          className={`num ${isHorizontal ? 'text-[12px]' : 'text-xs'} font-bold leading-none ${
+            vote === "up" ? "text-ember font-semibold" : vote === "down" ? "text-ink-3" : "text-ink"
           }`}
         >
           {displayScore}

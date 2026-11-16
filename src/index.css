@@ -27,118 +27,75 @@
     --font-body: 'Inter', system-ui, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-    /* ── Surfaces ─────────────────────────────────────────────── */
-    --background: 213 24% 6%;
-    --foreground: 0 0% 98%;
-    --card: 221 15% 11%;
-    --card-foreground: 0 0% 98%;
-    --popover: 221 15% 12%;
-    --popover-foreground: 0 0% 98%;
-    --secondary: 220 14% 16%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 220 14% 15%;
-    --muted-foreground: 220 15% 55%;
-    --accent: 220 14% 16%;
-    --accent-foreground: 0 0% 98%;
+    /* ── Agent 2 Ledger Raw Variables (Dark) ─────────────────── */
+    --bg: #0c0d0f;
+    --bg-sunken: #070808;
+    --surface: #131517;
+    --surface-raised: #1a1d20;
+    --line: #24282c;
+    --line-strong: #3b4147;
+    --ink: #ebe7dd;
+    --ink-2: #b6afa1;
+    --ink-3: #807a6e;
+    --ink-4: #585349;
+    --ember: #ff6b3b;
+    --ember-ink: #150a05;
+    --ember-soft: #3a1c10;
+    --verdigris: #3fbdb2;
+    --verdigris-soft: #0f2d2b;
+    --gold: #e3aa4c;
+    --gold-soft: #33260f;
+    --danger: #f06f64;
+    --danger-soft: #3b1715;
+    --success: #62c47a;
+    --success-soft: #11301a;
+    --grid: rgba(235, 231, 221, 0.035);
+    --shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 16px 40px -16px rgba(0, 0, 0, 0.7);
+    --pill-shadow: inset 0 0 0 1px rgba(235, 231, 221, 0.08), 0 1px 2px rgba(0, 0, 0, 0.4);
+    --sidebar-w: 256px;
+    --sidebar-rail: 52px;
+    --header-h: 56px;
+
+    /* ── Semantic HSL Triplet Tokens (Dark) ──────────────────── */
+    --background: 220 17% 5%;
+    --foreground: 43 24% 89%;
+    --card: 210 9% 8%;
+    --card-foreground: 43 24% 89%;
+    --popover: 210 10% 12%;
+    --popover-foreground: 43 24% 89%;
+    --secondary: 180 7% 3%;
+    --secondary-foreground: 41 12% 67%;
+    --muted: 180 7% 3%;
+    --muted-foreground: 41 8% 47%;
+    --accent: 17 57% 15%;
+    --accent-foreground: 15 100% 62%;
 
     /* ── Actions & accents ────────────────────────────────────── */
-    --primary: 0 0% 98%;
-    --primary-foreground: 213 24% 7%;
-    --brand: 215 65% 50%;
-    --brand-foreground: 0 0% 100%;
-    --ring: 215 65% 50%;
+    --primary: 15 100% 62%;
+    --primary-foreground: 220 17% 5%;
+    --brand: 15 100% 62%;
+    --brand-foreground: 220 17% 5%;
+    --ring: 15 100% 62%;
 
-    /* ── Voting (Borynx industrial theme) ─────────────────────── */
-    --upvote: 215 65% 50%;
-    --upvote-foreground: 0 0% 100%;
-    --downvote: 0 0% 55%;
-    --downvote-foreground: 0 0% 100%;
-
-    /* ── Semantics ────────────────────────────────────────────── */
-    --destructive: 0 72% 56%;
-    --destructive-foreground: 0 0% 100%;
-    --warning: 26 100% 62%;
-    --warning-foreground: 213 24% 7%;
-    --success: 148 72% 48%;
-    --success-foreground: 213 24% 7%;
-    --info: 183 78% 54%;
-    --info-foreground: 213 24% 7%;
-
-    /* ── Borders & inputs ─────────────────────────────────────── */
-    --border: 220 13% 17%;
-    --input: 220 13% 18%;
-
-    /* ── Radius scale (rem) ───────────────────────────────────── */
-    --radius-sm: 0.375rem;   /* pills, badges, small chips */
-    --radius: 0.5rem;        /* inputs, buttons, tight cards */
-    --radius-md: 0.75rem;    /* standard content cards */
-    --radius-lg: 1rem;       /* modals, drawers, page shells */
-    --radius-xl: 1.5rem;     /* page-level containers, hero surfaces */
-
-    /* ── Elevation (soft, deliberate) ─────────────────────────── */
-    --shadow-xs: 0 1px 2px 0 hsl(220 14% 10% / 0.4);
-    --shadow-sm: 0 1px 3px 0 hsl(220 14% 10% / 0.5), 0 1px 2px -1px hsl(220 14% 10% / 0.3);
-    --shadow-md: 0 4px 6px -1px hsl(220 14% 10% / 0.4), 0 2px 4px -2px hsl(220 14% 10% / 0.2);
-    --shadow-lg: 0 10px 15px -3px hsl(220 14% 10% / 0.5), 0 4px 6px -4px hsl(220 14% 10% / 0.2);
-
-    /* ── Sidebar ──────────────────────────────────────────────── */
-    --sidebar-background: 213 24% 7%;
-    --sidebar-foreground: 220 15% 50%;
-    --sidebar-primary: 215 65% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 14% 13%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 220 13% 15%;
-    --sidebar-ring: 215 65% 50%;
-  }
-
-  .theme-light {
-    /* ── Typography ───────────────────────────────────────────── */
-    --font-display: 'Space Grotesk', system-ui, sans-serif;
-    --font-heading: 'Space Grotesk', system-ui, sans-serif;
-    --font-body: 'Inter', system-ui, sans-serif;
-    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
-
-    /* ── Surfaces ─────────────────────────────────────────────── */
-    --background: 220 18% 97%;
-    --foreground: 213 24% 8%;
-    --card: 0 0% 100%;
-    --card-foreground: 213 24% 8%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 213 24% 8%;
-    --secondary: 220 16% 94%;
-    --secondary-foreground: 213 24% 9%;
-    --muted: 220 16% 92%;
-    --muted-foreground: 220 10% 42%;
-    --accent: 220 16% 92%;
-    --accent-foreground: 213 24% 8%;
-
-    /* ── Actions & accents ────────────────────────────────────── */
-    --primary: 213 24% 9%;
-    --primary-foreground: 0 0% 100%;
-    --brand: 215 60% 45%;
-    --brand-foreground: 0 0% 100%;
-    --ring: 215 60% 45%;
-
-    /* ── Voting (Borynx industrial theme) ─────────────────────── */
-    --upvote: 215 60% 45%;
-    --upvote-foreground: 0 0% 100%;
-    --downvote: 0 0% 45%;
-    --downvote-foreground: 0 0% 100%;
+    /* ── Voting (Agent 2 Ledger Theme) ────────────────────────── */
+    --upvote: 15 100% 62%;
+    --upvote-foreground: 220 17% 5%;
+    --downvote: 41 8% 47%;
+    --downvote-foreground: 43 24% 89%;
 
     /* ── Semantics ────────────────────────────────────────────── */
-    --destructive: 0 72% 46%;
-    --destructive-foreground: 0 0% 100%;
-    --warning: 26 90% 40%;
-    --warning-foreground: 0 0% 100%;
-    --success: 148 72% 28%;
-    --success-foreground: 0 0% 100%;
-    --info: 190 85% 30%;
-    --info-foreground: 0 0% 100%;
+    --destructive: 5 83% 67%;
+    --destructive-foreground: 220 17% 5%;
+    --warning: 37 75% 59%;
+    --warning-foreground: 220 17% 5%;
+    --success: 135 47% 57%;
+    --success-foreground: 220 17% 5%;
+    --info: 175 52% 49%;
+    --info-foreground: 220 17% 5%;
 
     /* ── Borders & inputs ─────────────────────────────────────── */
-    --border: 220 13% 86%;
-    --input: 220 13% 85%;
+    --border: 210 10% 16%;
+    --input: 210 9% 25%;
 
     /* ── Radius scale (rem) ───────────────────────────────────── */
     --radius-sm: 0.375rem;
@@ -148,20 +105,121 @@
     --radius-xl: 1.5rem;
 
     /* ── Elevation ────────────────────────────────────────────── */
-    --shadow-xs: 0 1px 2px 0 hsl(220 14% 10% / 0.06);
-    --shadow-sm: 0 1px 3px 0 hsl(220 14% 10% / 0.08), 0 1px 2px -1px hsl(220 14% 10% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(220 14% 10% / 0.1), 0 2px 4px -2px hsl(220 14% 10% / 0.05);
-    --shadow-lg: 0 10px 15px -3px hsl(220 14% 10% / 0.12), 0 4px 6px -4px hsl(220 14% 10% / 0.06);
+    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.6);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.7);
 
     /* ── Sidebar ──────────────────────────────────────────────── */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 220 10% 38%;
-    --sidebar-primary: 215 60% 45%;
+    --sidebar-background: 220 17% 5%;
+    --sidebar-foreground: 41 8% 47%;
+    --sidebar-primary: 15 100% 62%;
+    --sidebar-primary-foreground: 220 17% 5%;
+    --sidebar-accent: 210 9% 8%;
+    --sidebar-accent-foreground: 43 24% 89%;
+    --sidebar-border: 210 10% 16%;
+    --sidebar-ring: 15 100% 62%;
+  }
+
+  .theme-light {
+    /* ── Typography ───────────────────────────────────────────── */
+    --font-display: 'Space Grotesk', system-ui, sans-serif;
+    --font-heading: 'Space Grotesk', system-ui, sans-serif;
+    --font-body: 'Inter', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+    /* ── Agent 2 Ledger Raw Variables (Light) ────────────────── */
+    --bg: #f2eee5;
+    --bg-sunken: #e9e4d7;
+    --surface: #f9f7f1;
+    --surface-raised: #ffffff;
+    --line: #d8d1c1;
+    --line-strong: #b3a98f;
+    --ink: #16140f;
+    --ink-2: #4b463b;
+    --ink-3: #7f7868;
+    --ink-4: #a9a292;
+    --ember: #d4491a;
+    --ember-ink: #ffffff;
+    --ember-soft: #f8dfd3;
+    --verdigris: #136b66;
+    --verdigris-soft: #d3e9e6;
+    --gold: #a86f12;
+    --gold-soft: #f3e4c3;
+    --danger: #b4302a;
+    --danger-soft: #f6d9d6;
+    --success: #2d7a40;
+    --success-soft: #d8ecdb;
+    --grid: rgba(22, 20, 15, 0.045);
+    --shadow: 0 1px 0 rgba(22, 20, 15, 0.04), 0 12px 32px -16px rgba(22, 20, 15, 0.25);
+    --pill-shadow: inset 0 0 0 1px rgba(22, 20, 15, 0.08), 0 1px 2px rgba(22, 20, 15, 0.08);
+    --sidebar-w: 256px;
+    --sidebar-rail: 52px;
+    --header-h: 56px;
+
+    /* ── Semantic HSL Triplet Tokens (Light) ─────────────────── */
+    --background: 43 27% 92%;
+    --foreground: 43 24% 7%;
+    --card: 45 38% 96%;
+    --card-foreground: 43 24% 7%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 43 24% 7%;
+    --secondary: 42 28% 88%;
+    --secondary-foreground: 41 12% 26%;
+    --muted: 42 28% 88%;
+    --muted-foreground: 41 10% 45%;
+    --accent: 19 74% 90%;
+    --accent-foreground: 15 78% 47%;
+
+    /* ── Actions & accents ────────────────────────────────────── */
+    --primary: 15 78% 47%;
+    --primary-foreground: 0 0% 100%;
+    --brand: 15 78% 47%;
+    --brand-foreground: 0 0% 100%;
+    --ring: 15 78% 47%;
+
+    /* ── Voting (Agent 2 Ledger Theme) ────────────────────────── */
+    --upvote: 15 78% 47%;
+    --upvote-foreground: 0 0% 100%;
+    --downvote: 41 10% 45%;
+    --downvote-foreground: 0 0% 100%;
+
+    /* ── Semantics ────────────────────────────────────────────── */
+    --destructive: 3 62% 44%;
+    --destructive-foreground: 0 0% 100%;
+    --warning: 37 80% 36%;
+    --warning-foreground: 0 0% 100%;
+    --success: 135 46% 33%;
+    --success-foreground: 0 0% 100%;
+    --info: 176 70% 25%;
+    --info-foreground: 0 0% 100%;
+
+    /* ── Borders & inputs ─────────────────────────────────────── */
+    --border: 41 21% 80%;
+    --input: 43 19% 63%;
+
+    /* ── Radius scale (rem) ───────────────────────────────────── */
+    --radius-sm: 0.375rem;
+    --radius: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.5rem;
+
+    /* ── Elevation ────────────────────────────────────────────── */
+    --shadow-xs: 0 1px 2px 0 rgba(22, 20, 15, 0.04);
+    --shadow-sm: 0 1px 3px 0 rgba(22, 20, 15, 0.06);
+    --shadow-md: 0 4px 6px -1px rgba(22, 20, 15, 0.08);
+    --shadow-lg: 0 10px 15px -3px rgba(22, 20, 15, 0.12);
+
+    /* ── Sidebar ──────────────────────────────────────────────── */
+    --sidebar-background: 43 27% 92%;
+    --sidebar-foreground: 41 10% 45%;
+    --sidebar-primary: 15 78% 47%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 16% 94%;
-    --sidebar-accent-foreground: 213 24% 9%;
-    --sidebar-border: 220 13% 90%;
-    --sidebar-ring: 215 60% 45%;
+    --sidebar-accent: 45 38% 96%;
+    --sidebar-accent-foreground: 43 24% 7%;
+    --sidebar-border: 41 21% 80%;
+    --sidebar-ring: 15 78% 47%;
   }
 }
 
@@ -177,12 +235,264 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-body);
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 32px 32px;
+    background-attachment: fixed;
     transition: background-color 0.25s ease, color 0.25s ease;
+  }
+
+  ::selection {
+    background: var(--ember);
+    color: var(--ember-ink);
   }
 
   h1, h2, h3, h4, h5, h6, .font-heading {
     font-family: var(--font-heading);
     letter-spacing: -0.01em;
+  }
+}
+
+@layer utilities {
+  /* ── Agent 2 Typographic utilities ──────────────────────────── */
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    font-weight: 500;
+  }
+  .display {
+    font-family: var(--font-display);
+    font-weight: 650;
+    letter-spacing: -0.028em;
+    line-height: 1.05;
+  }
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Agent 2 Ledger Surfaces ────────────────────────────────── */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow);
+  }
+  .panel-raised {
+    background: var(--surface-raised);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow);
+  }
+  .hairline-b {
+    border-bottom: 1px solid var(--line);
+  }
+  .ledger-row {
+    position: relative;
+    border-bottom: 1px solid var(--line);
+    transition: background-color 120ms ease;
+  }
+  .ledger-row:hover {
+    background: color-mix(in oklab, var(--surface-raised) 70%, transparent);
+  }
+  .ledger-row[data-focused="true"] {
+    background: color-mix(in oklab, var(--ember-soft) 55%, var(--surface));
+    box-shadow: inset 3px 0 0 var(--ember);
+  }
+
+  /* ── Agent 2 Buttons ────────────────────────────────────────── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 550;
+    border: 1px solid var(--line-strong);
+    background: var(--surface-raised);
+    color: var(--ink);
+    transition:
+      background-color 120ms ease,
+      border-color 120ms ease,
+      transform 80ms ease;
+    white-space: nowrap;
+  }
+  .btn:hover {
+    border-color: var(--ink-3);
+  }
+  .btn:active {
+    transform: translateY(1px);
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .btn-primary {
+    background: var(--ember);
+    color: var(--ember-ink);
+    border-color: transparent;
+  }
+  .btn-primary:hover {
+    filter: brightness(1.06);
+    border-color: transparent;
+  }
+  .btn-ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--ink-2);
+  }
+  .btn-ghost:hover {
+    background: var(--bg-sunken);
+    border-color: transparent;
+    color: var(--ink);
+  }
+  .btn-sm {
+    height: 26px;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+  .btn-danger {
+    color: var(--danger);
+    border-color: color-mix(in oklab, var(--danger) 40%, transparent);
+  }
+  .btn-danger:hover {
+    background: var(--danger-soft);
+  }
+
+  /* ── Agent 2 Inputs ─────────────────────────────────────────── */
+  .field {
+    width: 100%;
+    height: 36px;
+    padding: 0 10px;
+    border-radius: 6px;
+    background: var(--surface-raised);
+    border: 1px solid var(--line-strong);
+    color: var(--ink);
+    font-size: 13.5px;
+  }
+  .field::placeholder {
+    color: var(--ink-4);
+  }
+  .field:focus {
+    outline: none;
+    border-color: var(--ember);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--ember) 22%, transparent);
+  }
+  textarea.field {
+    height: auto;
+    padding: 10px;
+    line-height: 1.55;
+    resize: vertical;
+  }
+  select.field {
+    appearance: none;
+  }
+
+  /* ── Agent 2 Tags ───────────────────────────────────────────── */
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 20px;
+    padding: 0 7px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border: 1px solid var(--line);
+    color: var(--ink-2);
+    background: var(--surface);
+  }
+  .tag-ember {
+    color: var(--ember);
+    background: var(--ember-soft);
+    border-color: transparent;
+  }
+  .tag-verdigris {
+    color: var(--verdigris);
+    background: var(--verdigris-soft);
+    border-color: transparent;
+  }
+  .tag-gold {
+    color: var(--gold);
+    background: var(--gold-soft);
+    border-color: transparent;
+  }
+  .tag-danger {
+    color: var(--danger);
+    background: var(--danger-soft);
+    border-color: transparent;
+  }
+  .tag-success {
+    color: var(--success);
+    background: var(--success-soft);
+    border-color: transparent;
+  }
+
+  /* ── Agent 2 Navigation Item with Dot Indicator ─────────────── */
+  .nav-gutter {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 999px;
+    color: var(--ink-2);
+    font-size: 13.5px;
+    font-weight: 500;
+    position: relative;
+    transition:
+      background-color 140ms ease,
+      color 140ms ease,
+      box-shadow 140ms ease;
+  }
+  .nav-item:hover {
+    background: var(--bg-sunken);
+    color: var(--ink);
+  }
+  .nav-item[aria-current="page"] {
+    background: var(--surface-raised);
+    color: var(--ink);
+    box-shadow: var(--pill-shadow);
+  }
+  .nav-item[aria-current="page"]::before {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    width: 4px;
+    height: 4px;
+    margin-top: -2px;
+    border-radius: 999px;
+    background: var(--ember);
+  }
+
+  /* ── Agent 2 Skeleton Shimmer ───────────────────────────────── */
+  .skeleton-bx {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-sunken);
+    border-radius: 4px;
+  }
+  .skeleton-bx::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--surface-raised) 70%, transparent), transparent);
+    animation: shimmer-bx 1.4s infinite;
+  }
+  @keyframes shimmer-bx {
+    100% {
+      transform: translateX(100%);
+    }
   }
 }
 

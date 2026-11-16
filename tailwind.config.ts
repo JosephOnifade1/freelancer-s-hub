@@ -90,6 +90,32 @@ export default {
         "badge-question": "hsl(var(--badge-question))",
         "badge-resource": "hsl(var(--badge-resource))",
         "badge-weekly": "hsl(var(--badge-weekly))",
+        ember: {
+          DEFAULT: "var(--ember)",
+          soft: "var(--ember-soft)",
+          ink: "var(--ember-ink)",
+        },
+        verdigris: {
+          DEFAULT: "var(--verdigris)",
+          soft: "var(--verdigris-soft)",
+        },
+        gold: {
+          DEFAULT: "var(--gold)",
+          soft: "var(--gold-soft)",
+        },
+        ink: {
+          DEFAULT: "var(--ink)",
+          2: "var(--ink-2)",
+          3: "var(--ink-3)",
+          4: "var(--ink-4)",
+        },
+        surface: "var(--surface)",
+        raised: "var(--surface-raised)",
+        sunken: "var(--bg-sunken)",
+        line: {
+          DEFAULT: "var(--line)",
+          strong: "var(--line-strong)",
+        },
       },
       borderRadius: {
         xl: "var(--radius-xl)",

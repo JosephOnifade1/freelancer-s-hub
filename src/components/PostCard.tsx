@@ -1,10 +1,12 @@
-import { MessageSquare, Share2, Bookmark, MoreHorizontal, Edit2, Trash2, Eye, ExternalLink, Pin, Lock, Users, Flag } from "lucide-react";
+import { MessageSquare, Share2, Bookmark, MoreHorizontal, Edit2, Trash2, Eye, ExternalLink, Pin, Lock, Users, Flag, CheckCircle2 } from "lucide-react";
 import { AppLink as Link } from "@/components/AppLink";
 import { VoteControls } from "@/components/VoteControls";
 import { PostTypeBadge } from "@/components/PostTypeBadge";
 import { LiveReputation } from "@/components/LiveReputation";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
-import { formatTimeAgo } from "@/lib/utils";
+import { UserHoverCard } from "@/components/UserHoverCard";
+import { CommunityHoverCard } from "@/components/CommunityHoverCard";
+import { cn, formatTimeAgo } from "@/lib/utils";
 import { isVeteran } from "@/lib/users";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -56,12 +58,13 @@ export interface PostData {
   isPinned?: boolean;
 }
 
-interface PostCardProps {
+export interface PostCardProps {
   post: PostData;
   index: number;
+  isFocused?: boolean;
 }
 
-export function PostCard({ post, index }: PostCardProps) {
+export function PostCard({ post, index, isFocused }: PostCardProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
@@ -199,10 +202,14 @@ export function PostCard({ post, index }: PostCardProps) {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: Math.min(index, 8) * 0.05, duration: 0.3 }}
-        className="group flex gap-3 rounded-xl border border-border bg-card p-3 transition-colors hover:border-brand/40"
+        className={cn(
+          "group panel flex gap-3.5 rounded-lg p-3.5 transition-all hover:border-line-strong",
+          isFocused && "ring-1 ring-ember border-ember shadow-md shadow-ember/10"
+        )}
+        data-focused={isFocused ? "true" : undefined}
       >
-        {/* ── Vote rail (Reddit style: left of post content) ── */}
-        <div className="flex flex-col items-center justify-start gap-1 pt-0.5 w-8 shrink-0">
+        {/* ── Vote rail (Agent 2 Ledger style) ── */}
+        <div className="flex flex-col items-center justify-start self-start rounded-md bg-sunken px-1 py-1.5 shrink-0 border border-line">
           <VoteControls
             score={post.score || 0}
             entityId={post.id}
@@ -217,81 +224,65 @@ export function PostCard({ post, index }: PostCardProps) {
         <div className="flex-1 min-w-0 flex flex-col gap-1.5">
 
           {/* Meta line: community avatar + name + Join + time */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap text-xs text-ink-3">
             {post.communitySlug ? (
               <>
-                <Link
-                  href={`/b/${post.communitySlug}`}
-                  className="flex items-center gap-1 hover:opacity-80 transition-opacity"
-                >
-                  <div className="flex h-5 w-5 items-center justify-center rounded-md bg-muted text-foreground font-heading text-[9px] font-bold shrink-0">
-                    {post.communitySlug.charAt(0).toUpperCase()}
-                  </div>
-                  <span className="font-body text-[12px] font-semibold text-foreground hover:underline">
-                    b/{post.communitySlug}
-                  </span>
-                </Link>
-                <span className="text-muted-foreground text-[10px]">·</span>
-                <Link
-                  href={authorLinkTarget}
-                  className="flex items-center gap-1 hover:opacity-80 transition-opacity"
-                >
-                  <div className="flex h-4 w-4 items-center justify-center rounded-full font-heading text-[9px] font-bold overflow-hidden bg-muted text-muted-foreground shrink-0">
-                    {(post.author?.avatar || post.author?.avatarUrl) ? (
-                      <img src={post.author.avatar || post.author.avatarUrl} alt={post.author.name} className="h-full w-full object-cover" />
-                    ) : (
-                      <span>{post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'}</span>
-                    )}
-                  </div>
-                  <span className="font-body text-[11px] text-muted-foreground hover:underline flex items-center gap-0.5">
-                    f/{authorDisplay}
-                    <VerifiedBadge isVerified={!!post.author?.isVerifiedPro} size={10} showTooltip={false} />
-                  </span>
-                </Link>
+                <CommunityHoverCard slug={post.communitySlug}>
+                  <Link
+                    href={`/b/${post.communitySlug}`}
+                    className="tag hover:border-ink-3 transition-colors"
+                  >
+                    <span className="inline-block h-2 w-2 rounded-[2px] bg-ember" aria-hidden="true" />
+                    <span className="num normal-case tracking-normal">b/{post.communitySlug}</span>
+                  </Link>
+                </CommunityHoverCard>
+                <span aria-hidden="true">·</span>
+                <UserHoverCard handle={authorDisplay}>
+                  <Link
+                    href={authorLinkTarget}
+                    className="inline-flex items-center gap-1 num font-medium text-ink-2 hover:underline"
+                  >
+                    <span>f/{authorDisplay}</span>
+                    <VerifiedBadge isVerified={!!post.author?.isVerifiedPro} size={11} showTooltip={false} />
+                  </Link>
+                </UserHoverCard>
               </>
             ) : (
               <>
-                <Link
-                  href={authorLinkTarget}
-                  className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
-                >
-                  <div className="flex h-5 w-5 items-center justify-center rounded-full font-heading text-[10px] font-bold overflow-hidden bg-muted text-foreground shrink-0">
-                    {(post.author?.avatar || post.author?.avatarUrl) ? (
-                      <img src={post.author.avatar || post.author.avatarUrl} alt={post.author.name} className="h-full w-full object-cover" />
-                    ) : (
-                      <span>{post.author?.name ? post.author.name.charAt(0).toUpperCase() : '?'}</span>
-                    )}
-                  </div>
-                  <span className="font-body text-[12px] font-medium text-foreground hover:underline flex items-center gap-1">
-                    f/{authorDisplay}
-                    <VerifiedBadge isVerified={!!post.author?.isVerifiedPro} size={12} showTooltip={false} />
-                  </span>
-                </Link>
-                <span className="text-muted-foreground text-[10px]">·</span>
+                <UserHoverCard handle={authorDisplay}>
+                  <Link
+                    href={authorLinkTarget}
+                    className="inline-flex items-center gap-1 num font-medium text-ink-2 hover:underline"
+                  >
+                    <span>f/{authorDisplay}</span>
+                    <VerifiedBadge isVerified={!!post.author?.isVerifiedPro} size={11} showTooltip={false} />
+                  </Link>
+                </UserHoverCard>
+                <span aria-hidden="true">·</span>
               </>
             )}
 
-            <time className="font-body text-[11px] text-muted-foreground flex items-center gap-1">
+            <time className="num text-ink-3 flex items-center gap-1">
               {formatTimeAgo(post.createdAt)}
               {isVeteran(post.author?.reputation || 0) && (
-                <span className="text-brand font-bold ml-0.5" title="Veteran">V</span>
+                <span className="tag tag-gold py-0 px-1 text-[9px] font-bold" title="Veteran">V</span>
               )}
             </time>
 
             <div className="ml-auto flex items-center gap-1.5 flex-wrap">
               {post.isPinned && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-semibold text-brand">
-                  <Pin className="h-3 w-3" /> Pinned
+                <span className="inline-flex items-center gap-1 text-gold text-xs font-medium">
+                  <Pin className="h-3 w-3" /> pinned
                 </span>
               )}
               {post.visibility === "members" && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                  <Users className="h-3 w-3" /> Members only
+                <span className="tag">
+                  <Users className="h-2.5 w-2.5" /> Members
                 </span>
               )}
               {post.visibility === "admins" && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                  <Lock className="h-3 w-3" /> Space admins
+                <span className="tag tag-danger">
+                  <Lock className="h-2.5 w-2.5" /> Space admins
                 </span>
               )}
               {post.type !== 'discussion' && <PostTypeBadge type={post.type} />}
@@ -300,7 +291,7 @@ export function PostCard({ post, index }: PostCardProps) {
 
           {/* Title */}
           <Link href={postUrl} className="block group">
-            <h3 className="font-display text-base font-semibold text-foreground leading-tight group-hover:text-brand transition-colors">
+            <h3 className="font-heading text-[16px] font-semibold text-ink leading-snug tracking-[-0.01em] group-hover:text-ember transition-colors">
               {post.title}
             </h3>
           </Link>
@@ -309,12 +300,30 @@ export function PostCard({ post, index }: PostCardProps) {
             <a
               href={post.externalLink.startsWith('http') ? post.externalLink : `https://${post.externalLink}`}
               target="_blank"
-              rel="noopener noreferrer"
+              rel="noopener noreferrer nofollow ugc"
               onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1.5 font-body text-[10px] text-brand hover:underline mt-0.5"
+              className="mt-1 flex min-w-0 items-center gap-2 rounded-md border border-line bg-sunken px-2.5 py-1 text-[11.5px] transition-colors hover:border-line-strong w-fit max-w-full"
             >
-              <ExternalLink className="h-3 w-3" />
-              Source Reference
+              <ExternalLink size={12} className="shrink-0 text-ink-3" aria-hidden="true" />
+              <span className="num truncate font-medium text-verdigris">
+                {(() => {
+                  try {
+                    return new URL(post.externalLink.startsWith('http') ? post.externalLink : `https://${post.externalLink}`).host;
+                  } catch {
+                    return post.externalLink;
+                  }
+                })()}
+              </span>
+              <span className="num truncate text-ink-3">
+                {(() => {
+                  try {
+                    const u = new URL(post.externalLink.startsWith('http') ? post.externalLink : `https://${post.externalLink}`);
+                    return u.pathname === "/" ? "" : u.pathname;
+                  } catch {
+                    return "";
+                  }
+                })()}
+              </span>
             </a>
           )}
 
@@ -364,40 +373,43 @@ export function PostCard({ post, index }: PostCardProps) {
             </div>
           )}
 
-          {/* Action footer - Reddit style: comment count | Repost | Award | Share | ... */}
-          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/40">
-            <Link href={postUrl} className="flex items-center gap-1 rounded-md px-2 py-1 font-body text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-info">
-              <MessageSquare className="h-3.5 w-3.5" />
-              {post.commentCount || 0}
+          {/* Action footer - Agent 2 Ledger style */}
+          <div className="-ml-1.5 mt-2 flex flex-wrap items-center gap-1 border-t border-line/60 pt-2 text-ink-3">
+            <Link href={postUrl} className="btn btn-ghost btn-sm text-ink-3 hover:text-ink">
+              <MessageSquare className="h-3.5 w-3.5 text-ink-4" />
+              <span className="num">{post.commentCount || 0}</span>
             </Link>
 
-            <button onClick={handleShare} aria-label="Share post" className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted/40 hover:text-brand">
-              <Share2 className="h-3.5 w-3.5" />
+            <button onClick={handleShare} aria-label="Share post" className="btn btn-ghost btn-sm text-ink-3 hover:text-ink">
+              <Share2 className="h-3.5 w-3.5 text-ink-4" />
+              <span>Share</span>
             </button>
 
             {user && (
-              <button aria-label={isSaved ? "Unsave post" : "Save post"}
+              <button
+                aria-label={isSaved ? "Unsave post" : "Save post"}
                 onClick={(e) => { e.preventDefault(); bookmarkMutation.mutate(); }}
                 disabled={bookmarkMutation.isPending}
-                className={`rounded-md p-1 transition-colors hover:bg-muted/40 ${isSaved ? 'text-warning' : 'text-muted-foreground hover:text-warning'}`}
+                className={`btn btn-ghost btn-sm ${isSaved ? 'text-gold' : 'text-ink-3 hover:text-ink'}`}
               >
                 <Bookmark className="h-3.5 w-3.5" fill={isSaved ? "currentColor" : "none"} />
+                <span>{isSaved ? "Saved" : "Save"}</span>
               </button>
             )}
 
             {isOwnPost && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground focus:outline-none">
+                  <button className="btn btn-ghost btn-sm text-ink-3 hover:text-ink focus:outline-none">
                     <MoreHorizontal className="h-3.5 w-3.5" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-40 font-body">
+                <DropdownMenuContent align="end" className="w-40 font-body bg-surface border border-line">
                   <DropdownMenuItem onClick={() => setIsEditing(true)} className="cursor-pointer">
                     <Edit2 className="h-4 w-4 mr-2" />
                     <span>Edit Post</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => deleteMutation.mutate()} className="cursor-pointer text-destructive focus:text-destructive">
+                  <DropdownMenuItem onClick={() => deleteMutation.mutate()} className="cursor-pointer text-danger focus:text-danger">
                     <Trash2 className="h-4 w-4 mr-2" />
                     <span>Delete Post</span>
                   </DropdownMenuItem>
@@ -408,7 +420,7 @@ export function PostCard({ post, index }: PostCardProps) {
             {!isOwnPost && user && (
               <button
                 onClick={() => setIsPostReportOpen(true)}
-                className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted/40 hover:text-brand"
+                className="btn btn-ghost btn-sm text-ink-3 hover:text-danger"
                 aria-label="Report post"
               >
                 <Flag className="h-3.5 w-3.5" />

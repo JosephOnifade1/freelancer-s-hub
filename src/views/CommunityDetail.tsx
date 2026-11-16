@@ -175,29 +175,29 @@ const CommunityDetail = () => {
           <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" /> All spaces
         </button>
 
-        <header className="mb-6 rounded-2xl border border-border bg-card p-5 md:p-6">
+        <header className="mb-6 panel rounded-xl p-5 md:p-6">
           <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
             <div className="flex items-start gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-radius-md border border-border bg-muted text-foreground">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-line bg-sunken text-ember">
                 <Icon className="h-7 w-7" />
               </div>
               <div className="min-w-0 space-y-1.5">
-                <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">{community.name}</h1>
-                <p className="flex flex-wrap items-center gap-x-2 text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
-                  <span className="tabular-nums">b/{community.slug}</span>
+                <h1 className="font-heading text-xl sm:text-2xl font-bold tracking-tight text-ink">{community.name}</h1>
+                <p className="flex flex-wrap items-center gap-x-2 text-[10px] num text-ink-3 uppercase tracking-wider">
+                  <span>b/{community.slug}</span>
                   <span aria-hidden>·</span>
-                  <span className="inline-flex items-center gap-1"><Globe className="h-3.5 w-3.5" /> Public</span>
+                  <span className="inline-flex items-center gap-1"><Globe className="h-3 w-3" /> Public</span>
                   <span aria-hidden>·</span>
-                  <span className="tabular-nums">{community.memberCount.toLocaleString()} {community.memberCount === 1 ? "member" : "members"}</span>
+                  <span>{community.memberCount.toLocaleString()} {community.memberCount === 1 ? "member" : "members"}</span>
                 </p>
-                <p className="max-w-2xl font-body text-sm leading-relaxed text-muted-foreground">{community.description}</p>
+                <p className="max-w-2xl text-xs leading-relaxed text-ink-2">{community.description}</p>
                 {community.topics.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 pt-1">
+                  <div className="flex flex-wrap gap-1 pt-1">
                     {community.topics.map((t) => (
                       <Link
                         key={t}
                         to={`/tag/${t}`}
-                        className="rounded-md border border-border bg-muted/50 px-2 py-0.5 font-body text-[11px] font-medium text-muted-foreground hover:border-brand hover:text-brand transition-colors"
+                        className="tag text-[10px] hover:text-ember transition-colors"
                       >
                         #{t}
                       </Link>
@@ -208,46 +208,46 @@ const CommunityDetail = () => {
             </div>
 
             <div className="flex shrink-0 items-center gap-2">
-              <Button variant="outline" size="sm" onClick={copyInviteLink} className="gap-1.5 rounded-radius-md">
+              <button onClick={copyInviteLink} className="btn btn-ghost btn-sm gap-1.5">
                 <Link2 className="h-3.5 w-3.5" /> Copy link
-              </Button>
+              </button>
               {!user ? (
-                <Button size="sm" asChild className="rounded-radius-md"><AppLink href={loginPath(pathname)}>Sign in to join</AppLink></Button>
+                <AppLink href={loginPath(pathname)} className="btn btn-primary btn-sm">Sign in to join</AppLink>
               ) : membershipError ? (
-                <button type="button" onClick={() => refetchMembership()} className="text-xs text-destructive hover:underline">Couldn't check membership. Retry</button>
+                <button type="button" onClick={() => refetchMembership()} className="text-xs text-danger hover:underline">Couldn't check membership. Retry</button>
               ) : isJoined ? (
-                <Button variant="outline" size="sm" disabled={leaveMutation.isPending} onClick={() => leaveMutation.mutate()} className="rounded-radius-md">
+                <button disabled={leaveMutation.isPending} onClick={() => leaveMutation.mutate()} className="btn btn-ghost btn-sm">
                   Joined
-                </Button>
+                </button>
               ) : (
-                <Button size="sm" disabled={joinMutation.isPending} onClick={() => joinMutation.mutate()} className="rounded-radius-md">
+                <button disabled={joinMutation.isPending} onClick={() => joinMutation.mutate()} className="btn btn-primary btn-sm">
                   Join space
-                </Button>
+                </button>
               )}
             </div>
           </div>
         </header>
 
-        <div className="mb-6 flex items-center gap-6 overflow-x-auto border-b border-border pb-2">
+        <div className="mb-5 flex items-center gap-6 overflow-x-auto hairline-b pb-1 text-xs">
           {TABS.map((tab) => {
             const isActive = activeTab === tab;
             return (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`relative whitespace-nowrap pb-2 text-sm font-medium transition-colors ${
-                  isActive ? "text-brand" : "text-muted-foreground hover:text-foreground"
+                className={`relative whitespace-nowrap pb-2 font-medium tracking-wide transition-colors ${
+                  isActive ? "text-ember" : "text-ink-4 hover:text-ink"
                 }`}
               >
                 {tab}
-                {isActive && <motion.div layoutId="activeSpaceTab" className="absolute inset-x-0 bottom-0 h-1 w-full bg-brand rounded-full" />}
+                {isActive && <motion.div layoutId="activeSpaceTab" className="absolute inset-x-0 bottom-0 h-0.5 w-full bg-ember" />}
               </button>
             );
           })}
         </div>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-          <div className="space-y-4 lg:col-span-8">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          <div className="space-y-3.5 lg:col-span-8">
             {(activeTab === "Feed" || activeTab === "Discussions" || activeTab === "Resources") && (
               <>
                 <ComposerBar spaceSlug={community.slug} placeholder={`Post in b/${community.slug}`} />
@@ -305,28 +305,28 @@ const CommunityDetail = () => {
           </div>
 
           <aside className="space-y-4 lg:col-span-4">
-            <div className="rounded-xl border border-border bg-card p-4">
-              <h2 className="mb-3 font-heading text-sm font-bold text-foreground">About this space</h2>
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-lg bg-muted py-2.5">
-                  <div className="font-heading text-base font-bold text-foreground">{community.memberCount.toLocaleString()}</div>
-                  <div className="text-[11px] text-muted-foreground">Members</div>
+            <div className="panel rounded-xl p-4">
+              <h2 className="mb-2.5 eyebrow text-[10px] tracking-widest uppercase text-ink-3 hairline-b pb-1.5">About this space</h2>
+              <div className="num grid grid-cols-3 gap-1.5 text-center">
+                <div className="rounded-md bg-sunken py-2 border border-line">
+                  <div className="text-sm font-bold text-ink">{community.memberCount.toLocaleString()}</div>
+                  <div className="eyebrow text-[8.5px]">Members</div>
                 </div>
-                <div className="rounded-lg bg-muted py-2.5">
-                  <div className="font-heading text-base font-bold text-foreground">{posts.length.toLocaleString()}</div>
-                  <div className="text-[11px] text-muted-foreground">Posts</div>
+                <div className="rounded-md bg-sunken py-2 border border-line">
+                  <div className="text-sm font-bold text-ink">{posts.length.toLocaleString()}</div>
+                  <div className="eyebrow text-[8.5px]">Posts</div>
                 </div>
-                <div className="rounded-lg bg-muted py-2.5">
-                  <div className="font-heading text-base font-bold text-foreground">{postsToday}</div>
-                  <div className="text-[11px] text-muted-foreground">Today</div>
+                <div className="rounded-md bg-sunken py-2 border border-line">
+                  <div className="text-sm font-bold text-ink">{postsToday}</div>
+                  <div className="eyebrow text-[8.5px]">Today</div>
                 </div>
               </div>
-              <div className="mt-4 space-y-1 border-t border-border pt-3 text-xs text-muted-foreground">
+              <div className="mt-3 space-y-1 hairline-b pt-2 text-xs text-ink-3">
                 {created && <p>Created {created}</p>}
                 {owner && (
                   <p>
                     Started by{" "}
-                    <Link to={`/f/${owner.username || owner.uid}`} className="font-medium text-foreground hover:underline">
+                    <Link to={`/f/${owner.username || owner.uid}`} className="font-medium text-ember hover:underline">
                       f/{owner.username || owner.displayName}
                     </Link>
                   </p>
@@ -334,30 +334,30 @@ const CommunityDetail = () => {
               </div>
             </div>
 
-            <div className="rounded-xl border border-border bg-card p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="font-heading text-sm font-bold text-foreground">Top members</h2>
+            <div className="panel rounded-xl p-4">
+              <div className="mb-2.5 flex items-center justify-between hairline-b pb-1.5">
+                <h2 className="eyebrow text-[10px] tracking-widest uppercase text-ink-3">Top members</h2>
                 {members.length > topMembers.length && (
-                  <button onClick={() => setActiveTab("Members")} className="text-xs text-muted-foreground hover:text-foreground">
+                  <button onClick={() => setActiveTab("Members")} className="eyebrow text-[9.5px] text-ember hover:underline">
                     View all
                   </button>
                 )}
               </div>
               {membersError ? (
-                <p role="alert" className="text-xs text-destructive">Members unavailable. <button onClick={() => refetchMembers()} className="underline">Retry</button></p>
+                <p role="alert" className="text-xs text-danger">Members unavailable. <button onClick={() => refetchMembers()} className="underline">Retry</button></p>
               ) : topMembers.length === 0 ? (
-                <p className="text-xs text-muted-foreground">Members will show up here once people join.</p>
+                <p className="text-xs text-ink-3">Members will show up here once people join.</p>
               ) : (
-                <ol className="space-y-2.5">
+                <ol className="space-y-1.5">
                   {topMembers.map((m, i) => (
                     <li key={m.uid}>
-                      <Link to={memberLink(m)} className="flex items-center gap-2.5 hover:opacity-80">
-                        <span className="w-3 tabular-nums text-xs text-muted-foreground">{i + 1}</span>
-                        <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-muted font-heading text-[11px] font-bold">
+                      <Link to={memberLink(m)} className="flex items-center gap-2 rounded-md px-1.5 py-1 hover:bg-sunken transition-colors">
+                        <span className="w-3 num text-[10px] text-ink-4">{i + 1}</span>
+                        <div className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-md bg-surface border border-line font-heading text-[10px] font-bold text-ink shrink-0">
                           {m.avatarUrl ? <img src={m.avatarUrl} alt="" className="h-full w-full object-cover" /> : memberName(m).charAt(0).toUpperCase()}
                         </div>
-                        <span className="flex-1 truncate text-sm font-medium text-foreground">{memberName(m)}</span>
-                        <span className="tabular-nums text-[11px] text-muted-foreground">{m.reputation.toLocaleString()}</span>
+                        <span className="flex-1 truncate text-xs font-medium text-ink">{memberName(m)}</span>
+                        <span className="num text-[10px] text-ink-3">{m.reputation.toLocaleString()} rep</span>
                       </Link>
                     </li>
                   ))}

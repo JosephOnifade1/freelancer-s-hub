@@ -49,26 +49,32 @@ export default function LeadsBoard() {
           title="Opportunities"
           subtitle="Real, open projects posted by Borynx members. Apply without bidding credits."
           action={
-            <AppLink {...publish} className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-radius-md bg-primary px-4 py-2 font-body text-sm font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-              <Plus className="h-4 w-4" /> Post opportunity
+            <AppLink {...publish} className="btn btn-primary btn-sm gap-2">
+              <Plus className="h-3.5 w-3.5" /> Post opportunity
             </AppLink>
           }
         />
-        <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 sm:flex-row sm:items-center">
+        <div className="mb-5 flex flex-col gap-3 panel rounded-xl p-3 sm:flex-row sm:items-center">
           <label className="relative min-w-0 flex-1">
             <span className="sr-only">Search opportunities</span>
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search skills, title or location" className="pl-9" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-4" />
+            <input
+              type="text"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search skills, title or location…"
+              className="field w-full pl-9"
+            />
           </label>
-          <label className="flex items-center gap-2 text-sm text-muted-foreground">
-            Type
-            <select aria-label="Filter opportunity type" value={type} onChange={(event) => setType(event.target.value as (typeof TYPES)[number])} className="min-h-10 rounded-radius-md border border-border bg-background px-3 font-body text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <label className="flex items-center gap-2 text-xs text-ink-3">
+            <span className="eyebrow text-[9.5px]">Type</span>
+            <select aria-label="Filter opportunity type" value={type} onChange={(event) => setType(event.target.value as (typeof TYPES)[number])} className="field">
               {TYPES.map((value) => <option key={value} value={value}>{value === "All" ? "All types" : value}</option>)}
             </select>
           </label>
-          <label className="flex items-center gap-2 text-sm text-muted-foreground">
-            Sort
-            <select aria-label="Sort opportunities" value={sort} onChange={(event) => setSort(event.target.value as Sort)} className="min-h-10 rounded-radius-md border border-border bg-background px-3 font-body text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <label className="flex items-center gap-2 text-xs text-ink-3">
+            <span className="eyebrow text-[9.5px]">Sort</span>
+            <select aria-label="Sort opportunities" value={sort} onChange={(event) => setSort(event.target.value as Sort)} className="field">
               <option value="newest">Newest</option>
               <option value="most-applicants">Most applicants</option>
             </select>
@@ -76,7 +82,7 @@ export default function LeadsBoard() {
         </div>
 
         {user && (
-          <Link to="/pipeline" className="mb-5 inline-flex text-sm font-semibold text-brand hover:underline">
+          <Link to="/pipeline" className="mb-4 inline-flex text-xs font-semibold text-ember hover:underline">
             View your private pipeline →
           </Link>
         )}

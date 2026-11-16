@@ -14,6 +14,8 @@
  * Phase 2E: social — communities, community members, follows.
  * Phase 2F: marketplace — leads, lead applications, private lead pipeline.
  * Phase 2G: notifications and reports. Supabase retains Auth/Storage only.
+ * Phase 2J (migration 0009): karma_events, moderation_actions, referral_attributions,
+ *   posts.kind, posts.isSolved, posts.solutionCommentId.
  */
 export * from "./identity";
 export * from "./content";

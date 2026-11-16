@@ -4,6 +4,7 @@ import { useSidebar } from "@/components/ui/sidebar-context";
 import { AppSidebar } from "@/components/AppSidebar";
 import { VeteranCelebration } from "./VeteranCelebration";
 import { NotificationBell } from "./NotificationBell";
+import { CommandPalette, useCommandPalette } from "@/components/CommandPalette";
 import { Plus, User, LogOut, Settings, Search, X, FileText, Sparkles, Monitor, Sun, Moon, Shield, Check, Briefcase } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/auth-context";
@@ -55,6 +56,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const mobileInputRef = useRef<HTMLInputElement>(null);
   const { theme, setTheme } = useTheme();
   const { state } = useSidebar();
+  const { open: cmdOpen, onClose: cmdClose } = useCommandPalette();
 
   const toggleAvailability = async () => {
     if (!user?.uid || !profile || availabilityPending) return;
@@ -566,22 +568,6 @@ export function AppLayout({ children }: AppLayoutProps) {
       <div className="flex-1 flex min-w-0 overflow-hidden relative">
         <AppSidebar />
 
-        {/* High-Grade Boundary Toggle */}
-        <div
-          className={cn(
-            "fixed top-[5rem] z-50 transition-all duration-300 ease-in-out hidden md:flex pointer-events-none",
-            state === "expanded" ? "left-[270px]" : "left-[30px]",
-            "-translate-x-1/2"
-          )}
-        >
-          <SidebarTrigger
-            className={cn(
-              "rounded-full w-8 h-8 flex items-center justify-center p-0 border border-border transition-all duration-300 hover:scale-110 active:scale-95 pointer-events-auto",
-              "bg-background"
-            )}
-          />
-        </div>
-
         <main className="flex-1 overflow-y-auto bg-background relative flex flex-col">
           <div className="flex-1 min-w-0 p-2 sm:p-4 lg:p-6">
             {/* Phase 2B.4: a provisioning failure is surfaced here, not as a logout. */}
@@ -597,6 +583,9 @@ export function AppLayout({ children }: AppLayoutProps) {
       </div>
 
       {user && <VeteranCelebration />}
+
+      {/* Global Command Palette — Cmd+K / Ctrl+K */}
+      <CommandPalette open={cmdOpen} onClose={cmdClose} />
 
       {/* Global Theme Selection Modal (Reddit Style) */}
       <AnimatePresence>

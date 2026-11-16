@@ -41,76 +41,71 @@ export function CommunityHoverCard({ slug, children, asChild = false }: Communit
           </Link>
         )}
       </HoverCardTrigger>
-      <HoverCardContent className="w-80 p-0 overflow-hidden border-border/40 shadow-2xl bg-card/95 backdrop-blur-md rounded-2xl">
+      <HoverCardContent className="w-80 p-0 overflow-hidden border border-line shadow-2xl bg-surface rounded-xl">
         {isLoading ? (
           <div className="p-4 space-y-3">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-muted animate-pulse" />
-              <div className="space-y-2">
-                <div className="h-4 w-24 bg-muted animate-pulse rounded" />
-                <div className="h-3 w-16 bg-muted animate-pulse rounded" />
+              <div className="h-10 w-10 rounded-lg bg-sunken skeleton-bx" />
+              <div className="space-y-2 flex-1">
+                <div className="h-3.5 w-24 bg-sunken skeleton-bx rounded" />
+                <div className="h-3 w-16 bg-sunken skeleton-bx rounded" />
               </div>
             </div>
-            <div className="h-16 w-full bg-muted animate-pulse rounded-lg" />
+            <div className="h-14 w-full bg-sunken skeleton-bx rounded-md" />
           </div>
         ) : community ? (
           <div className="relative">
-            {/* Custom Cover Banner based on Community category */}
-            <div className={cn(
-              "h-16 w-full bg-gradient-to-br",
-              style?.bgGradient || "from-primary/20 via-brand/10 to-transparent"
-            )} />
+            <div className="h-12 w-full bg-sunken hairline-b" />
             
-            <div className="px-5 pb-5 -mt-8">
-              <div className="flex items-end justify-between mb-3">
+            <div className="px-4 pb-4 -mt-6">
+              <div className="flex items-end justify-between mb-2.5">
                 <div className={cn(
-                  "flex h-14 w-14 items-center justify-center rounded-xl border-2 border-card shadow-lg ring-2 ring-border",
-                  style?.iconBg || "bg-primary/10 text-primary"
+                  "flex h-12 w-12 items-center justify-center rounded-lg border-2 border-line shadow-md bg-surface-raised",
+                  style?.iconBg || "text-ember"
                 )}>
-                  {IconComp && <IconComp className="h-7 w-7" />}
+                  {IconComp && <IconComp className="h-6 w-6" />}
                 </div>
                 
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-secondary/50 border border-border/50">
-                  <Users className="h-3 w-3 text-muted-foreground" />
-                  <span className="text-xs font-bold text-foreground">
-                    {community.memberCount?.toLocaleString() || 0} <span className="text-muted-foreground font-medium text-[9px] uppercase tracking-tighter">Members</span>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-sunken border border-line">
+                  <Users className="h-3 w-3 text-ink-3" />
+                  <span className="num text-xs font-bold text-ink">
+                    {community.memberCount?.toLocaleString() || 0} <span className="eyebrow text-[9px]">Members</span>
                   </span>
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <h3 className="font-heading text-base font-bold text-foreground leading-tight">
-                  b/{community.slug}
+              <div className="space-y-0.5">
+                <h3 className="font-heading text-base font-bold text-ink leading-tight">
+                  <span className="text-ink-3 font-normal font-mono">b/</span>{community.slug}
                 </h3>
-                <p className="font-body text-xs text-muted-foreground">
+                <p className="eyebrow text-[10px]">
                   {community.name} Space
                 </p>
               </div>
 
               {community.description && (
-                <p className="mt-3 font-body text-sm text-[var(--text-muted)] line-clamp-2 leading-relaxed">
+                <p className="mt-2.5 text-xs text-ink-2 line-clamp-2 leading-relaxed">
                   {community.description}
                 </p>
               )}
 
               {community.topics && community.topics.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-1.5">
+                <div className="mt-3 flex flex-wrap gap-1">
                   {community.topics.slice(0, 3).map((topic) => (
-                    <Badge
+                    <span
                       key={topic}
-                      variant="secondary"
-                      className="bg-primary/5 hover:bg-primary/10 border-primary/10 text-[9px] py-0 px-2 rounded-md transition-colors"
+                      className="tag text-[9.5px]"
                     >
                       #{topic}
-                    </Badge>
+                    </span>
                   ))}
                 </div>
               )}
 
-              <div className="mt-4 pt-4 border-t border-border/40 flex items-center justify-between">
+              <div className="mt-3 pt-2.5 border-t border-line flex items-center justify-between">
                 <Link
                   href={`/b/${slug}`}
-                  className="w-full flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-semibold text-primary hover:bg-primary/10 hover:text-primary transition-all border border-primary/20"
+                  className="btn btn-sm w-full justify-center text-xs"
                 >
                   Visit Community
                   <ArrowRight className="h-3 w-3" />
@@ -119,8 +114,8 @@ export function CommunityHoverCard({ slug, children, asChild = false }: Communit
             </div>
           </div>
         ) : (
-          <div className="p-6 text-center">
-            <p className="text-sm text-muted-foreground">Community not found</p>
+          <div className="p-4 text-center">
+            <p className="text-xs text-ink-3">Community not found at b/{slug}.</p>
           </div>
         )}
       </HoverCardContent>
